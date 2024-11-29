@@ -1,0 +1,640 @@
+#include "render_system.h"
+#include "log.h"
+#include "math.h"
+#include "hashmap.h"
+#include "arena.h"
+
+#include <glad/glad.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include <stdint.h>
+
+#define MAX_DRAW_INDIRECT_DRAW_COMMANDS 10000
+#define MAX_BINDLESS_TEXTURE_2D_HANDLES sizeof(GLuint64) * 16384
+#define MAX_MATERIALS 10000
+
+#define BO_INDEX_POSITION 0
+#define BO_INDEX_COLOR 1
+#define BO_INDEX_UV 2
+
+#define BO_INDEX_ELEMENT_ARRAY 16      // IBO
+#define BO_INDEX_DRAW_INDIRECT 17      // Command buffer
+#define BO_INDEX_DRAW_COMMAND_DATA 18  // gl_DrawID indexed array
+//#define BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES 19 // Bindless textures
+#define BO_INDEX_MATERIALS 20
+#define BO_INDEX_MAX 32
+
+
+
+typedef struct {
+    unsigned int count;
+    unsigned int instance_count;
+    unsigned int first_index;
+    int base_vertex;
+    unsigned int base_instance;
+} DrawElementsIndirectCommand;
+
+typedef struct {
+    Mat4x4 model; // 64 bytes
+    Vec2f tex_coord_offset; // 8 bytes
+    Vec2f tex_coord_scale; // 8 bytes
+    unsigned int material_index; // 4 bytes
+    char padding[12];
+} DrawCommandDataTiled;
+
+typedef struct {
+    GLuint64 handle;
+    Vec4u8 color;
+} Material;
+
+
+struct RenderSystem_t {
+    DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    HashMap material_asset_index_mapping;
+    HashMap textures;
+    // Program asset ID => GL program handle
+    HashMap programs;
+    Vec render_data;
+    // Keep track of which materials we've seen as
+    // Key: AssetId, Value: Material SSBO vector index
+    Vec materials;
+    GLuint buffer_objects[32];
+    Assets* assets;
+    GLuint tilemap;
+    GLuint vao;
+    unsigned int count;
+};
+
+#define CHECK_GL_ERROR()                                        \
+    if(glGetError() != GL_NO_ERROR) {                           \
+        LOG_ERROR("GL error: %s:%d", __FUNCTION__, __LINE__);   \
+        exit(1);                                                \
+    }                                                           \
+
+
+void __stdcall gl_debug_callback(GLenum source, GLenum type, GLuint id,
+                              GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+    switch (severity) {
+    case GL_DEBUG_SEVERITY_HIGH:
+        LOG_GL_HIGH(message);
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        LOG_GL_MEDIUM(message);
+        break;
+    case GL_DEBUG_SEVERITY_LOW:
+        LOG_GL_LOW(message);
+        break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION:
+        LOG_GL_NOTIFY(message);
+        break;
+    }
+}
+
+static void hash_map_asset_printer(void* key, size_t key_len, void* value) {
+    AssetId id = *(AssetId*)key;
+    GLuint tex_id = (GLuint)(uintptr_t)value;
+    printf("AssetId %d Texture handle %d\n", id, tex_id);
+}
+
+static GLuint compile_shader(const char* src, GLenum type) {
+    GLint src_len = (GLint)strlen(src);
+    GLuint handle = glCreateShader(type);
+    glShaderSource(handle, 1, &src, &src_len);
+    CHECK_GL_ERROR();
+    glCompileShader(handle);
+    CHECK_GL_ERROR();
+
+    int status = 0;
+    glGetShaderiv(handle,  GL_COMPILE_STATUS, &status);
+    if(status != GL_TRUE) {
+        int log_len = 0;
+        glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_len);
+        if (log_len) {
+            GLchar* log_buf = malloc(log_len);
+            GLsizei actual_len = 0;
+            glGetShaderInfoLog(handle, log_len, &actual_len, log_buf);
+            LOG_EXIT("Failed to compile shader: %s\n%s", log_buf, src);
+            
+        } else {
+            LOG_EXIT("Failed to compile shader: Log len is 0");
+        }
+
+        CHECK_GL_ERROR();
+    }
+
+    return handle;
+}
+
+static GLuint create_program(GLuint* shaders, int count) {
+    GLuint prog = glCreateProgram();
+
+    CHECK_GL_ERROR();
+
+    for(int i = 0; i < count; ++i) {
+        glAttachShader(prog, *(shaders+i));
+    }
+
+    glLinkProgram(prog);
+
+    CHECK_GL_ERROR();
+
+    glValidateProgram(prog);
+    int status = 0;
+    glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
+
+    if(status != GL_TRUE) {
+        int log_len = 0;
+        // Includes null-terminator
+        glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
+        if(log_len) {
+            GLchar* log_buf = malloc(log_len);
+            GLsizei actual_len = 0;
+            glGetProgramInfoLog(prog, log_len, &actual_len, log_buf);
+            LOG_EXIT("Failed to validate program:\n%s", log_buf);
+            free(log_buf);
+            CHECK_GL_ERROR();
+        } else {
+            LOG_EXIT("Failed to validate program, but info log length is 0");        }
+    }
+    
+    return prog;
+}
+
+void render_system_create_program(RenderSystem* system, AssetId program_id) {
+    AssetShaderProgram* program_asset = assets_get_program(system->assets, program_id);
+    if(!program_asset) {
+        LOG_EXIT("Failed to create program with id '%d'", program_id);
+    }
+    
+    int num_shaders_in_program = 0;
+    GLuint shader_handles[6];
+
+    for (int i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId); ++i) {
+        if(assets_shader_program_has_shader(program_asset, i)) {
+            AssetShader* shader_asset = assets_get_shader(system->assets, program_asset->shader_ids[i]);
+
+            GLenum gl_shader_type = 0;
+            switch (0x1 << i) {
+            case AssetShaderVertex:
+                gl_shader_type = GL_VERTEX_SHADER;
+                break;
+            case AssetShaderFragment:
+                gl_shader_type = GL_FRAGMENT_SHADER;
+                break;
+            default:
+                LOG_EXIT("Unhandled shader type");
+            }
+
+            LOG_INFO("Compiling shader '%s'", shader_asset->file_path.path);
+            shader_handles[num_shaders_in_program++] = compile_shader(shader_asset->shader_src, gl_shader_type);
+        }
+    }
+    
+    GLuint program_handle = create_program(shader_handles, num_shaders_in_program);
+    hash_map_insert_value(&system->programs,
+                          &program_asset->id,
+                          sizeof(program_asset->id),
+                          (void*)(uintptr_t)program_handle);
+}
+
+
+RenderSystem* render_system_create(Assets* assets ) {
+    LOG_INFO("Create render system implementation...");
+    // init function pointer loader 
+    gladLoadGL();
+    glDebugMessageCallback(&gl_debug_callback, 0);
+    glEnable(GL_DEBUG_OUTPUT);
+
+    glClearColor(0.f, 0.0f, 0.0f, 255.f);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    RenderSystem* system = malloc(sizeof(RenderSystem));
+    system->assets = assets;
+    system->render_data = vec_create();
+    system->materials = vec_create();
+
+
+    hash_map_init(&system->programs, 100);
+    hash_map_init(&system->textures, 1000);
+    hash_map_init(&system->material_asset_index_mapping, 1000);
+    
+    memset(&system->draw_commands, 0x0, sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
+    memset(&system->draw_command_data, 0x0, sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
+
+
+//    glEnable(GL_BLEND);
+    glCreateVertexArrays(1, &system->vao);
+    glCreateBuffers(BO_INDEX_MAX, system->buffer_objects);
+
+    CHECK_GL_ERROR();
+    
+    glEnableVertexArrayAttrib(system->vao, 0);
+    glEnableVertexArrayAttrib(system->vao, 1);
+    glEnableVertexArrayAttrib(system->vao, 2);
+    
+
+    glVertexArrayAttribBinding(system->vao, 0, 0);
+    glVertexArrayAttribBinding(system->vao, 1, 1);
+    glVertexArrayAttribBinding(system->vao, 2, 2);
+
+    glVertexArrayVertexBuffer(system->vao, 0, system->buffer_objects[BO_INDEX_POSITION], 0, sizeof(float) * 3);
+    glVertexArrayVertexBuffer(system->vao, 1, system->buffer_objects[BO_INDEX_COLOR], 0, sizeof(uint8_t)* 3);
+    glVertexArrayVertexBuffer(system->vao, 2, system->buffer_objects[BO_INDEX_UV], 0, sizeof(float)* 2);
+    
+    glVertexArrayAttribFormat(system->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribIFormat(system->vao, 1, 3, GL_UNSIGNED_BYTE, 0);
+    glVertexArrayAttribFormat(system->vao, 2, 2, GL_FLOAT, GL_FALSE, 0);
+    
+    float pos_data[] = {
+        -1.0f, -1.0f, -0.0f, // lower left
+        1.0f, -1.0f, -0.0f, // lower right
+        1.0f, 1.0f, -0.0f, // upper right
+        -1.0f, 1.0f, -0.0f, // upper left
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_POSITION], sizeof(pos_data), &pos_data, GL_STATIC_DRAW);
+    
+    uint8_t color_data[] = {
+        255,   0,   0,
+          0, 255,   0,
+          0,   0, 255,
+        255, 255, 255
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_COLOR], sizeof(color_data), &color_data, GL_STATIC_DRAW);
+    
+    float uv_data[] = {
+        0.0f, 0.0f, // lower left,
+        1.0f, 0.0f, // lower right,
+        1.0f, 1.0f, // upper right,
+        0.0f, 1.0f, // upper left
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_UV], sizeof(uv_data), &uv_data, GL_STATIC_DRAW);
+
+    uint16_t index_data[] = {
+        0, 1, 2,
+        0, 2, 3
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_ELEMENT_ARRAY],
+                      sizeof(index_data),
+                      index_data,
+                      GL_STATIC_DRAW);
+
+    glVertexArrayElementBuffer(system->vao, system->buffer_objects[BO_INDEX_ELEMENT_ARRAY]);
+
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
+    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
+                      sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+
+    glBindBufferBase( GL_SHADER_STORAGE_BUFFER,
+                      BO_INDEX_DRAW_COMMAND_DATA,
+                      system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA] );
+    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
+                      sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+
+
+    /* glBindBufferBase(GL_SHADER_STORAGE_BUFFER, */
+    /*                  BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES, */
+    /*                  system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES]); */
+    /* glNamedBufferData(system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES], */
+    /*                   sizeof(GLuint64) * MAX_BINDLESS_TEXTURE_2D_HANDLES, */
+    /*                   0, */
+    /*                   GL_DYNAMIC_DRAW); */
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                     BO_INDEX_MATERIALS,
+                     system->buffer_objects[BO_INDEX_MATERIALS]);
+    glNamedBufferData(system->buffer_objects[BO_INDEX_MATERIALS],
+                      sizeof(Material) * MAX_MATERIALS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+    
+    /* GLuint vs = compile_shader(vs_src, GL_VERTEX_SHADER); */
+    /* GLuint fs = compile_shader(fs_src, GL_FRAGMENT_SHADER); */
+    /* GLuint prog = create_program(vs, fs); */
+
+    /* system->program = prog; */
+
+    /* AssetId unit_program_id = assets_make_id_str("unit"); */
+    /* render_system_create_program(system, unit_program_id); */
+    /* AssetId tilemap_program_id = assets_make_id_str("tilemap"); */
+    /* render_system_create_program(system, tilemap_program_id); */
+
+    LOG_INFO("Created render system implementation");
+
+    return system;
+}
+
+static void render_system_create_material(RenderSystem* system, AssetId material_id) {
+    Material new_material;
+    AssetMaterial* mat = assets_get_material(system->assets, material_id);
+    if (!mat) {
+        LOG_EXIT("Failed to find material with id %u", material_id);
+    }
+    new_material.color = mat->color;
+
+    void* texture_handle_ptr = 0; 
+    int found_texture_handle = (GLuint64)(uintptr_t)hash_map_get(&system->textures, &mat->texture_id, sizeof(AssetId), &texture_handle_ptr );
+    // Careful. Don't know if it's valid before testing hash_map_get return value
+    GLuint64 texture_handle = (GLuint64)texture_handle_ptr;
+    if (!found_texture_handle) {
+
+        ImageMeta meta;
+        void* data = 0;
+        if (!assets_load_asset(system->assets, mat->texture_id, &data, &meta)) {
+            LOG_EXIT("Failed to load texture asset '%d'", mat->texture_id);
+        }
+
+        // Store the new handle as a void* in the hash map to avoid allocating just for
+        // a pointer sized type
+        GLuint64 new_handle = render_system_create_texture(system, data, &meta);
+        uintptr_t new_handle_ptr = (uintptr_t)new_handle;
+
+        hash_map_insert_value(&system->textures, &mat->texture_id, sizeof(AssetId), (void*)new_handle_ptr);
+
+        if (data) {
+            free(data);
+        }
+
+        new_material.handle = new_handle;
+                
+    } else {
+        new_material.handle = texture_handle;
+    }
+
+    unsigned int new_material_index = system->materials.size;
+    hash_map_insert_value(&system->material_asset_index_mapping,
+                          &material_id,
+                          sizeof(AssetId),
+                          (void*)(uintptr_t)new_material_index);
+
+    VEC_PUSH_T(&system->materials, Material, new_material);
+}
+
+void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources) {
+    for (int i = 0; i < resources->program_ids.size; ++i) {
+        AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i);
+        render_system_create_program(system, program_id);        
+    }
+
+    for (int i = 0; i < resources->material_ids.size; ++i) {
+        AssetId material_id =  VEC_GET_T(&resources->material_ids, AssetId, i);
+        render_system_create_material(system, material_id);
+    }
+}
+
+
+uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta) {
+    GLuint tex_handle;
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
+
+    CHECK_GL_ERROR();
+    GLenum format = 0;
+    GLenum internal_fmt = 0;
+    switch (meta->channels) {
+    case 3: 
+        format = GL_RGB;
+        internal_fmt = GL_RGB8;
+        break;
+    case 4:
+        format = GL_RGBA;
+        internal_fmt = GL_RGBA8;
+        break;
+    default:
+        LOG_EXIT("Unimplemented number of image channels (%d) to GL enum mapping", meta->channels);
+    }
+    
+    int levels = 1;
+    int border = 0;
+    glTextureStorage2D(tex_handle, levels, internal_fmt, meta->width, meta->height);
+    CHECK_GL_ERROR();
+
+    int level = 0;
+    int xoffset = 0;
+    int yoffset = 0;
+
+    GLenum type = GL_UNSIGNED_BYTE;
+    glTextureSubImage2D(tex_handle, level, xoffset, yoffset, meta->width, meta->height, format, type, data);
+
+    CHECK_GL_ERROR();
+
+     // Hack set up a texture unit
+
+    glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindTexture(GL_TEXTURE_2D, tex_handle);
+    glGenerateTextureMipmap(tex_handle);
+
+    CHECK_GL_ERROR();
+
+    GLuint64 bindless_handle = glGetTextureHandleARB(tex_handle);
+    glMakeTextureHandleResidentARB(bindless_handle);
+
+    CHECK_GL_ERROR();
+
+    return bindless_handle;
+}
+
+Vec* render_system_get_render_data(RenderSystem* system, int num_entities) {
+    if (num_entities > system->render_data.size) {
+        VEC_RESIZE_T(&system->render_data, RenderData, num_entities);
+    }
+    
+    return &system->render_data;
+}
+
+static GLint get_uniform_location_checked(GLuint program, const char* name) {
+    GLint loc = glGetUniformLocation(program, name);
+    CHECK_GL_ERROR();
+    
+    if(loc == -1) {
+        LOG_EXIT("Invalid uniform location '%s'", name);
+    }
+
+    return loc;
+}
+
+static int render_data_order_comp(const void* lhs, const void* rhs) {
+    const RenderData* a = lhs;
+    const RenderData* b = rhs;
+
+    static int i = 0;
+    
+    LOG_INFO("%p cmp %p - %d ", lhs, rhs, i++);
+    if(a->render_layer < b->render_layer) {
+        return -1;
+    } else if (a->render_layer > b->render_layer) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static void sort_render_data(RenderSystem* system) {
+    void* ptr = system->render_data.storage.ptr;
+    qsort(ptr, system->render_data.size, sizeof(RenderData), &render_data_order_comp);
+}
+
+static void render_batch(RenderSystem* system, unsigned int batch_size) {
+    LOG_INFO("Render batch size %u", batch_size);
+    glMultiDrawElementsIndirect(GL_TRIANGLES,
+                                GL_UNSIGNED_SHORT,
+                                0, // *indirect *
+                                batch_size,
+                                sizeof(DrawElementsIndirectCommand));
+    
+    CHECK_GL_ERROR();
+}
+
+void render_system_update(RenderSystem* system) {
+    CHECK_GL_ERROR();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (system->render_data.size == 0) {
+        return;
+    }
+    
+    glBindVertexArray(system->vao);
+    GLint loc_view;
+    GLint loc_proj;
+
+    CHECK_GL_ERROR();
+
+    Vec3f cam_pos = { -0.05f, 0.0f, 0.08f };
+    Vec3f cam_target = { 0.0f, 0.0f, 0.0f};
+    Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
+    Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
+
+    
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
+    CHECK_GL_ERROR();
+
+//    sort_render_data(system);
+
+    unsigned int count_in_batch = 0;
+    AssetId current_program = 0;
+
+    for (int i = 0; i < system->render_data.size; ++i) {
+        RenderData* render_data = VEC_GET_T_PTR(&system->render_data, RenderData, i);
+
+        if(render_data->program_id != current_program) {
+            // We we encounter a new program/pipeline
+            // Render whatever we have so far, and then continue
+            // building a new batch with the new program/pipeline
+            render_batch(system, count_in_batch);
+            count_in_batch = 0;
+            
+            GLuint* program = 0;
+            if (!hash_map_get(&system->programs, &render_data->program_id, sizeof(render_data->program_id), &program)) {
+                LOG_EXIT("Failed to find shader program");
+            }
+            GLuint program_handle = (GLuint)(uintptr_t)program;
+            glUseProgram(program_handle);
+            CHECK_GL_ERROR();
+
+            current_program = render_data->program_id;
+
+            loc_view = get_uniform_location_checked(program_handle, "View");
+            loc_proj = get_uniform_location_checked(program_handle, "Proj");
+
+            glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
+            CHECK_GL_ERROR();
+
+            Mat4x4 proj_mat = perspective(0.01f, 1.0f, 65.f, 800.f / 600.f);
+            glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
+            CHECK_GL_ERROR();
+        }
+       
+        DrawElementsIndirectCommand* command = &system->draw_commands[count_in_batch];
+        command->count = 6;
+        command->instance_count = 1;
+        command->first_index = 0;
+        command->base_vertex = 0;
+        command->base_instance = 0;
+        
+        DrawCommandDataTiled* draw_data = &system->draw_command_data[count_in_batch];
+        draw_data->model = render_data->model_matrix;
+        draw_data->tex_coord_offset = render_data->tex_coord_offset;
+        draw_data->tex_coord_scale = render_data->tex_coord_scale;
+
+        void* value = 0;
+        int found = hash_map_get(&system->material_asset_index_mapping, &render_data->material_id, sizeof(AssetId), &value);
+
+        // We only have to do more work if haven't seen this material id
+        // before.
+        if (found) {
+            draw_data->material_index = (unsigned int)(uintptr_t)value;
+        } else {
+            LOG_EXIT("Failed to map material id to material index");
+        }
+
+        count_in_batch++;
+    }
+
+    glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
+                         0,
+                         sizeof(DrawElementsIndirectCommand) * count_in_batch,
+                         system->draw_commands);
+    CHECK_GL_ERROR();
+
+    glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
+                         0,
+                         sizeof(DrawCommandDataTiled) * count_in_batch,
+                         system->draw_command_data);
+    CHECK_GL_ERROR();
+
+    glNamedBufferSubData(system->buffer_objects[BO_INDEX_MATERIALS],
+                         0,
+                         sizeof(Material) * system->materials.size,
+                         VEC_ITER_BEGIN_T(&system->materials, Material));
+
+    CHECK_GL_ERROR();
+
+
+    // Dispatch the final batch
+    render_batch(system, count_in_batch);
+
+    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT], */
+    /*                      0, */
+    /*                      sizeof(DrawElementsIndirectCommand) * system->render_data.size, */
+    /*                      system->draw_commands); */
+
+    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA], */
+    /*                      0, */
+    /*                      sizeof(DrawCommandDataTiled) * system->render_data.size, */
+    /*                      system->draw_command_data); */
+
+    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_MATERIALS], */
+    /*                      0, */
+    /*                      sizeof(Material) * system->materials.size, */
+    /*                      VEC_ITER_BEGIN_T(&system->materials, Material)); */
+
+    /* CHECK_GL_ERROR(); */
+
+    /* Material* mat_a = VEC_GET_T_PTR(&system->materials, Material, 0); */
+    /* Material* mat_b = VEC_GET_T_PTR(&system->materials, Material, 1); */
+    
+
+    /* glMultiDrawElementsIndirect(GL_TRIANGLES, */
+    /*                             GL_UNSIGNED_SHORT, */
+    /*                             0, // *indirect * */
+    /*                             system->render_data.size, */
+    /*                             sizeof(DrawElementsIndirectCommand)); */
+    
+    /* CHECK_GL_ERROR(); */
+}
+
+void render_system_render(RenderSystem* system) {
+    // Later on, we will probably do multiple batches,
+    // so keep this for now rather pointless extra function call
+    render_batch(system, system->count);
+}
+
