@@ -25,3 +25,4 @@ cl.exe ^
  /std:c17 ^
  /I "./libs/GLFW/include" /I "./libs/glad/include" /I "./libs/stb/" ^
  /I "./src/"^
+ /Fe:main.exe
