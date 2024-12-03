@@ -4,43 +4,22 @@
 #include "vec.h"
 #include "component.h"
 #include "assetstore.h"
+#include "types.h"
+#include "system.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define ENTITY_INVALID_INDEX -1
 #define COMPONENT_POOLS_MAX 32
 #define SYSTEMS_MAX 32
 
-typedef uint8_t SignatureT;
-typedef int EntityId;
-
-struct System_t;
-
-typedef void(*pfnSystemUpdate)(struct Registry_t*, struct System_t*, size_t);
-
-struct System_t {
-    int id;
-    SignatureT signature;
-    Vec entities;
-    pfnSystemUpdate update_fn;
-    void* system_impl;
-    Assets* assets;
-};
-typedef struct System_t System;
-
-struct Entity_t {
-    EntityId id;
-    size_t index;
-};
-typedef struct Entity_t Entity;
 
 struct Pool {
     void* data;
     size_t count;
-    Component* descriptor;
+    const Component* descriptor;
 };
 
 //Track our entity indexes so we can reuse destroyed entities
@@ -78,7 +57,7 @@ typedef struct Registry_t Registry;
 /*
  Registry API
  */
-void registry_init(Registry* registry, size_t max_entity_count, Component* components, size_t component_count);
+void registry_init(Registry* registry, size_t max_entity_count, const Component* components, size_t component_count);
 
 struct Pool* registry_get_pool(Registry* reg, enum component_bit bit);
 
@@ -106,15 +85,5 @@ void registry_commit_entities(Registry* reg);
 void registry_add_component(Registry* reg, Entity e, enum component_bit, void* data);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
 
-/*
-  System API
- */
-System* system_create(pfnSystemUpdate update_fn, int required_component_flags);
-
-void system_add_entity(System* system, Entity e);
-
-void system_remove_entity(System* sys, Entity e);
-
-void system_require_component(System* sys, int bit);
 
 #endif _ECS_H

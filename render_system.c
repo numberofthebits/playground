@@ -314,17 +314,6 @@ RenderSystem* render_system_create(Assets* assets ) {
                       0,
                       GL_DYNAMIC_DRAW);
     
-    /* GLuint vs = compile_shader(vs_src, GL_VERTEX_SHADER); */
-    /* GLuint fs = compile_shader(fs_src, GL_FRAGMENT_SHADER); */
-    /* GLuint prog = create_program(vs, fs); */
-
-    /* system->program = prog; */
-
-    /* AssetId unit_program_id = assets_make_id_str("unit"); */
-    /* render_system_create_program(system, unit_program_id); */
-    /* AssetId tilemap_program_id = assets_make_id_str("tilemap"); */
-    /* render_system_create_program(system, tilemap_program_id); */
-
     LOG_INFO("Created render system implementation");
 
     return system;
@@ -427,8 +416,8 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
     glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, tex_handle);
     glGenerateTextureMipmap(tex_handle);
 
@@ -483,7 +472,6 @@ static void sort_render_data(RenderSystem* system) {
 }
 
 static void render_batch(RenderSystem* system, unsigned int batch_size) {
-    LOG_INFO("Render batch size %u", batch_size);
     glMultiDrawElementsIndirect(GL_TRIANGLES,
                                 GL_UNSIGNED_SHORT,
                                 0, // *indirect *
@@ -508,8 +496,8 @@ void render_system_update(RenderSystem* system) {
 
     CHECK_GL_ERROR();
 
-    Vec3f cam_pos = { -0.05f, 0.0f, 0.08f };
-    Vec3f cam_target = { 0.0f, 0.0f, 0.0f};
+    Vec3f cam_pos = { 10.f, 10.0f, 20.f };
+    Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
     Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
     Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
 
@@ -548,7 +536,7 @@ void render_system_update(RenderSystem* system) {
             glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
             CHECK_GL_ERROR();
 
-            Mat4x4 proj_mat = perspective(0.01f, 1.0f, 65.f, 800.f / 600.f);
+            Mat4x4 proj_mat = perspective(0.1f, 10.0f, 65.f, 800.f / 600.f);
             glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
             CHECK_GL_ERROR();
         }
@@ -601,40 +589,5 @@ void render_system_update(RenderSystem* system) {
 
     // Dispatch the final batch
     render_batch(system, count_in_batch);
-
-    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT], */
-    /*                      0, */
-    /*                      sizeof(DrawElementsIndirectCommand) * system->render_data.size, */
-    /*                      system->draw_commands); */
-
-    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA], */
-    /*                      0, */
-    /*                      sizeof(DrawCommandDataTiled) * system->render_data.size, */
-    /*                      system->draw_command_data); */
-
-    /* glNamedBufferSubData(system->buffer_objects[BO_INDEX_MATERIALS], */
-    /*                      0, */
-    /*                      sizeof(Material) * system->materials.size, */
-    /*                      VEC_ITER_BEGIN_T(&system->materials, Material)); */
-
-    /* CHECK_GL_ERROR(); */
-
-    /* Material* mat_a = VEC_GET_T_PTR(&system->materials, Material, 0); */
-    /* Material* mat_b = VEC_GET_T_PTR(&system->materials, Material, 1); */
-    
-
-    /* glMultiDrawElementsIndirect(GL_TRIANGLES, */
-    /*                             GL_UNSIGNED_SHORT, */
-    /*                             0, // *indirect * */
-    /*                             system->render_data.size, */
-    /*                             sizeof(DrawElementsIndirectCommand)); */
-    
-    /* CHECK_GL_ERROR(); */
-}
-
-void render_system_render(RenderSystem* system) {
-    // Later on, we will probably do multiple batches,
-    // so keep this for now rather pointless extra function call
-    render_batch(system, system->count);
 }
 

@@ -26,7 +26,6 @@ typedef struct {
 AssetName assets_make_asset_name(const char* name, size_t len);
 AssetName assets_make_asset_name_str(const char* name);
 
-
 AssetFilePath assets_make_asset_file_path(const char* file_path);
 
 int assets_asset_name_eq(AssetName* lhs, AssetName* rhs);

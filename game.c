@@ -10,6 +10,7 @@
 #include "os.h"
 #include "ecs.h"
 #include "util.h"
+#include "system.h"
 
 // Exclude rarely-used stuff from Windows headers
 #define WIN32_LEAN_AND_MEAN
@@ -18,6 +19,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <math.h>
 
 
 #define MAX_ENTITIES 1024
@@ -265,16 +267,17 @@ static void render_update(Registry* reg, System* s, size_t frame_nr) {
         scale.z = 1.0f;
         
         Vec3f pos;
-        pos.x = tc->pos.x / 25.f;
-        pos.y = tc->pos.y / 20.f;
+        pos.x = tc->pos.x;
+        pos.y = tc->pos.y;
         pos.z = tc->pos.z;
 
         rd->tex_coord_offset = rc->tex_coord_offset;
         rd->tex_coord_scale = rc->tex_coord_scale;
         rd->model_matrix = identity();
 
-        scale_mat4(&rd->model_matrix, &scale);        
+        scale_mat4(&rd->model_matrix, &scale);
         translate(&rd->model_matrix, &pos);
+
         rd->material_id = rc->material_id;
         rd->program_id = rc->pipeline_id;
     }
@@ -291,18 +294,99 @@ static void animation_update(Registry* reg, System* sys, size_t frame_nr) {
     struct AnimationSystem* animation_system = sys->system_impl;
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
     struct Pool* animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
+    struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
+
     Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
     
     for (int i = 0; i < sys->entities.size; ++i) {
         Entity entity = entities[i];
+        PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity.id);
         RenderComponent* rc = RegistryGetComponent(render_pool, RenderComponent, entity.id);
         AnimationComponent* ac =
             RegistryGetComponent(animation_pool, AnimationComponent, entity.id);
-        size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) % ac->num_animation_frames;
+        size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) % ac->num_animation_frames * ac->is_playing;
+
+        float offset = 0;            
+        float len = length_vec2f(&pc->velocity);
+ 
+        if (len) {
+            Vec2f normalized_velocity = normalize_with_len_vec2f(&pc->velocity, len);
+            Vec2f x_axis = {
+                .x = 1.f,
+                .y = 0.f
+            };
+            Vec2f y_axis = {
+                .x = 0.f,
+                .y = 1.f
+            };
+            float dp_x = dot_vec2f(&normalized_velocity, &x_axis);
+            float dp_y = dot_vec2f(&normalized_velocity, &y_axis);
+
+            // Pick which contributes the most to our direction
+            if (fabs(dp_x) > fabs(dp_y)) {
+                if (dp_x > 0) {
+                    // We're going right ish
+                    offset = 1.f;
+                } else {
+                    // left ish
+                    offset = 3.f;
+                }                
+            } else {
+                if (dp_y > 0) {
+                    // up
+                    offset = 0.f;
+                } else {
+                    // down
+                    offset = 2.f;
+                }
+            }
+
+            ac->last_offset = offset;
+
+        }
+        
+        rc->tex_coord_scale.x = 1.f / ac->num_frames_width;
+        rc->tex_coord_scale.y = 1.f / ac->num_frames_height;
+
+        rc->tex_coord_offset.x = 1.f / ac->num_frames_width * animation_frame_nr;
+        rc->tex_coord_offset.y = ((float)ac->num_frames_height - 1.f - ac->last_offset) / (float)ac->num_frames_height;
     }
 
     AppendScopedTimer(animation_time);
     PrintScopedTimer(animation_time);
+}
+
+static void collision_update(Registry* reg, System* sys, size_t frame_nr) {
+    BeginScopedTimer(collision_time);
+
+    struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
+    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+
+    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+    
+    for (int i = 0; i < sys->entities.size; ++i) {
+        Entity self = entities[i];
+        CollisionComponent* self_collision = RegistryGetComponent(collision_pool, CollisionComponent, self.id);
+        TransformComponent* self_transform = RegistryGetComponent(transform_pool, TransformComponent, self.id);
+            
+        for (int j = i; i < sys->entities.size; ++j) {
+            Entity other = entities[j];
+
+            if(other.id == self.id) {
+                continue;
+            }
+            
+            TransformComponent* other_transform = RegistryGetComponent(transform_pool, TransformComponent, other.id);
+            CollisionComponent* other_collision = RegistryGetComponent(collision_pool, CollisionComponent, other.id);
+
+            if (intersect_rectf(&self_collision->bounding_rect, &other_collision->bounding_rect)) {
+                LOG_INFO("YOU HAVE TAKEN THE LEAD");
+            }
+        }
+    }
+
+    AppendScopedTimer(collision_time);
+    PrintScopedTimer(collision_time);
 }
 
 Game* game_create() {
@@ -341,7 +425,8 @@ Game* game_create() {
     Game* game = ArenaAlloc(&allocator, 1, Game);
 
     game->window = window;
-    registry_init(&game->registry, MAX_ENTITIES, component_table, component_table_size);
+
+    registry_init(&game->registry, MAX_ENTITIES, component_table, component_table_size());
 
     game->frame_counter = 0;
 
@@ -371,11 +456,15 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             Entity e = registry_create_entity(registry);
 
             TransformComponent tc = {0};
-            tc.pos.x = (float)(col - 25.f / 2.f);
-            tc.pos.y = (float)(row - 20.f / 2.f);
+            /* tc.pos.x = (float)(col - 24.f / 2.f); */
+            /* tc.pos.y = (float)(row - 19.f / 2.f); */
+            tc.pos.x = (float)col;
+            tc.pos.y = (float)row;
             tc.pos.z = 0.0f;
-            tc.scale.x = 1.0f / 51.0f;
-            tc.scale.y = 1.0f / 41.0f;
+            tc.scale.x = 0.5f;
+            tc.scale.y = 0.5f;
+            /* tc.scale.x_= 1.0f / 50.0f; */
+            /* tc.scale.y = 1.0f / 40.0f; */
             tc.rotation = 0.f;
             
             registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
@@ -383,16 +472,15 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             MapTile tile = map_get_tile(map, col, row);
             
             RenderComponent rc;
-//            rc.flags = 0;
             rc.render_layer = 0;
             
             // In map space, tile starts at the upper left
             // In GL texture coord space, tile starts at lower left
             // Offset.y must be the bottom of the texture rect.
-            rc.tex_coord_offset.x =  (float)tile.atlas_coord.x / atlas_cols_f; 
-            rc.tex_coord_offset.y = (atlas_rows_f - 1.0f - (float)tile.atlas_coord.y) / atlas_rows_f;
-            rc.tex_coord_scale.x = 1.0f / atlas_cols_f;
-            rc.tex_coord_scale.y = 1.0f / atlas_rows_f;
+            rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f; 
+            rc.tex_coord_offset.y = (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f;
+            rc.tex_coord_scale.x = 1.0f / (atlas_cols_f);
+            rc.tex_coord_scale.y = 1.0f / (atlas_rows_f);
             rc.material_id = assets_make_id_str("jungle-mat");
             rc.pipeline_id = assets_make_id_str("tilemap");
             
@@ -415,8 +503,8 @@ static void load_units(Registry* registry, Assets* assets) {
         tc.pos.x = 0.5;
         tc.pos.y = 0.5;
         tc.pos.z = 0.1f;
-        tc.scale.x = 1.0f / 51.0f;
-        tc.scale.y = 1.0f / 41.f;
+        tc.scale.x = 1.0f;
+        tc.scale.y = 1.0f;
         tc.rotation = 0.f;
 
         RenderComponent rc;
@@ -438,6 +526,88 @@ static void load_units(Registry* registry, Assets* assets) {
 
         registry_add_entity(registry, truck);
     }
+
+    {
+        Entity chopper = registry_create_entity(registry);
+
+        TransformComponent tc = {0};
+        tc.pos.x = 0.2f;
+        tc.pos.y = 0.2f;
+        tc.pos.z = 0.1f;
+        tc.scale.x = 1.f;
+        tc.scale.y = 1.f;
+        /* tc.scale.x = 1.0f / 51.0f * 2.f; */
+        /* tc.scale.y = 1.0f / 41.f * 2.f; */
+        tc.rotation = 0.f;
+
+        RenderComponent rc;
+        rc.render_layer = 0;
+        rc.tex_coord_offset.x = 0.f;
+        rc.tex_coord_offset.y = 0.f;
+        rc.tex_coord_scale.x = 1.f;
+        rc.tex_coord_scale.y = 1.f;
+        rc.material_id = assets_make_id_str("chopper-udlr");
+        rc.pipeline_id = unit_shader_id;
+
+        PhysicsComponent pc;
+        pc.velocity.x = 0.01f;
+        pc.velocity.y = 0.00f;
+
+        AnimationComponent ac = {0};
+        ac.frames_per_animation_frame = 5;
+        ac.num_animation_frames = 2;
+        ac.num_frames_width = 2;
+        ac.num_frames_height = 4;
+        ac.is_playing = 1;
+        ac.last_offset = 0.f;
+
+        registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
+        registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
+        registry_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
+        registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
+
+        registry_add_entity(registry, chopper);
+
+        Entity chopper2 = registry_create_entity(registry);
+
+        pc.velocity.x = -0.01f;
+        pc.velocity.y = 0.00f;
+
+        registry_add_component(registry, chopper2, RENDER_COMPONENT_BIT, &rc);
+        registry_add_component(registry, chopper2, TRANSFORM_COMPONENT_BIT, &tc);
+        registry_add_component(registry, chopper2, PHYSICS_COMPONENT_BIT, &pc);
+        registry_add_component(registry, chopper2, ANIMATION_COMPONENT_BIT, &ac);
+
+        registry_add_entity(registry, chopper2);
+
+
+        Entity chopper3 = registry_create_entity(registry);
+
+        pc.velocity.x = 0.00f;
+        pc.velocity.y = 0.01f;
+
+        registry_add_component(registry, chopper3, RENDER_COMPONENT_BIT, &rc);
+        registry_add_component(registry, chopper3, TRANSFORM_COMPONENT_BIT, &tc);
+        registry_add_component(registry, chopper3, PHYSICS_COMPONENT_BIT, &pc);
+        registry_add_component(registry, chopper3, ANIMATION_COMPONENT_BIT, &ac);
+
+        registry_add_entity(registry, chopper3);
+
+
+        Entity chopper4 = registry_create_entity(registry);
+
+        pc.velocity.x = 0.00f;
+        pc.velocity.y = -0.01f;
+
+        registry_add_component(registry, chopper4, RENDER_COMPONENT_BIT, &rc);
+        registry_add_component(registry, chopper4, TRANSFORM_COMPONENT_BIT, &tc);
+        registry_add_component(registry, chopper4, PHYSICS_COMPONENT_BIT, &pc);
+        registry_add_component(registry, chopper4, ANIMATION_COMPONENT_BIT, &ac);
+
+        registry_add_entity(registry, chopper4);
+
+    }
+
 }
 
 void game_setup(Game* game) {
@@ -445,10 +615,20 @@ void game_setup(Game* game) {
 
     assets_init(&game->assets);
 
-    System* movement_system = system_create(&movement_update, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
-    System* physics_system = system_create(&physics_update, PHYSICS_COMPONENT_BIT);
-    System* render_system = system_create(&render_update, RENDER_COMPONENT_BIT);
-    System* animation_system = system_create(&animation_update, ANIMATION_COMPONENT_BIT);
+    System* physics_system = system_create(&physics_update,
+                                           PHYSICS_COMPONENT_BIT);
+    
+    System* movement_system = system_create(&movement_update,
+                                            TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
+    
+    System* collision_system = system_create(&collision_update,
+                                             COLLISION_COMPONENT_BIT);
+
+    System* animation_system = system_create(&animation_update,
+                                             ANIMATION_COMPONENT_BIT);
+
+    System* render_system = system_create(&render_update,
+                                          RENDER_COMPONENT_BIT);
     
     RenderSystem* render_system_impl = render_system_create(&game->assets);
     render_system->system_impl = render_system_impl;
@@ -461,6 +641,7 @@ void game_setup(Game* game) {
     registry_add_system(registry, physics_system);
     registry_add_system(registry, render_system);
     registry_add_system(registry, animation_system);
+    registry_add_system(registry, collision_system);
 
     map_init(&game->map);
     load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
@@ -477,6 +658,7 @@ void game_setup(Game* game) {
 
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("truck-blue-mat"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
+    VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
 
     render_system_prepare_resources(render_system_impl, &prep);
 
@@ -486,25 +668,28 @@ void game_setup(Game* game) {
 
 void game_update(Game* game) {
     registry_update(&game->registry, game->frame_counter);
-    /* RenderSystem* render_system = registry_get_system(&game->registry)->system_impl; */
-
-    /* render_system_render(render_system); */
-    
-
-/*     #error "Maybe: run render_system_update after registry is done" */
-/*     #error "is this enough to guarantee all systems that could?" */
-/*     #error "affect what we render have ran before we render?" */
-/*     #error "Is it better to create ordering of system update funcs?" */
-/* //    registry_get_systme(&game->registry) */
-/* //    render_system_update(render_sys); */
-
 }
 
 void game_run(Game* game) {
     LOG_INFO("Main loop");
     game->main_loop_running = 1;
 
+    LARGE_INTEGER fps;
+    QueryPerformanceCounter(&fps);
+
     while (game->main_loop_running) {
+        if (game->frame_counter % 60 == 0) {
+            LARGE_INTEGER fps2;
+            QueryPerformanceCounter(&fps2);
+            LARGE_INTEGER elapsed;
+            elapsed.QuadPart = fps2.QuadPart - fps.QuadPart;
+            elapsed.QuadPart *= 1000000;
+            elapsed.QuadPart /= performance_counter_frequency.QuadPart;
+            LOG_INFO("Time 60 frames %ld", elapsed.QuadPart);
+
+            QueryPerformanceCounter(&fps);
+        }
+        
         BeginScopedTimer(frame_time);
 
         LOG_INFO("###### FRAME %zu #####", game->frame_counter);

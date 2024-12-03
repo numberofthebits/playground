@@ -9,10 +9,6 @@ layout (location = 2) flat in uint mat_idx;
 
 layout (location = 0) out vec4 fragColor;
 
-// layout (std430, binding = 19) buffer TextureHandles2D {
-//     sampler2D handles[];
-// };
-
 struct Material {
     sampler2D tex_handle;
     uint color;
@@ -21,12 +17,6 @@ struct Material {
 layout (std430, binding = 20) buffer Materials {
     Material materials[];
 };
-
-/* Is having to flip Y UV coord just a natural consequence of GL and tile maps? */
-/* The map coordinate system has Y as downwards. GL has Y has upwards.*/
-// vec2 map_uv_to_tiled_tex() {
-//     return (vec2(fUV.x, fUV.y) + vec2(fTileIndex.x, 2.0 - fTileIndex.y)) / vec2(10.0, 3.0);
-// }
 
 vec4 uint_to_rgba(uint val) {
     float r = float((val & 0x000000ff));

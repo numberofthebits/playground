@@ -38,6 +38,4 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 // num_entities. No shrink logic implemented.
 Vec* render_system_get_render_data(RenderSystem* system, int num_entities);
 
-void render_system_render(RenderSystem* system);
-
 #endif

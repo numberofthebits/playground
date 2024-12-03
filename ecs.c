@@ -4,9 +4,9 @@
 #include "component.h"
 #include "log.h"
 #include "arena.h"
+#include "system.h"
 
 #define REGISTRY_ENTITY_COMMIT_BUFFER_CAPACITY 1024
-#define SYSTEM_ENTITIES_DEFAULT_CAPACITY 1024
 
 #define REGISTRY_ARENA_SIZE 1024*1024*64
 
@@ -115,16 +115,6 @@ static void print_entity_id_pool(struct EntityIdPool* entity_id_pool) {
     }
 }
 
-static int find_entity_index(Vec* entities, Entity e) {
-    Entity* iter = VEC_ITER_BEGIN_T(entities, Entity);
-    for (int i = 0; i < entities->size; ++i, ++iter) {
-        if (iter->id == e.id) {
-            return i;
-        }
-    }
-    return ENTITY_INVALID_INDEX;
-}
-
 static void zero_system_pointers(System** systems, int count) {
     for (int i = 0; i < count; ++i) {
         *systems = 0;
@@ -134,17 +124,17 @@ static void zero_system_pointers(System** systems, int count) {
 
 void registry_init(Registry* reg,
                    size_t max_entity_count,
-                   Component* components,
+                   const Component* components,
                    size_t component_count)
-{    
-
+{
+    printf("%zu\n", component_count);
     entity_id_pool_init(&reg->entity_id_pool, max_entity_count);
 
     // Initialize all pools to null size null pointer data and
     // null pointer 
     memset(&reg->pools[0], 0x0, sizeof(reg->pools));
     for (int i = 0; i < component_count; ++i) {
-        Component* component = &components[i];
+        const Component* component = &components[i];
         struct Pool pool;
         pool.descriptor = component;
         pool.count = max_entity_count;
@@ -226,14 +216,14 @@ void registry_remove_entity(Registry* reg, Entity e) {
 }
 
 void registry_commit_entities(Registry* reg) {
-    LOG_INFO("Add %d entities", reg->count_to_remove);
+//    LOG_INFO("Add %d entities", reg->count_to_remove);
     for (int i = 0; i < reg->count_to_add; ++i) {
         registry_add_entity_to_systems(reg, reg->to_add[i]);
     }
 
     reg->count_to_add = 0;
 
-    LOG_INFO("Remove %d entities", reg->count_to_remove);
+//    LOG_INFO("Remove %d entities", reg->count_to_remove);
     for (int j = 0; j < reg->count_to_remove; ++j) {
         registry_remove_entity_from_systems(reg, reg->to_remove[j]);
     }
@@ -277,47 +267,17 @@ void registry_update(Registry* reg, size_t frame_index) {
     for (int i = 0; i < SYSTEMS_MAX; ++i) {
         System* system = reg->systems[i];
         if (system) {
+            LOG_INFO("Update system");
             system->update_fn(reg, system, frame_index);
         }
     }
+    
+    BeginScopedTimer(commit_entities);
 
     registry_commit_entities(reg);
+
+    AppendScopedTimer(commit_entities);
+    PrintScopedTimer(commit_entities);
 }
 
-System* system_create(pfnSystemUpdate update_fn, int required_component_flags) {
-    static int system_id = 0;
-    LOG_INFO("Create system with id %d", system_id);
-    System* system = malloc(sizeof(System));
-    system->id = system_id++;
-    system->signature = required_component_flags;
-    system->update_fn = update_fn;
-    system->entities = vec_create();
-    VEC_RESERVE_T(&system->entities, Entity, SYSTEM_ENTITIES_DEFAULT_CAPACITY);
-
-    return system;
-}
-
-void system_add_entity(System* system, Entity e) {
-    int index = find_entity_index(&system->entities, e);
-    if (index != ENTITY_INVALID_INDEX) {
-        LOG_WARN("Entity %d already in System %d", e.id, system->id);
-        return;
-    }
-
-    VEC_PUSH_T(&system->entities, Entity, e);
-}
-
-void system_remove_entity(System* system, Entity e) {
-    int index = find_entity_index(&system->entities, e);
-    if (index == ENTITY_INVALID_INDEX) {
-        LOG_WARN("Entity %d not found in System %d", e.id, system->id);
-        return;
-    }
-
-    VEC_ERASE_T(&system->entities, Entity, index);
-}
-
-void system_require_component(System* sys, int bit) {
-    sys->signature |= bit;
-}
 

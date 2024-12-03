@@ -1,9 +1,5 @@
-#include "vec.h"
-#include "ecs.h"
 #include "log.h"
-#include "render_system.h"
 #include "game.h"
-#include "hashmap.h"
 #include "arena.h"
 
 #include <stdio.h>
@@ -90,19 +86,19 @@ void registry_test() {
 }
 */
 
-struct TestStruct {
-    int arr[9];
-    double lol;
-};
+/* struct TestStruct { */
+/*     int arr[9]; */
+/*     double lol; */
+/* }; */
 
-void test_arena() {   
-    struct ArenaAllocator allocator;
-    arena_init(&allocator, 4096);
-    char* cptr = ArenaAlloc(&allocator, 1, char);
-    int* iptr = ArenaAlloc(&allocator, 1, int);
-    struct TestStruct* tsptr = ArenaAlloc(&allocator, 2, struct TestStruct);
-    exit(1);
-}
+/* void test_arena() {    */
+/*     struct ArenaAllocator allocator; */
+/*     arena_init(&allocator, 4096); */
+/*     char* cptr = ArenaAlloc(&allocator, 1, char); */
+/*     int* iptr = ArenaAlloc(&allocator, 1, int); */
+/*     struct TestStruct* tsptr = ArenaAlloc(&allocator, 2, struct TestStruct); */
+/*     exit(1); */
+/* } */
 
 int main(void) {
 

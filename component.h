@@ -17,6 +17,8 @@ enum ComponentBit {
     RENDER_COMPONENT_BIT = (1U << 1),
     PHYSICS_COMPONENT_BIT = (1U << 2),
     ANIMATION_COMPONENT_BIT = (1U << 3),
+    COLLISION_COMPONENT_BIT = (1U << 4),
+    
     INVALID_COMPONENT_BIT = (1U << 31)
 };
 typedef enum ComponentBit ComponentBit;
@@ -28,15 +30,6 @@ struct Component_t {
     const char* name;
 };
 typedef struct Component_t Component;
-
-int component_index(ComponentBit flag);
-
-int component_flag(int index);
-
-size_t component_size(ComponentBit flag);
-
-const char* component_name(int index);
-
 
 struct Transform_Component_t {
     Vec3f pos;
@@ -61,8 +54,8 @@ typedef struct {
     Vec2f tex_coord_offset;
     Vec2f tex_coord_scale;
     AssetId material_id;
-    uint8_t render_layer;
     AssetId pipeline_id;
+    uint8_t render_layer;
 } RenderComponent;
 
 // inline void render_component_flags_set(RenderComponent* component, RenderComponentFlags flags) {
@@ -79,39 +72,33 @@ struct Physics_Component_t {
 typedef struct Physics_Component_t PhysicsComponent;
 
 struct AnimationComponent_t {
+    float last_offset;
     uint8_t frames_per_animation_frame;
     uint8_t num_animation_frames;
+    uint8_t num_frames_width;
+    uint8_t num_frames_height;
     uint8_t is_playing;
+    
 };
 typedef struct AnimationComponent_t AnimationComponent;
 
-static Component component_table[] = {
-    {
-        .flag = TRANSFORM_COMPONENT_BIT,
-        .size = sizeof(TransformComponent),
-        .alignment = alignof(TransformComponent),
-        .name = "transform"
-    },
-    {
-        .flag = RENDER_COMPONENT_BIT,
-        .size = sizeof(RenderComponent),
-        .alignment = alignof(RenderComponent),
-        .name = "render" },
-    {
-        .flag = PHYSICS_COMPONENT_BIT,
-        .size = sizeof(PhysicsComponent),
-        .alignment = alignof(TransformComponent),
-        .name = "physics"
-    },
-    {
-        .flag = ANIMATION_COMPONENT_BIT,
-        .size = sizeof(AnimationComponent),
-        .alignment = alignof(AnimationComponent),
-        .name = "animation"
-    }
+struct CollisionComponent_t {
+    Rectf bounding_rect;
 };
+typedef struct CollisionComponent_t CollisionComponent;
 
-static size_t component_table_size = sizeof(component_table) / sizeof(Component);
+int component_index(ComponentBit flag);
+
+int component_flag(int index);
+
+size_t component_size(ComponentBit flag);
+
+size_t component_table_size();
+
+const char* component_name(int index);
+
+extern const Component component_table[];
+
 
 
 #endif _COMPONENT_H

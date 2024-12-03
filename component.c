@@ -2,8 +2,44 @@
 
 #include "log.h"
 
+const Component component_table[] = {
+    {
+        .flag = TRANSFORM_COMPONENT_BIT,
+        .size = sizeof(TransformComponent),
+        .alignment = alignof(TransformComponent),
+        .name = "transform"
+    },
+    {
+        .flag = RENDER_COMPONENT_BIT,
+        .size = sizeof(RenderComponent),
+        .alignment = alignof(RenderComponent),
+        .name = "render" },
+    {
+        .flag = PHYSICS_COMPONENT_BIT,
+        .size = sizeof(PhysicsComponent),
+        .alignment = alignof(TransformComponent),
+        .name = "physics"
+    },
+    {
+        .flag = ANIMATION_COMPONENT_BIT,
+        .size = sizeof(AnimationComponent),
+        .alignment = alignof(AnimationComponent),
+        .name = "animation"
+    },
+    {
+        .flag = COLLISION_COMPONENT_BIT,
+        .size = sizeof(CollisionComponent),
+        .alignment = alignof(CollisionComponent),
+        .name = "collision"
+    }
+};
+
+size_t component_table_size() {
+    return sizeof(component_table) / sizeof(Component);
+}
+
 int component_index(ComponentBit flag) {
-    for (int i = 0; i < component_table_size; ++i) {
+    for (int i = 0; i < component_table_size(); ++i) {
         if (component_table[i].flag == flag) {
             return i;
         }
@@ -13,7 +49,7 @@ int component_index(ComponentBit flag) {
 }
 
 ComponentBit component_flag(int index) {
-    if (index >= component_table_size) {
+    if (index >= component_table_size()) {
         return INVALID_COMPONENT_BIT;
     }
     

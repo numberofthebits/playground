@@ -4,7 +4,12 @@
 #include <stdint.h>
 #include <memory.h>
 
-float dot(Vec3f* a, Vec3f* b) {
+
+float dot_vec2f(Vec2f* a, Vec2f* b) {
+    return a->x * b->x + a->y * b->y;
+}
+
+float dot_vec3f(Vec3f* a, Vec3f* b) {
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
@@ -25,16 +30,41 @@ Vec3f scale(Vec3f* v, float scalar) {
     return result;
 }
 
-float magnitude_squared(Vec3f* v) {
+float magnitude_squared_vec2f(Vec2f* v) {
+    return v->x * v->x + v->y * v->y;
+}
+
+float magnitude_squared_vec3f(Vec3f* v) {
     return v->x * v->x + v->y * v->y + v->z * v->z;
 }
 
-float length(Vec3f* v) {
-    return (float)sqrt(magnitude_squared(v));
+float length_vec2f(Vec2f* v) {
+    return (float)sqrt(magnitude_squared_vec2f(v));
 }
 
-Vec3f normalize(Vec3f* v) {
-    float len = length(v);
+float length_vec3f(Vec3f* v) {
+    return (float)sqrt(magnitude_squared_vec3f(v));
+}
+
+Vec2f normalize_vec2f(Vec2f* v) {
+    float len = length_vec2f(v);
+    Vec2f result;
+    result.x = v->x / len;
+    result.y = v->y / len;
+
+    return result;
+}
+
+Vec2f normalize_with_len_vec2f(Vec2f* v, float len) {
+    Vec2f result;
+    result.x = v->x / len;
+    result.y = v->y / len;
+
+    return result;
+}
+
+Vec3f normalize_vec3f(Vec3f* v) {
+    float len = length_vec3f(v);
     Vec3f result;
     result.x = v->x / len;
     result.y = v->y / len;
@@ -42,6 +72,16 @@ Vec3f normalize(Vec3f* v) {
 
     return result;
 }
+
+Vec3f normalize_with_len_vec3f(Vec3f* v, float len) {
+    Vec3f result;
+    result.x = v->x / len;
+    result.y = v->y / len;
+    result.z = v->z / len;
+
+    return result;
+}
+
 
 // Subtract "b" from "a"
 Vec3f sub(Vec3f* a, Vec3f* b) {
@@ -56,13 +96,13 @@ Vec3f sub(Vec3f* a, Vec3f* b) {
 
 Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up) {
     Vec3f dir = sub(pos, target);
-    Vec3f d = normalize(&dir);
-    Vec3f u = normalize(up);
+    Vec3f d = normalize_vec3f(&dir);
+    Vec3f u = normalize_vec3f(up);
     Vec3f r = cross(&u, &d);
     Vec3f t = {
-        dot(pos, &r),
-        dot(pos, &u),
-        dot(pos, &d)
+        dot_vec3f(pos, &r),
+        dot_vec3f(pos, &u),
+        dot_vec3f(pos, &d)
     };
         
     Mat4x4 m = {
@@ -162,6 +202,18 @@ Mat4x4 mul(Mat4x4* a, Mat4x4* b) {
     }
 
     return m;
+}
+
+int intersect_rectf(Rectf* a, Rectf* b) {
+    if (a->pos.x  + a->width  < b->pos.x ||
+        a->pos.x >= b->pos.x  + b->width ||
+        a->pos.y  + a->height < b->pos.y ||
+        a->pos.y >= b->pos.y  + b->height)
+    {
+        return 0;
+    }
+
+    return 1;
 }
 
 // #[derive(Default)]

@@ -211,9 +211,18 @@ static void load_materials(Assets* assets) {
     jungle_map.color.a = 0; // a
     jungle_map.texture_id = assets_make_id_str("jungle.png");
 
+    AssetMaterial chopper_udlr;
+    chopper_udlr.id = assets_make_id_str("chopper-udlr");
+    chopper_udlr.color.r = 255;
+    chopper_udlr.color.g = 255;
+    chopper_udlr.color.b = 255;
+    chopper_udlr.color.a = 255;
+    chopper_udlr.texture_id = assets_make_id_str("chopper-spritesheet.png");
+
     VEC_PUSH_T(&assets->materials, AssetMaterial, truck_red);
     VEC_PUSH_T(&assets->materials, AssetMaterial, truck_blue);
     VEC_PUSH_T(&assets->materials, AssetMaterial, jungle_map);
+    VEC_PUSH_T(&assets->materials, AssetMaterial, chopper_udlr);
 }
 
 void assets_init(Assets* assets) {

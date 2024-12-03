@@ -6,6 +6,11 @@
 #include <memory.h>
 
 #define PI 3.1415927f
+#define PI_MUL_2 2.f * PI
+#define PI_DIV_2 PI / 2.f
+#define PI_3_DIV_4 3.f / 4.f * PI
+#define PI_DIV_4 PI / 4.f
+
 
 typedef struct {
     float x;
@@ -54,13 +59,23 @@ typedef struct {
     float height;
 } Rectf;
 
-float dot(Vec3f* a, Vec3f* b);
+float dot_vec2f(Vec2f* a, Vec2f* b);
+float dot_vec3f(Vec3f* a, Vec3f* b);
+
 Vec3f cross(Vec3f* a, Vec3f* b);
 Vec3f scale(Vec3f* v, float scalar);
-float magnitude_squared(Vec3f* v);
 
-float length(Vec3f* v);
-Vec3f normalize(Vec3f* v);
+float magnitude_squared_vec2f(Vec2f* v);
+float magnitude_squared_vec3f(Vec3f* v);
+
+float length_vec2f(Vec2f* v);
+float length_vec3f(Vec3f* v);
+
+Vec2f normalize_vec2f(Vec2f* v);
+Vec3f normalize_vec3f(Vec3f* v);
+
+Vec2f normalize_with_len_vec2f(Vec2f* v, float len);
+Vec3f normalize_with_len_vec3f(Vec3f* v, float len);
 
 
 // Subtract "b" from "a"
@@ -75,6 +90,8 @@ void translate(Mat4x4* mat, Vec3f* v);
 void scale_mat4(Mat4x4* mat, Vec3f* v);
 void transpose(Mat4x4* mat);
 Mat4x4 mul(Mat4x4* a, Mat4x4* b);
+
+int intersect_rectf(Rectf* a, Rectf* b);
 
 // #[derive(Default)]
 //  struct SphericalCoord {
