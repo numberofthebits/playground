@@ -201,7 +201,7 @@ static void print_transform_component(TransformComponent* tc) {
     LOG_INFO("\tTransform pos (%f, %f) ", tc->pos.x, tc->pos.y);
 }
 
-static void movement_update(Registry* reg, System* system, size_t frame_nr) {
+static void movement_update(Registry* reg, SystemBase* system, size_t frame_nr) {
     BeginScopedTimer(movement_time);
 
     Entity* entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
@@ -220,7 +220,7 @@ static void movement_update(Registry* reg, System* system, size_t frame_nr) {
     PrintScopedTimer(movement_time);
 }
 
-static void physics_update(Registry* reg, System* s, size_t frame_nr) {
+static void physics_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     BeginScopedTimer(physics_time);
 
     Entity* entities = VEC_ITER_BEGIN_T(&s->entities, Entity);
@@ -235,7 +235,7 @@ static void physics_update(Registry* reg, System* s, size_t frame_nr) {
     PrintScopedTimer(physics_time);
 }
 
-static void render_update(Registry* reg, System* s, size_t frame_nr) {
+static void render_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     BeginScopedTimer(render_time);
 
     RenderSystem* render_sys = (RenderSystem*)s->system_impl;
@@ -289,7 +289,7 @@ static void render_update(Registry* reg, System* s, size_t frame_nr) {
     PrintScopedTimer(render_time);
 }
 
-static void animation_update(Registry* reg, System* sys, size_t frame_nr) {
+static void animation_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(animation_time);
 
     struct AnimationSystem* animation_system = sys->system_impl;
@@ -357,7 +357,7 @@ static void animation_update(Registry* reg, System* sys, size_t frame_nr) {
     PrintScopedTimer(animation_time);
 }
 
-static void collision_update(Registry* reg, System* sys, size_t frame_nr) {
+static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(collision_time);
 
     struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
@@ -616,19 +616,19 @@ void game_setup(Game* game) {
 
     assets_init(&game->assets);
 
-    System* physics_system = system_create(&physics_update,
+    SystemBase* physics_system = system_create(&physics_update,
                                            PHYSICS_COMPONENT_BIT);
     
-    System* movement_system = system_create(&movement_update,
+    SystemBase* movement_system = system_create(&movement_update,
                                             TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
     
-    System* collision_system = system_create(&collision_update,
+    SystemBase* collision_system = system_create(&collision_update,
                                              COLLISION_COMPONENT_BIT);
 
-    System* animation_system = system_create(&animation_update,
+    SystemBase* animation_system = system_create(&animation_update,
                                              ANIMATION_COMPONENT_BIT);
 
-    System* render_system = system_create(&render_update,
+    SystemBase* render_system = system_create(&render_update,
                                           RENDER_COMPONENT_BIT);
     
     RenderSystem* render_system_impl = render_system_create(&game->assets);

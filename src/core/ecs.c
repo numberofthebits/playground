@@ -115,7 +115,7 @@ static void print_entity_id_pool(struct EntityIdPool* entity_id_pool) {
     }
 }
 
-static void zero_system_pointers(System** systems, int count) {
+static void zero_system_pointers(SystemBase** systems, int count) {
     for (int i = 0; i < count; ++i) {
         *systems = 0;
         systems++;
@@ -176,7 +176,7 @@ static void registry_add_entity_to_systems(Registry* registry, Entity entity) {
     SignatureT entity_signature = registry->entity_component_signatures[entity_id];
 
     for (int i = 0; i < SYSTEMS_MAX; ++i) {
-        System* system = registry_get_system(registry, i);
+        SystemBase* system = registry_get_system(registry, i);
         if (!system) {
             continue;
         }
@@ -193,7 +193,7 @@ static void registry_remove_entity_from_systems(Registry* registry, Entity entit
     /* int entity_signature = VEC_GET_T(&registry->entity_component_signatures, int, entity_id); */
     SignatureT entity_signature = registry->entity_component_signatures[entity_id];
     for (int i = 0; i < SYSTEMS_MAX; ++i) {
-        System* system = registry_get_system(registry, i);
+        SystemBase* system = registry_get_system(registry, i);
         if(!system) {
             continue;
         }
@@ -254,18 +254,18 @@ void registry_add_component(Registry* reg, Entity e, enum component_bit componen
     *entity_signature |= component;    
 }
 
-void registry_add_system(Registry* reg, System* sys) {
+void registry_add_system(Registry* reg, SystemBase* sys) {
     LOG_INFO("Add system...");
     reg->systems[sys->id] = sys;
 }
 
-System* registry_get_system(Registry* reg, int system_id) {
+SystemBase* registry_get_system(Registry* reg, int system_id) {
     return reg->systems[system_id];
 }
 
 void registry_update(Registry* reg, size_t frame_index) {
     for (int i = 0; i < SYSTEMS_MAX; ++i) {
-        System* system = reg->systems[i];
+        SystemBase* system = reg->systems[i];
         if (system) {
             LOG_INFO("Update system");
             system->update_fn(reg, system, frame_index);

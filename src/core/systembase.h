@@ -5,9 +5,9 @@
 #include "vec.h"
 #include "assetstore.h"
 
-typedef void(*pfnSystemUpdate)(struct Registry_t*, struct System_t*, size_t);
+typedef void(*pfnSystemUpdate)(struct Registry_t*, struct SystemBase_t*, size_t);
 
-struct System_t {
+struct SystemBase_t {
     int id;
     SignatureT signature;
     Vec entities;
@@ -15,16 +15,16 @@ struct System_t {
     void* system_impl;
     Assets* assets;
 };
-typedef struct System_t System;
+typedef struct SystemBase_t SystemBase;
 
 
-System* system_create(pfnSystemUpdate update_fn, int required_component_flags);
+SystemBase* system_create(pfnSystemUpdate update_fn, int required_component_flags);
 
-void system_add_entity(System* system, Entity e);
+void system_add_entity(SystemBase* system, Entity e);
 
-void system_remove_entity(System* sys, Entity e);
+void system_remove_entity(SystemBase* sys, Entity e);
 
-void system_require_component(System* sys, int bit);
+void system_require_component(SystemBase* sys, int bit);
 
 
 #endif _SYSTEM_H

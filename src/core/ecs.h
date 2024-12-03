@@ -35,7 +35,7 @@ struct EntityIdPool {
 struct Registry_t {
     struct Pool pools[COMPONENT_POOLS_MAX];
 
-    System* systems[SYSTEMS_MAX];
+    SystemBase* systems[SYSTEMS_MAX];
 
     struct EntityIdPool entity_id_pool;
 
@@ -66,9 +66,9 @@ struct Pool* registry_get_pool(Registry* reg, enum component_bit bit);
 
 Entity registry_create_entity(Registry* reg);
 
-void registry_add_system(Registry* reg, System* s);
+void registry_add_system(Registry* reg, SystemBase* s);
 
-System* registry_get_system(Registry* reg, int system_id);
+SystemBase* registry_get_system(Registry* reg, int system_id);
 // Process 'to_add' and 'to_remove' lists
 
 void registry_update(Registry* reg, size_t frame_index);
