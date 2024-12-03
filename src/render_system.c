@@ -1,8 +1,9 @@
 #include "render_system.h"
-#include "log.h"
-#include "math.h"
-#include "hashmap.h"
-#include "arena.h"
+
+#include <core/log.h>
+#include <core/math.h>
+#include <core/hashmap.h>
+#include <core/arena.h>
 
 #include <glad/glad.h>
 

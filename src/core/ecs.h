@@ -5,7 +5,7 @@
 #include "component.h"
 #include "assetstore.h"
 #include "types.h"
-#include "system.h"
+#include "systembase.h"
 
 #include <stdint.h>
 #include <stdio.h>

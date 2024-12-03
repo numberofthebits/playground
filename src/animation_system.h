@@ -1,7 +1,7 @@
 #ifndef _ANIMATION_SYSTEM_H
 #define _ANIMATION_SYSTEM_H
 
-#include "ecs.h"
+#include <core/ecs.h>
 
 struct AnimationSystem;
 struct AnimationResource {

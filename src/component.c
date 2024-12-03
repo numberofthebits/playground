@@ -1,6 +1,6 @@
 #include "component.h"
 
-#include "log.h"
+#include <core/log.h>
 
 const Component component_table[] = {
     {

@@ -1,8 +1,8 @@
 #ifndef _COMPONENT_H
 #define _COMPONENT_H
 
-#include "math.h"
-#include "types.h"
+#include <core/math.h>
+#include <core/types.h>
 
 #include <stdalign.h>
 

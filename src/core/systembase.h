@@ -1,5 +1,5 @@
-#ifndef _SYSTEM_H
-#define _SYSTEM_H
+#ifndef _SYSTEMBASE_H
+#define _SYSTEMBASE_H
 
 #include "types.h"
 #include "vec.h"

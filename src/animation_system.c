@@ -1,6 +1,6 @@
 #include "animation_system.h"
 
-#include "arena.h"
+#include <core/arena.h>
 
 struct AnimationSystem {
     Assets* assets;

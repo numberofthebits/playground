@@ -1,10 +1,10 @@
 #ifndef _RENDER_SYSTEM_H
 #define _RENDER_SYSTEM_H
 
-#include "ecs.h"
-#include "types.h"
-#include "assetstore.h"
-#include "vec.h"
+#include <core/ecs.h>
+#include <core/types.h>
+#include <core/assetstore.h>
+#include <core/vec.h>
 
 #include <stdint.h>
 

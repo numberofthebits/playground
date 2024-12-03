@@ -4,7 +4,7 @@
 #include "component.h"
 #include "log.h"
 #include "arena.h"
-#include "system.h"
+#include "systembase.h"
 
 #define REGISTRY_ENTITY_COMMIT_BUFFER_CAPACITY 1024
 

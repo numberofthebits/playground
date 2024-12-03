@@ -1,16 +1,17 @@
 #include "game.h"
 
-#include "arena.h"
-#include "assetstore.h"
 #include "component.h"
-#include "log.h"
-#include "math.h"
 #include "render_system.h"
 #include "animation_system.h"
-#include "os.h"
-#include "ecs.h"
-#include "util.h"
-#include "system.h"
+
+#include <core/arena.h>
+#include <core/assetstore.h>
+#include <core/log.h>
+#include <core/math.h>
+#include <core/os.h>
+#include <core/ecs.h>
+#include <core/util.h>
+#include <core/systembase.h>
 
 // Exclude rarely-used stuff from Windows headers
 #define WIN32_LEAN_AND_MEAN

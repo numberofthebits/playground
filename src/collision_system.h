@@ -1,7 +1,7 @@
 #ifndef _COLLISION_SYSTEM_H
 #define _COLLISION_SYSTEM_H
 
-#include "math.h"
+#include <core/math.h>
 
 struct CollisionSystem {
 
