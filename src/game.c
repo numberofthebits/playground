@@ -1,8 +1,11 @@
 #include "game.h"
 
+#include "system.h"
 #include "component.h"
 #include "render_system.h"
 #include "animation_system.h"
+#include "input_system.h"
+
 
 #include <core/arena.h>
 #include <core/assetstore.h>
@@ -168,11 +171,17 @@ static int load_tile_map_layout(const char* file, Map* map) {
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        LOG_INFO("ESC pressed");
-        Game* game = glfwGetWindowUserPointer(window);
+    Game* game = glfwGetWindowUserPointer(window);
+    SystemBase* base = registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
+    struct InputSystem* input_system = base->system_impl;
+
+    if(key == GLFW_KEY_ESCAPE) {
         game->main_loop_running = 0;
+        return;
     }
+
+    input_system_handle_keyboard(input_system, key, action);
+    
 }
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -214,6 +223,13 @@ static void movement_update(Registry* reg, SystemBase* system, size_t frame_nr) 
         PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity_index);
         tc->pos.x += pc->velocity.x;
         tc->pos.y += pc->velocity.y;
+
+        if (tc->pos.x < 0.f) {
+            pc->velocity.x = -pc->velocity.x;
+        }
+        if (tc->pos.y < 0.f) {
+            pc->velocity.y = -pc->velocity.y;
+        }
     }
     
     AppendScopedTimer(movement_time);
@@ -390,6 +406,38 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     PrintScopedTimer(collision_time);
 }
 
+static void input_update(Registry* registry, SystemBase* sys, size_t frame_nr) {
+    struct InputSystem* input_system = sys->system_impl;
+    struct Pool* physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
+
+    static float key_to_velocity_factor = 0.011f;
+    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+    
+    for(int i = 0; i < sys->entities.size; ++i) {
+        Entity entity = entities[i];
+        PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity.id);
+
+        if (input_system->key_state[GLFW_KEY_UP] == GLFW_PRESS) {
+            pc->velocity.y += key_to_velocity_factor;
+        }
+
+        int lol = GLFW_PRESS;
+        if (input_system->key_state[GLFW_KEY_DOWN] == GLFW_PRESS) {
+            pc->velocity.y -= key_to_velocity_factor;
+        }
+
+        if(input_system->key_state[GLFW_KEY_LEFT] == GLFW_PRESS) {
+            pc->velocity.x -= key_to_velocity_factor;
+        }
+
+        if(input_system->key_state[GLFW_KEY_RIGHT] == GLFW_PRESS) {
+            pc->velocity.x += key_to_velocity_factor;
+        }
+    }
+
+    input_system_reset(input_system);
+}
+
 Game* game_create() {
     timers_init();
     
@@ -462,8 +510,8 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             tc.pos.x = (float)col;
             tc.pos.y = (float)row;
             tc.pos.z = 0.0f;
-            tc.scale.x = 0.5f;
-            tc.scale.y = 0.5f;
+            tc.scale.x = 0.5f;// * 9.f/16.f;
+            tc.scale.y = 0.5f;// * 16.f/9.f;
             /* tc.scale.x_= 1.0f / 50.0f; */
             /* tc.scale.y = 1.0f / 40.0f; */
             tc.rotation = 0.f;
@@ -521,6 +569,8 @@ static void load_units(Registry* registry, Assets* assets) {
         pc.velocity.x = 0.01f;
         pc.velocity.y = -0.01f;
 
+        InputComponent ic = {0};
+        
         registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
@@ -562,50 +612,56 @@ static void load_units(Registry* registry, Assets* assets) {
         ac.is_playing = 1;
         ac.last_offset = 0.f;
 
+        InputComponent ic = {0};
+        
         registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
         registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
+        registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
 
+        /* #error "You've lost your way here. The idea of InputSystem doesn't seem right" */
+        /* #error "The input system is a single set of key strokes appled to N entities, usually 1" */
+        /* #error "The input component becomes an empty tag type just to be able to differentiate between components that are not controllable" */
         registry_add_entity(registry, chopper);
 
-        Entity chopper2 = registry_create_entity(registry);
+        /* Entity chopper2 = registry_create_entity(registry); */
 
-        pc.velocity.x = -0.01f;
-        pc.velocity.y = 0.00f;
+        /* pc.velocity.x = -0.01f; */
+        /* pc.velocity.y = 0.00f; */
 
-        registry_add_component(registry, chopper2, RENDER_COMPONENT_BIT, &rc);
-        registry_add_component(registry, chopper2, TRANSFORM_COMPONENT_BIT, &tc);
-        registry_add_component(registry, chopper2, PHYSICS_COMPONENT_BIT, &pc);
-        registry_add_component(registry, chopper2, ANIMATION_COMPONENT_BIT, &ac);
+        /* registry_add_component(registry, chopper2, RENDER_COMPONENT_BIT, &rc); */
+        /* registry_add_component(registry, chopper2, TRANSFORM_COMPONENT_BIT, &tc); */
+        /* registry_add_component(registry, chopper2, PHYSICS_COMPONENT_BIT, &pc); */
+        /* registry_add_component(registry, chopper2, ANIMATION_COMPONENT_BIT, &ac); */
 
-        registry_add_entity(registry, chopper2);
-
-
-        Entity chopper3 = registry_create_entity(registry);
-
-        pc.velocity.x = 0.00f;
-        pc.velocity.y = 0.01f;
-
-        registry_add_component(registry, chopper3, RENDER_COMPONENT_BIT, &rc);
-        registry_add_component(registry, chopper3, TRANSFORM_COMPONENT_BIT, &tc);
-        registry_add_component(registry, chopper3, PHYSICS_COMPONENT_BIT, &pc);
-        registry_add_component(registry, chopper3, ANIMATION_COMPONENT_BIT, &ac);
-
-        registry_add_entity(registry, chopper3);
+        /* registry_add_entity(registry, chopper2); */
 
 
-        Entity chopper4 = registry_create_entity(registry);
+        /* Entity chopper3 = registry_create_entity(registry); */
 
-        pc.velocity.x = 0.00f;
-        pc.velocity.y = -0.01f;
+        /* pc.velocity.x = 0.00f; */
+        /* pc.velocity.y = 0.01f; */
 
-        registry_add_component(registry, chopper4, RENDER_COMPONENT_BIT, &rc);
-        registry_add_component(registry, chopper4, TRANSFORM_COMPONENT_BIT, &tc);
-        registry_add_component(registry, chopper4, PHYSICS_COMPONENT_BIT, &pc);
-        registry_add_component(registry, chopper4, ANIMATION_COMPONENT_BIT, &ac);
+        /* registry_add_component(registry, chopper3, RENDER_COMPONENT_BIT, &rc); */
+        /* registry_add_component(registry, chopper3, TRANSFORM_COMPONENT_BIT, &tc); */
+        /* registry_add_component(registry, chopper3, PHYSICS_COMPONENT_BIT, &pc); */
+        /* registry_add_component(registry, chopper3, ANIMATION_COMPONENT_BIT, &ac); */
 
-        registry_add_entity(registry, chopper4);
+        /* registry_add_entity(registry, chopper3); */
+
+
+        /* Entity chopper4 = registry_create_entity(registry); */
+
+        /* pc.velocity.x = 0.00f; */
+        /* pc.velocity.y = -0.01f; */
+
+        /* registry_add_component(registry, chopper4, RENDER_COMPONENT_BIT, &rc); */
+        /* registry_add_component(registry, chopper4, TRANSFORM_COMPONENT_BIT, &tc); */
+        /* registry_add_component(registry, chopper4, PHYSICS_COMPONENT_BIT, &pc); */
+        /* registry_add_component(registry, chopper4, ANIMATION_COMPONENT_BIT, &ac); */
+
+        /* registry_add_entity(registry, chopper4); */
 
     }
 
@@ -616,33 +672,61 @@ void game_setup(Game* game) {
 
     assets_init(&game->assets);
 
-    SystemBase* physics_system = system_create(&physics_update,
-                                           PHYSICS_COMPONENT_BIT);
-    
-    SystemBase* movement_system = system_create(&movement_update,
-                                            TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
-    
-    SystemBase* collision_system = system_create(&collision_update,
-                                             COLLISION_COMPONENT_BIT);
+    /*     MOVEMENT_SYSTEM_BIT = (1U << 0), */
+    /* RENDER_SYSTEM_BIT = (1U << 1), */
+    /* COLLISION_SYSTEM_BIT = (1U << 2), */
+    /* ANIMATION_SYSTEM_BIT = (1U << 3), */
 
-    SystemBase* animation_system = system_create(&animation_update,
-                                             ANIMATION_COMPONENT_BIT);
+    /* SystemBase* physics_system = system_create( */
+        
+    /*     &physics_update, */
+    /*     PHYSICS_COMPONENT_BIT); */
 
-    SystemBase* render_system = system_create(&render_update,
-                                          RENDER_COMPONENT_BIT);
+    SystemBase* input_system = system_create(
+        INPUT_SYSTEM_BIT,
+        &input_update,
+        INPUT_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
+
+    SystemBase* movement_system = system_create(
+        MOVEMENT_SYSTEM_BIT,
+        &movement_update,
+        TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
     
-    RenderSystem* render_system_impl = render_system_create(&game->assets);
+    SystemBase* collision_system = system_create(
+        COLLISION_SYSTEM_BIT,
+        &collision_update,
+        COLLISION_COMPONENT_BIT);
+
+    SystemBase* animation_system = system_create(
+        ANIMATION_SYSTEM_BIT,
+        &animation_update,
+        ANIMATION_COMPONENT_BIT);
+
+    SystemBase* render_system = system_create(
+        RENDER_SYSTEM_BIT,
+        &render_update,
+        RENDER_COMPONENT_BIT);
+
+
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, greenbits=%d, bluebits=%d,refresh rate=%d",
+             mode->width, mode->height, mode->redBits, mode->greenBits, mode->blueBits, mode->refreshRate);
+
+    RenderSystem* render_system_impl = render_system_create(&game->assets, mode->width, mode->height);
     render_system->system_impl = render_system_impl;
+    animation_system->system_impl = animation_system_create(&game->assets);
+    input_system->system_impl = input_system_create();
     
-    struct AnimationSystem* animation_system_impl = animation_system_create(&game->assets);
-
     Registry* registry = &game->registry;
     
     registry_add_system(registry, movement_system);
-    registry_add_system(registry, physics_system);
+    /* registry_add_system(registry, physics_system); */
     registry_add_system(registry, render_system);
     registry_add_system(registry, animation_system);
     registry_add_system(registry, collision_system);
+    registry_add_system(registry, input_system);
+
 
     map_init(&game->map);
     load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
@@ -722,7 +806,13 @@ void game_destroy(Game* game) {
 
 void game_frame_buffer_size_changed(Game* game, int width, int height) {
     LOG_INFO("Framebuffer size changed: (%d, %d)", width, height);
-    glViewport(0, 0, width, height);
+    SystemBase* system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
+    if (!system) {
+        LOG_ERROR("Failed to resize frame buffer: System not found");
+    }
+
+    RenderSystem* render_system = system->system_impl;
+    render_system_frame_buffer_size_changed(render_system, width, height);
 }
 
 void game_window_size_changed(Game* game, int width, int height) {

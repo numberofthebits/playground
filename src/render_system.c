@@ -50,6 +50,11 @@ typedef struct {
 } Material;
 
 
+struct Framebuffer {
+    int width;
+    int height;
+};
+
 struct RenderSystem_t {
     DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
     DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
@@ -66,6 +71,7 @@ struct RenderSystem_t {
     GLuint tilemap;
     GLuint vao;
     unsigned int count;
+    struct Framebuffer main_framebuffer;
 };
 
 #define CHECK_GL_ERROR()                                        \
@@ -201,7 +207,7 @@ void render_system_create_program(RenderSystem* system, AssetId program_id) {
 }
 
 
-RenderSystem* render_system_create(Assets* assets ) {
+RenderSystem* render_system_create(Assets* assets, int initial_width, int initial_height ) {
     LOG_INFO("Create render system implementation...");
     // init function pointer loader 
     gladLoadGL();
@@ -216,6 +222,8 @@ RenderSystem* render_system_create(Assets* assets ) {
     system->assets = assets;
     system->render_data = vec_create();
     system->materials = vec_create();
+    system->main_framebuffer.width = initial_width;
+    system->main_framebuffer.height = initial_height;;
 
 
     hash_map_init(&system->programs, 100);
@@ -537,7 +545,14 @@ void render_system_update(RenderSystem* system) {
             glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
             CHECK_GL_ERROR();
 
-            Mat4x4 proj_mat = perspective(0.1f, 10.0f, 65.f, 800.f / 600.f);
+            /* Mat4x4 proj_mat = perspective(0.1f, */
+            /*                               10.0f, */
+            /*                               65.f, */
+            /*                               (float)system->main_framebuffer.width / */
+            /*                               (float)system->main_framebuffer.height); */
+            float scale = 1.0f;
+            float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
+            Mat4x4 proj_mat = ortho(0.01f, 2.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
             glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
             CHECK_GL_ERROR();
         }
@@ -592,3 +607,8 @@ void render_system_update(RenderSystem* system) {
     render_batch(system, count_in_batch);
 }
 
+void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height) {
+    render_system->main_framebuffer.width = width;
+    render_system->main_framebuffer.height = height;
+    glViewport(0, 0, width, height);
+}

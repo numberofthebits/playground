@@ -18,6 +18,7 @@ enum ComponentBit {
     PHYSICS_COMPONENT_BIT = (1U << 2),
     ANIMATION_COMPONENT_BIT = (1U << 3),
     COLLISION_COMPONENT_BIT = (1U << 4),
+    INPUT_COMPONENT_BIT = (1U << 5),
     
     INVALID_COMPONENT_BIT = (1U << 31)
 };
@@ -86,6 +87,12 @@ struct CollisionComponent_t {
     Rectf bounding_rect;
 };
 typedef struct CollisionComponent_t CollisionComponent;
+
+struct InputComponent_t {
+    uint8_t dummy;
+};
+typedef struct InputComponent_t InputComponent;
+
 
 int component_index(ComponentBit flag);
 

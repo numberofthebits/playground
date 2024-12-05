@@ -14,6 +14,8 @@ cl.exe ^
  ./src/game.c^
  ./src/main.c^
  ./src/render_system.c^
+ ./src/system.c^
+ ./src/input_system.c^
  .\libs\glad\src\glad.c ^
  Shlwapi.lib ^
  "./libs/GLFW/lib/glfw3dll.lib"^

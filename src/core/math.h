@@ -85,6 +85,7 @@ Mat4x4 zero();
     
 Mat4x4 identity();
 Mat4x4 perspective(float near, float far, float fov, float aspect);
+Mat4x4 ortho(float near, float far, float right, float left, float top, float bottom);
 
 void translate(Mat4x4* mat, Vec3f* v);
 void scale_mat4(Mat4x4* mat, Vec3f* v);

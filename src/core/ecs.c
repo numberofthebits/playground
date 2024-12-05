@@ -248,8 +248,6 @@ void registry_add_component(Registry* reg, Entity e, enum component_bit componen
     ptrdiff_t ptr_offset = e.id * pool->descriptor->size;
     memcpy((char*)pool->data + ptr_offset, data, pool->descriptor->size);
 
-    /* int* entity_signature = VEC_GET_T_PTR(&reg->entity_component_signatures, int, e.id); */
-
     SignatureT* entity_signature = &reg->entity_component_signatures[e.id];
     *entity_signature |= component;    
 }
@@ -267,7 +265,6 @@ void registry_update(Registry* reg, size_t frame_index) {
     for (int i = 0; i < SYSTEMS_MAX; ++i) {
         SystemBase* system = reg->systems[i];
         if (system) {
-            LOG_INFO("Update system");
             system->update_fn(reg, system, frame_index);
         }
     }

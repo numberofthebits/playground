@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct RenderSystem_t RenderSystem;
 
-RenderSystem* render_system_create(Assets* assets);
+RenderSystem* render_system_create(Assets* assets, int intitial_width, int initial_height);
 
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources);
 
@@ -37,5 +37,7 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 // Get the render jobs vector and ensure it has space for at least
 // num_entities. No shrink logic implemented.
 Vec* render_system_get_render_data(RenderSystem* system, int num_entities);
+
+void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height);
 
 #endif

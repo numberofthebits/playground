@@ -161,6 +161,22 @@ Mat4x4 perspective(float near, float far, float fov, float aspect) {
     return m;
 }
 
+Mat4x4 ortho(float near, float far, float right, float left, float top, float bottom) {
+    Mat4x4 m = identity();
+    // TODO: Transpose assignments instead of calling transpose runtime
+    m.data[0] = 2.f / (right - left);
+    m.data[5] = 2.f / (top - bottom);
+    m.data[10] = -2.f / (far - near);
+    m.data[12] = -(right + left) / (right - left);
+    m.data[13] = -(top + bottom) / (top - bottom);
+    m.data[14] = -(far + near)  / (far - near);
+    m.data[15] = 1.f;
+
+
+    transpose(&m);
+    return m;
+}
+
 void translate(Mat4x4* mat, Vec3f* v) {
     mat->data[12] += v->x;
     mat->data[13] += v->y;

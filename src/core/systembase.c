@@ -16,11 +16,10 @@ static int find_entity_index(Vec* entities, Entity e) {
     return ENTITY_INVALID_INDEX;
 }
 
-SystemBase* system_create(pfnSystemUpdate update_fn, int required_component_flags) {
-    static int system_id = 0;
+SystemBase* system_create(int system_id, pfnSystemUpdate update_fn, int required_component_flags) {
     LOG_INFO("Create system with id %d", system_id);
     SystemBase* system = malloc(sizeof(SystemBase));
-    system->id = system_id++;
+    system->id = system_id;
     system->signature = required_component_flags;
     system->update_fn = update_fn;
     system->entities = vec_create();

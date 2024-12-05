@@ -15,7 +15,6 @@
 #define COMPONENT_POOLS_MAX 32
 #define SYSTEMS_MAX 32
 
-
 struct Pool {
     void* data;
     size_t count;

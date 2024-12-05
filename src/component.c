@@ -7,30 +7,36 @@ const Component component_table[] = {
         .flag = TRANSFORM_COMPONENT_BIT,
         .size = sizeof(TransformComponent),
         .alignment = alignof(TransformComponent),
-        .name = "transform"
+        .name = "TransformComponent"
     },
     {
         .flag = RENDER_COMPONENT_BIT,
         .size = sizeof(RenderComponent),
         .alignment = alignof(RenderComponent),
-        .name = "render" },
+        .name = "RenderComponent" },
     {
         .flag = PHYSICS_COMPONENT_BIT,
         .size = sizeof(PhysicsComponent),
         .alignment = alignof(TransformComponent),
-        .name = "physics"
+        .name = "PhysicsComponent"
     },
     {
         .flag = ANIMATION_COMPONENT_BIT,
         .size = sizeof(AnimationComponent),
         .alignment = alignof(AnimationComponent),
-        .name = "animation"
+        .name = "AnimationComponent"
     },
     {
         .flag = COLLISION_COMPONENT_BIT,
         .size = sizeof(CollisionComponent),
         .alignment = alignof(CollisionComponent),
-        .name = "collision"
+        .name = "CollisionComponent"
+    },
+    {
+        .flag = INPUT_COMPONENT_BIT,
+        .size = sizeof(InputComponent),
+        .alignment = alignof(InputComponent),
+        .name = "InputComponent"
     }
 };
 
