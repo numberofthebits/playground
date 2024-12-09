@@ -19,7 +19,7 @@ struct SystemBase_t {
 };
 typedef struct SystemBase_t SystemBase;
 
-SystemBase* system_create(int system_id, pfnSystemUpdate update_fn, int required_component_flags);
+void system_base_init(SystemBase* system, int system_id, pfnSystemUpdate update_fn, int required_component_flags, Assets* assets);
 
 void system_add_entity(SystemBase* system, Entity e);
 

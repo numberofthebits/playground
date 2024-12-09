@@ -3,8 +3,11 @@
 #include "system.h"
 #include "component.h"
 #include "render_system.h"
+#include "collision_system.h"
 #include "animation_system.h"
+#include "movement_system.h"
 #include "input_system.h"
+#include "time_system.h"
 
 #include <core/arena.h>
 #include <core/assetstore.h>
@@ -172,16 +175,14 @@ static int load_tile_map_layout(const char* file, Map* map) {
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     Game* game = glfwGetWindowUserPointer(window);
 
-    SystemBase* base = registry_get_system(&game->registry, INPUT_SYSTEM_BIT); */
-    struct InputSystem* input_system = base->system_impl;
-
+    struct InputSystem* input_system = (struct InputSystem*)registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
+    
     if(key == GLFW_KEY_ESCAPE) {
         game->main_loop_running = 0;
         return;
     }
 
     input_system_handle_keyboard(input_system, key, action);
-    
 }
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -251,11 +252,11 @@ static void physics_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     PrintScopedTimer(physics_time);
 }
 
-static void render_update(Registry* reg, SystemBase* s, size_t frame_nr) {
+static void render_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(render_time);
 
-    RenderSystem* render_sys = (RenderSystem*)s->system_impl;
-    Entity* entities = VEC_ITER_BEGIN_T(&s->entities, Entity);
+    RenderSystem* render_sys = (RenderSystem*)sys;
+    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 
     // This assumes knowledge of which pools the system needs.
     // That seems okay, since the implementation of a system can't
@@ -267,9 +268,9 @@ static void render_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     // WHY is was this knowledge of the pools needed considered bad?
     struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-    Vec* render_data = render_system_get_render_data(render_sys, s->entities.size);
+    Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size);
     
-    for (int i = 0; i < s->entities.size; ++i) {
+    for (int i = 0; i < sys->entities.size; ++i) {
         Entity entity = entities[i];
         TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
         RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
@@ -308,7 +309,7 @@ static void render_update(Registry* reg, SystemBase* s, size_t frame_nr) {
 static void animation_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(animation_time);
 
-    struct AnimationSystem* animation_system = sys->system_impl;
+    struct AnimationSystem* animation_system = (struct AnimationSystem*)sys;
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
     struct Pool* animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
     struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
@@ -407,7 +408,7 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
 }
 
 static void input_update(Registry* registry, SystemBase* sys, size_t frame_nr) {
-    struct InputSystem* input_system = sys->system_impl;
+    struct InputSystem* input_system = (struct InputSystem*)sys;
     struct Pool* physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
     if (input_system_is_key_pressed(input_system, GLFW_KEY_SPACE)) {
         Entity e = registry_create_entity(registry);
@@ -736,57 +737,42 @@ void game_setup(Game* game) {
     /*     &physics_update, */
     /*     PHYSICS_COMPONENT_BIT); */
 
-    SystemBase* input_system = system_create(
-        INPUT_SYSTEM_BIT,
-        &input_update,
-        INPUT_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
+    struct InputSystem* input_system = input_system_create(
+        &input_update);
 
-    SystemBase* movement_system = system_create(
-        MOVEMENT_SYSTEM_BIT,
-        &movement_update,
-        TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT);
+    struct MovementSystem* movement_system = movement_system_create(
+        &movement_update);
     
-    SystemBase* collision_system = system_create(
-        COLLISION_SYSTEM_BIT,
-        &collision_update,
-        COLLISION_COMPONENT_BIT);
+    struct CollisionSystem* collision_system = collision_system_create(
+        &collision_update);
 
-    SystemBase* animation_system = system_create(
-        ANIMATION_SYSTEM_BIT,
+    struct AnimationSystem* animation_system = animation_system_create(
         &animation_update,
-        ANIMATION_COMPONENT_BIT);
+        &game->assets);
 
-    SystemBase* time_system = system_create(
-        TIME_SYSTEM_BIT,
+    struct TimeSystem* time_system = time_system_create(
         &time_update,
-        TIME_COMPONENT_BIT
-        );
-
-    SystemBase* render_system = system_create(
-        RENDER_SYSTEM_BIT,
-        &render_update,
-        RENDER_COMPONENT_BIT);
- 
+        &game->assets);
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, greenbits=%d, bluebits=%d,refresh rate=%d",
              mode->width, mode->height, mode->redBits, mode->greenBits, mode->blueBits, mode->refreshRate);
 
-    RenderSystem* render_system_impl = render_system_create(&game->assets, mode->width, mode->height);
-    render_system->system_impl = render_system_impl;
-    animation_system->system_impl = animation_system_create(&game->assets);
-    input_system->system_impl = input_system_create();
-    
+    struct RenderSystem* render_system = render_system_create(
+        &render_update,
+        &game->assets,
+        mode->width, mode->height);
+
     Registry* registry = &game->registry;
     
-    registry_add_system(registry, movement_system);
+    registry_add_system(registry, (SystemBase*)movement_system);
     /* registry_add_system(registry, physics_system); */
-    registry_add_system(registry, animation_system);
-    registry_add_system(registry, collision_system);
-    registry_add_system(registry, input_system);
-    registry_add_system(registry, time_system);
-    registry_add_system(registry, render_system);
+    registry_add_system(registry, (SystemBase*)animation_system);
+    registry_add_system(registry, (SystemBase*)collision_system);
+    registry_add_system(registry, (SystemBase*)input_system);
+    registry_add_system(registry, (SystemBase*)time_system);
+    registry_add_system(registry, (SystemBase*)render_system);
  
 
     map_init(&game->map);
@@ -807,7 +793,7 @@ void game_setup(Game* game) {
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
 
-    render_system_prepare_resources(render_system_impl, &prep);
+    render_system_prepare_resources(render_system, &prep);
 
     // Push our initial entities before entering main loop
     registry_commit_entities(registry);
@@ -868,12 +854,11 @@ void game_destroy(Game* game) {
 
 void game_frame_buffer_size_changed(Game* game, int width, int height) {
     LOG_INFO("Framebuffer size changed: (%d, %d)", width, height);
-    SystemBase* system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
+    RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
     if (!system) {
         LOG_ERROR("Failed to resize frame buffer: System not found");
     }
 
-    RenderSystem* render_system = system->system_impl;
     render_system_frame_buffer_size_changed(render_system, width, height);
 }
 

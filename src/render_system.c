@@ -1,5 +1,8 @@
 #include "render_system.h"
 
+#include "component.h"
+#include "system.h"
+
 #include <core/log.h>
 #include <core/math.h>
 #include <core/hashmap.h>
@@ -11,7 +14,6 @@
 #include <stb_image.h>
 #include <stdint.h>
 
-#define MAX_DRAW_INDIRECT_DRAW_COMMANDS 10000
 #define MAX_BINDLESS_TEXTURE_2D_HANDLES sizeof(GLuint64) * 16384
 #define MAX_MATERIALS 10000
 
@@ -26,53 +28,6 @@
 #define BO_INDEX_MATERIALS 20
 #define BO_INDEX_MAX 32
 
-
-
-typedef struct {
-    unsigned int count;
-    unsigned int instance_count;
-    unsigned int first_index;
-    int base_vertex;
-    unsigned int base_instance;
-} DrawElementsIndirectCommand;
-
-typedef struct {
-    Mat4x4 model; // 64 bytes
-    Vec2f tex_coord_offset; // 8 bytes
-    Vec2f tex_coord_scale; // 8 bytes
-    unsigned int material_index; // 4 bytes
-    char padding[12];
-} DrawCommandDataTiled;
-
-typedef struct {
-    GLuint64 handle;
-    Vec4u8 color;
-} Material;
-
-
-struct Framebuffer {
-    int width;
-    int height;
-};
-
-struct RenderSystem_t {
-    DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
-    DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
-    HashMap material_asset_index_mapping;
-    HashMap textures;
-    // Program asset ID => GL program handle
-    HashMap programs;
-    Vec render_data;
-    // Keep track of which materials we've seen as
-    // Key: AssetId, Value: Material SSBO vector index
-    Vec materials;
-    GLuint buffer_objects[32];
-    Assets* assets;
-    GLuint tilemap;
-    GLuint vao;
-    unsigned int count;
-    struct Framebuffer main_framebuffer;
-};
 
 #define CHECK_GL_ERROR()                                        \
     if(glGetError() != GL_NO_ERROR) {                           \
@@ -207,7 +162,7 @@ void render_system_create_program(RenderSystem* system, AssetId program_id) {
 }
 
 
-RenderSystem* render_system_create(Assets* assets, int initial_width, int initial_height ) {
+RenderSystem* render_system_create(pfnSystemUpdate callback, Assets* assets, int initial_width, int initial_height ) {
     LOG_INFO("Create render system implementation...");
     // init function pointer loader 
     gladLoadGL();
@@ -217,8 +172,10 @@ RenderSystem* render_system_create(Assets* assets, int initial_width, int initia
     glClearColor(0.f, 0.0f, 0.0f, 255.f);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    RenderSystem* system = malloc(sizeof(RenderSystem));
+
+    RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
+    system_base_init((SystemBase*)system, RENDER_SYSTEM_BIT, callback, RENDER_COMPONENT_BIT, assets);
+
     system->assets = assets;
     system->render_data = vec_create();
     system->materials = vec_create();

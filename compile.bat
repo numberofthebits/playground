@@ -1,5 +1,7 @@
 cl.exe ^
  ./src/animation_system.c^
+ ./src/collision_system.c^
+ ./src/time_system.c^
  ./src/component.c^
  ./src/core/arena.c^
  ./src/core/assetstore.c^
@@ -14,6 +16,7 @@ cl.exe ^
  ./src/core/vec.c^
  ./src/game.c^
  ./src/main.c^
+ ./src/movement_system.c^
  ./src/render_system.c^
  ./src/system.c^
  ./src/input_system.c^

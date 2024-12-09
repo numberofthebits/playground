@@ -1,12 +1,13 @@
-#ifndef _COLLISION_SYSTEM_H
-#define _COLLISION_SYSTEM_H
+#ifndef COLLISION_SYSTEM_H
+#define COLLISION_SYSTEM_H
 
-#include <core/math.h>
+#include <core/systembase.h>
 
 struct CollisionSystem {
-
+    SystemBase base;
 };
 
+struct CollisionSystem* collision_system_create(pfnSystemUpdate callback);
 
 
-#endif _COLLITION_SYSTEM_H
+#endif COLLITION_SYSTEM_H

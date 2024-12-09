@@ -1,21 +1,27 @@
 #include "input_system.h"
 
+#include "system.h"
+#include "component.h"
+
 #include <core/arena.h>
 
 #include <GLFW/glfw3.h>
 
 #include <memory.h>
 
-struct InputSystem* input_system_create() {
-    struct InputSystem* impl =
+struct InputSystem* input_system_create(pfnSystemUpdate update_callback) {
+    struct InputSystem* system =
         ArenaAlloc(&allocator, 1, struct InputSystem);
-
-    input_system_reset(impl);
-    return impl;
+    
+    system_base_init((SystemBase*)system, INPUT_SYSTEM_BIT, update_callback, INPUT_COMPONENT_BIT, 0);
+    
+    input_system_reset(system);
+    
+    return system;
 }
 
 void input_system_handle_keyboard(struct InputSystem* system, int key, int action) {
-    struct EventBus* bus = system->event_bus;
+    struct EventBus* bus = system->base.event_bus;
 
     system->key_state[key] = (uint8_t)action == 0 ? 0 : 1;
 }

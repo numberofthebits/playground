@@ -1,21 +1,28 @@
-#ifndef _ANIMATION_SYSTEM_H
-#define _ANIMATION_SYSTEM_H
+#ifndef ANIMATION_SYSTEM_H
+#define ANIMATION_SYSTEM_H
 
+#include <core/systembase.h>
 #include <core/ecs.h>
+#include <core/assetstore.h>
 
-struct AnimationSystem;
+struct AnimationSystem {
+    SystemBase base;
+};
+
 struct AnimationResource {
     AssetId texture_id;
     uint8_t tile_width;
     uint8_t tile_height;
 };
+
 struct AnimationResources {
     struct AnimationResource* resources;
     size_t count;
 };
-struct AnimationSystem* animation_system_create(Assets* assets);
+
+struct AnimationSystem* animation_system_create(pfnSystemUpdate update_callback, Assets* assets);
 
 void animation_system_prepare(struct AnimationSystem* sys, struct AnimationResources* resources);
 
 
-#endif // _ANIMATION_SYSTEM_H
+#endif

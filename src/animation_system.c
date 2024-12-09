@@ -1,21 +1,19 @@
 #include "animation_system.h"
 
+#include "system.h"
+
+#include <core/assetstore.h>
+#include <core/systembase.h>
 #include <core/arena.h>
 
-struct AnimationSystem {
-    Assets* assets;
-};
-
-struct AnimationSystem* animation_system_create(Assets* assets) {
-    struct AnimationSystem* impl =
+struct AnimationSystem* animation_system_create(pfnSystemUpdate update_callback, Assets* assets) {
+    struct AnimationSystem* system =
         ArenaAlloc(&allocator, 1, struct AnimationSystem);
-    impl->assets = assets;
-
-    return impl;
+    system_base_init((SystemBase*)system, ANIMATION_SYSTEM_BIT, update_callback, ANIMATION_COMPONENT_BIT, assets);
+     
+    return system;
 }
 
 void animation_system_prepare(struct AnimationSystem* sys, struct AnimationResources* resources) {
-    /* for (int i = 0; i < resources->count; ++i) { */
-        
-    /* } */
+    ;
 }

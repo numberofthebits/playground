@@ -1,6 +1,7 @@
 #include "systembase.h"
 
 #include "types.h"
+#include <core/arena.h>
 
 #include <stdlib.h>
 
@@ -16,16 +17,13 @@ static int find_entity_index(Vec* entities, Entity e) {
     return ENTITY_INVALID_INDEX;
 }
 
-SystemBase* system_create(int system_id, pfnSystemUpdate update_fn, int required_component_flags) {
-    LOG_INFO("Create system with id %d", system_id);
-    SystemBase* system = malloc(sizeof(SystemBase));
+void system_base_init(SystemBase* system, int system_id, pfnSystemUpdate update_fn, int required_component_flags, Assets* assets) {
     system->id = system_id;
     system->signature = required_component_flags;
     system->update_fn = update_fn;
     system->entities = vec_create();
+    system->assets = assets;
     VEC_RESERVE_T(&system->entities, Entity, SYSTEM_ENTITIES_DEFAULT_CAPACITY);
-
-    return system;
 }
 
 void system_add_entity(SystemBase* system, Entity e) {
@@ -60,7 +58,7 @@ void system_subscribe_to_events(SystemBase* sys, int event_id, EventCallback cal
 void system_emit_event(SystemBase* sys, int event_id, void* event_data) {
     struct Event event;
     event.id = event_id;
-    event.data = event_data;
+    event.event_data = event_data;
     
     event_bus_publish(sys->event_bus, sys->id, event);
 }

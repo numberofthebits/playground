@@ -5,8 +5,39 @@
 #include <core/types.h>
 #include <core/assetstore.h>
 #include <core/vec.h>
+#include <core/systembase.h>
+
+#include <glad/glad.h>
 
 #include <stdint.h>
+
+#define MAX_DRAW_INDIRECT_DRAW_COMMANDS 10000
+
+typedef struct {
+    unsigned int count;
+    unsigned int instance_count;
+    unsigned int first_index;
+    int base_vertex;
+    unsigned int base_instance;
+} DrawElementsIndirectCommand;
+
+typedef struct {
+    Mat4x4 model; // 64 bytes
+    Vec2f tex_coord_offset; // 8 bytes
+    Vec2f tex_coord_scale; // 8 bytes
+    unsigned int material_index; // 4 bytes
+    char padding[12];
+} DrawCommandDataTiled;
+
+typedef struct {
+    GLuint64 handle;
+    Vec4u8 color;
+} Material;
+
+struct Framebuffer {
+    int width;
+    int height;
+};
 
 typedef struct {
     Mat4x4 model_matrix;
@@ -24,9 +55,28 @@ typedef struct {
     Vec material_ids;
 } PreparedResources;
 
-typedef struct RenderSystem_t RenderSystem;
+struct RenderSystem {
+    SystemBase base;
+    DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    HashMap material_asset_index_mapping;
+    HashMap textures;
+    // Program asset ID => GL program handle
+    HashMap programs;
+    Vec render_data;
+    // Keep track of which materials we've seen as
+    // Key: AssetId, Value: Material SSBO vector index
+    Vec materials;
+    GLuint buffer_objects[32];
+    Assets* assets;
+    GLuint tilemap;
+    GLuint vao;
+    unsigned int count;
+    struct Framebuffer main_framebuffer;
+};
+typedef struct RenderSystem RenderSystem;
 
-RenderSystem* render_system_create(Assets* assets, int intitial_width, int initial_height);
+RenderSystem* render_system_create(pfnSystemUpdate callback, Assets* assets, int intitial_width, int initial_height);
 
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources);
 

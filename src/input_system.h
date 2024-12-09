@@ -2,6 +2,7 @@
 #define INPUT_SYSTEM_H
 
 #include <core/util.h>
+#include <core/systembase.h>
 
 #include <stdint.h>
 
@@ -10,10 +11,11 @@ enum InputSystemEvent {
 };
 
 struct InputSystem {
+    SystemBase base;
     uint8_t key_state[512];
 };
 
-struct InputSystem* input_system_create();
+struct InputSystem* input_system_create(pfnSystemUpdate update_callback);
 
 void input_system_handle_keyboard(struct InputSystem* input_system, int key, int action);
 
