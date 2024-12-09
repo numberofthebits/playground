@@ -35,6 +35,7 @@ struct Registry_t {
     struct Pool pools[COMPONENT_POOLS_MAX];
 
     SystemBase* systems[SYSTEMS_MAX];
+    size_t num_systems;
 
     struct EntityIdPool entity_id_pool;
 
@@ -50,6 +51,8 @@ struct Registry_t {
     // Dynamically allocated signatures array sized. Must
     // be 'num_entities' size always
     SignatureT* entity_component_signatures;
+
+    struct EventBus event_bus;
 };
 typedef struct Registry_t Registry;
 
@@ -60,7 +63,7 @@ void registry_init(Registry* registry, size_t max_entity_count, const Component*
 
 struct Pool* registry_get_pool(Registry* reg, enum component_bit bit);
 
-#define RegistryGetComponent(pool, type, index) \
+#define PoolGetComponent(pool, type, index) \
     ((type*)pool->data) + index;
 
 Entity registry_create_entity(Registry* reg);

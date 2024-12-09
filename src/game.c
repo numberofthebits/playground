@@ -6,7 +6,6 @@
 #include "animation_system.h"
 #include "input_system.h"
 
-
 #include <core/arena.h>
 #include <core/assetstore.h>
 #include <core/log.h>
@@ -172,7 +171,8 @@ static int load_tile_map_layout(const char* file, Map* map) {
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     Game* game = glfwGetWindowUserPointer(window);
-    SystemBase* base = registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
+
+    SystemBase* base = registry_get_system(&game->registry, INPUT_SYSTEM_BIT); */
     struct InputSystem* input_system = base->system_impl;
 
     if(key == GLFW_KEY_ESCAPE) {
@@ -219,8 +219,8 @@ static void movement_update(Registry* reg, SystemBase* system, size_t frame_nr) 
     
     for (int i = 0; i < system->entities.size; ++i) {
         const int entity_index = entities[i].id;
-        TransformComponent* tc = RegistryGetComponent(transform_pool, TransformComponent, entity_index);
-        PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity_index);
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity_index);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity_index);
         tc->pos.x += pc->velocity.x;
         tc->pos.y += pc->velocity.y;
 
@@ -271,8 +271,8 @@ static void render_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     
     for (int i = 0; i < s->entities.size; ++i) {
         Entity entity = entities[i];
-        TransformComponent* tc = RegistryGetComponent(transform_pool, TransformComponent, entity.id);
-        RenderComponent* rc = RegistryGetComponent(render_pool, RenderComponent, entity.id);
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
+        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
 
         RenderData* rd = VEC_GET_T_PTR(render_data, RenderData, entity.id);
 
@@ -317,10 +317,10 @@ static void animation_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     
     for (int i = 0; i < sys->entities.size; ++i) {
         Entity entity = entities[i];
-        PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity.id);
-        RenderComponent* rc = RegistryGetComponent(render_pool, RenderComponent, entity.id);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.id);
+        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
         AnimationComponent* ac =
-            RegistryGetComponent(animation_pool, AnimationComponent, entity.id);
+            PoolGetComponent(animation_pool, AnimationComponent, entity.id);
         size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) % ac->num_animation_frames * ac->is_playing;
 
         float offset = 0;            
@@ -383,8 +383,8 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     
     for (int i = 0; i < sys->entities.size; ++i) {
         Entity self = entities[i];
-        CollisionComponent* self_collision = RegistryGetComponent(collision_pool, CollisionComponent, self.id);
-        TransformComponent* self_transform = RegistryGetComponent(transform_pool, TransformComponent, self.id);
+        CollisionComponent* self_collision = PoolGetComponent(collision_pool, CollisionComponent, self.id);
+        TransformComponent* self_transform = PoolGetComponent(transform_pool, TransformComponent, self.id);
             
         for (int j = i; i < sys->entities.size; ++j) {
             Entity other = entities[j];
@@ -393,8 +393,8 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
                 continue;
             }
             
-            TransformComponent* other_transform = RegistryGetComponent(transform_pool, TransformComponent, other.id);
-            CollisionComponent* other_collision = RegistryGetComponent(collision_pool, CollisionComponent, other.id);
+            TransformComponent* other_transform = PoolGetComponent(transform_pool, TransformComponent, other.id);
+            CollisionComponent* other_collision = PoolGetComponent(collision_pool, CollisionComponent, other.id);
 
             if (intersect_rectf(&self_collision->bounding_rect, &other_collision->bounding_rect)) {
                 LOG_INFO("YOU HAVE TAKEN THE LEAD");
@@ -409,13 +409,54 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
 static void input_update(Registry* registry, SystemBase* sys, size_t frame_nr) {
     struct InputSystem* input_system = sys->system_impl;
     struct Pool* physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
+    if (input_system_is_key_pressed(input_system, GLFW_KEY_SPACE)) {
+        Entity e = registry_create_entity(registry);
 
+        TransformComponent tc = {0};
+        tc.pos.x = 0.f;
+        tc.pos.y = 0.f;
+        tc.pos.z = 0.01f;
+        tc.scale.x = 0.2f;
+        tc.scale.y = 0.2f;
+        tc.rotation = 0.f;
+            
+        registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+
+        PhysicsComponent pc = {0};
+        pc.velocity.x = 0.1f;
+        pc.velocity.y = 0.1f;
+
+        registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+
+        RenderComponent rc;
+        rc.render_layer = 0;
+            
+        rc.tex_coord_offset.x = 0.f;
+        rc.tex_coord_offset.y = 0.f;
+        rc.tex_coord_scale.x = 1.0f;
+        rc.tex_coord_scale.y = 1.0f;
+        rc.material_id = assets_make_id_str("bullet-mat");
+        rc.pipeline_id = assets_make_id_str("tilemap");
+            
+        registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+
+        TimeComponent ttc = {0};
+        ttc.created = time_now();
+        uint64_t expires = time_from_secs(1);
+        ttc.expires = ttc.created + expires;
+
+        registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
+
+        registry_add_entity(registry, e);
+
+    }
+    
     static float key_to_velocity_factor = 0.011f;
     Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
     
     for(int i = 0; i < sys->entities.size; ++i) {
         Entity entity = entities[i];
-        PhysicsComponent* pc = RegistryGetComponent(physics_pool, PhysicsComponent, entity.id);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.id);
 
         if (input_system->key_state[GLFW_KEY_UP] == GLFW_PRESS) {
             pc->velocity.y += key_to_velocity_factor;
@@ -436,6 +477,22 @@ static void input_update(Registry* registry, SystemBase* sys, size_t frame_nr) {
     }
 
     input_system_reset(input_system);
+}
+
+void time_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
+    struct Pool* time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
+
+    static float key_to_velocity_factor = 0.011f;
+    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+    
+    for(int i = 0; i < sys->entities.size; ++i) {
+        Entity e = entities[i];
+        TimeComponent* tc = PoolGetComponent(time_pool, TimeComponent, e.id);
+        
+        if (time_expired(tc->created, tc->expires)) {
+            registry_remove_entity(reg, e);
+        }
+    }
 }
 
 Game* game_create() {
@@ -620,9 +677,6 @@ static void load_units(Registry* registry, Assets* assets) {
         registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
         registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
 
-        /* #error "You've lost your way here. The idea of InputSystem doesn't seem right" */
-        /* #error "The input system is a single set of key strokes appled to N entities, usually 1" */
-        /* #error "The input component becomes an empty tag type just to be able to differentiate between components that are not controllable" */
         registry_add_entity(registry, chopper);
 
         /* Entity chopper2 = registry_create_entity(registry); */
@@ -702,11 +756,17 @@ void game_setup(Game* game) {
         &animation_update,
         ANIMATION_COMPONENT_BIT);
 
+    SystemBase* time_system = system_create(
+        TIME_SYSTEM_BIT,
+        &time_update,
+        TIME_COMPONENT_BIT
+        );
+
     SystemBase* render_system = system_create(
         RENDER_SYSTEM_BIT,
         &render_update,
         RENDER_COMPONENT_BIT);
-
+ 
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -722,11 +782,12 @@ void game_setup(Game* game) {
     
     registry_add_system(registry, movement_system);
     /* registry_add_system(registry, physics_system); */
-    registry_add_system(registry, render_system);
     registry_add_system(registry, animation_system);
     registry_add_system(registry, collision_system);
     registry_add_system(registry, input_system);
-
+    registry_add_system(registry, time_system);
+    registry_add_system(registry, render_system);
+ 
 
     map_init(&game->map);
     load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
@@ -744,6 +805,7 @@ void game_setup(Game* game) {
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("truck-blue-mat"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
+    VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
 
     render_system_prepare_resources(render_system_impl, &prep);
 

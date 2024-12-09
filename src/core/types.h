@@ -14,10 +14,11 @@ typedef struct {
 typedef uint32_t AssetId;
 typedef uint8_t SignatureT;
 typedef int EntityId;
+typedef size_t EntityIndex;
 
 struct Entity_t {
+    EntityIndex index;
     EntityId id;
-    size_t index;
 };
 typedef struct Entity_t Entity;
 

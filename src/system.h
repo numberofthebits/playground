@@ -2,13 +2,14 @@
 #define SYSTEM_H
 
 enum SystemBit {
-    MOVEMENT_SYSTEM_BIT = (1U << 0),
-    RENDER_SYSTEM_BIT = (1U << 1),
+    MOVEMENT_SYSTEM_BIT =  (1U << 0),
+    RENDER_SYSTEM_BIT =    (1U << 1),
     COLLISION_SYSTEM_BIT = (1U << 2),
     ANIMATION_SYSTEM_BIT = (1U << 3),
-    INPUT_SYSTEM_BIT = (1U << 4),
-
-    INVALID_SYSTEM_BIT = (1U << 31)
+    INPUT_SYSTEM_BIT =     (1U << 4),
+    TIME_SYSTEM_BIT =      (1U << 5),
+    
+    INVALID_SYSTEM_BIT =   (1U << 31)
 };
 typedef enum SystemBit SystemBit;
 

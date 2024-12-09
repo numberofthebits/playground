@@ -4,6 +4,7 @@ cl.exe ^
  ./src/core/arena.c^
  ./src/core/assetstore.c^
  ./src/core/ecs.c^
+ ./src/core/eventbus.c^
  ./src/core/hashmap.c^
  ./src/core/log.c^
  ./src/core/math.c^

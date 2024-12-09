@@ -45,9 +45,22 @@ void system_remove_entity(SystemBase* system, Entity e) {
         return;
     }
 
+    LOG_INFO("Remove entity ID %d with index from system %d", e.id, e.index, system->id);
     VEC_ERASE_T(&system->entities, Entity, index);
 }
 
 void system_require_component(SystemBase* sys, int bit) {
     sys->signature |= bit;
+}
+
+void system_subscribe_to_events(SystemBase* sys, int event_id, EventCallback callback) {
+    event_bus_subscribe(sys->event_bus, sys->id, event_id, callback);
+}
+
+void system_emit_event(SystemBase* sys, int event_id, void* event_data) {
+    struct Event event;
+    event.id = event_id;
+    event.data = event_data;
+    
+    event_bus_publish(sys->event_bus, sys->id, event);
 }

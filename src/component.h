@@ -19,6 +19,7 @@ enum ComponentBit {
     ANIMATION_COMPONENT_BIT = (1U << 3),
     COLLISION_COMPONENT_BIT = (1U << 4),
     INPUT_COMPONENT_BIT = (1U << 5),
+    TIME_COMPONENT_BIT = (1U << 6),
     
     INVALID_COMPONENT_BIT = (1U << 31)
 };
@@ -93,6 +94,11 @@ struct InputComponent_t {
 };
 typedef struct InputComponent_t InputComponent;
 
+struct TimeComponent_t {
+    uint64_t created;
+    uint64_t expires;
+};
+typedef struct TimeComponent_t TimeComponent;
 
 int component_index(ComponentBit flag);
 

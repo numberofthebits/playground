@@ -223,6 +223,15 @@ static void load_materials(Assets* assets) {
     VEC_PUSH_T(&assets->materials, AssetMaterial, truck_blue);
     VEC_PUSH_T(&assets->materials, AssetMaterial, jungle_map);
     VEC_PUSH_T(&assets->materials, AssetMaterial, chopper_udlr);
+
+    AssetMaterial bullet;
+    bullet.id = assets_make_id_str("bullet-mat");
+    bullet.color.r = 255;
+    bullet.color.g = 255;
+    bullet.color.b = 255;
+    bullet.color.a = 0;
+    bullet.texture_id = assets_make_id_str("bullet.png");
+    VEC_PUSH_T(&assets->materials, AssetMaterial, bullet);
 }
 
 void assets_init(Assets* assets) {

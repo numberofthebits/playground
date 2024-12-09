@@ -37,6 +37,12 @@ const Component component_table[] = {
         .size = sizeof(InputComponent),
         .alignment = alignof(InputComponent),
         .name = "InputComponent"
+    },
+    {
+        .flag = TIME_COMPONENT_BIT,
+        .size = sizeof(TimeComponent),
+        .alignment = alignof(TimeComponent),
+        .name = "TimeComponent"
     }
 };
 
