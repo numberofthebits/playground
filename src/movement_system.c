@@ -4,12 +4,42 @@
 #include "component.h"
 
 #include <core/arena.h>
+#include <core/systembase.h>
+#include <core/ecs.h>
 
-struct MovementSystem* movement_system_create(pfnSystemUpdate update_callback) {
+static void movement_update(Registry* reg, struct SystemBase* system, size_t frame_nr) {
+    BeginScopedTimer(movement_time);
+
+    Entity* entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
+    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+    struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
+    
+    for (int i = 0; i < system->entities.size; ++i) {
+        const int entity_index = entities[i].id;
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity_index);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity_index);
+        tc->pos.x += pc->velocity.x;
+        tc->pos.y += pc->velocity.y;
+
+        if (tc->pos.x < 0.f) {
+            pc->velocity.x = -pc->velocity.x;
+        }
+        
+        if (tc->pos.y < 0.f) {
+            pc->velocity.y = -pc->velocity.y;
+        }
+    }
+    
+    AppendScopedTimer(movement_time);
+    PrintScopedTimer(movement_time);
+}
+
+
+struct MovementSystem* movement_system_create(struct EventBus* event_bus) {
     struct MovementSystem* system =
         ArenaAlloc(&allocator, 1, struct MovementSystem);
     
-    system_base_init((SystemBase*)system, MOVEMENT_SYSTEM_BIT, update_callback, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, 0);
+    system_base_init((struct SystemBase*)system, MOVEMENT_SYSTEM_BIT, &movement_update, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, 0, event_bus);
     
     return system;
 }

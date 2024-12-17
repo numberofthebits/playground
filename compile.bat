@@ -20,6 +20,7 @@ cl.exe ^
  ./src/render_system.c^
  ./src/system.c^
  ./src/input_system.c^
+ ./src/player_system.c^
  .\libs\glad\src\glad.c ^
  Shlwapi.lib ^
  "./libs/GLFW/lib/glfw3dll.lib"^

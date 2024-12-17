@@ -1,26 +1,51 @@
 #ifndef INPUT_SYSTEM_H
 #define INPUT_SYSTEM_H
 
+#include <core/ecs.h>
 #include <core/util.h>
 #include <core/systembase.h>
 
 #include <stdint.h>
 
-enum InputSystemEvent {
-    KeyPressed
+#define INPUT_SYSTEM_MAX_KEY_STATES 512
+
+enum KeyFlag {
+    KeyFlag_Released = 0x1,
+    KeyFlag_Pressed = 0x2
+};
+
+struct KeyState {
+    uint64_t time_start;
+    uint64_t elapsed;
+    int flags;
+};
+
+struct KeyStateEventData {
+    uint64_t elapsed;
+    int key;
+};
+
+struct AggregatedKeyboardEvents {
+    size_t num_events;
+    struct KeyStateEventData* events;
 };
 
 struct InputSystem {
-    SystemBase base;
-    uint8_t key_state[512];
+    struct SystemBase base;
+
+    // Working data structure for callbacks from OS
+    struct KeyState keys[INPUT_SYSTEM_MAX_KEY_STATES];
+
+    // Processed list of keystrokes for event_bus
+    struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
 };
 
-struct InputSystem* input_system_create(pfnSystemUpdate update_callback);
+struct InputSystem* input_system_create(struct EventBus* event_bus);
 
-void input_system_handle_keyboard(struct InputSystem* input_system, int key, int action);
+void input_system_handle_keyboard_input(struct InputSystem* input_system, int key, int action);
+
+void input_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr);
 
 void input_system_reset(struct InputSystem* input_system);
-
-int input_system_is_key_pressed(struct InputSystem* input_system, int key_code);
 
 #endif

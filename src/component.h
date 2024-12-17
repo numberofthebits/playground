@@ -20,6 +20,7 @@ enum ComponentBit {
     COLLISION_COMPONENT_BIT = (1U << 4),
     INPUT_COMPONENT_BIT = (1U << 5),
     TIME_COMPONENT_BIT = (1U << 6),
+//    PLAYER_COMPONENT_BIT = (1U << 7),
     
     INVALID_COMPONENT_BIT = (1U << 31)
 };
@@ -79,8 +80,7 @@ struct AnimationComponent_t {
     uint8_t num_animation_frames;
     uint8_t num_frames_width;
     uint8_t num_frames_height;
-    uint8_t is_playing;
-    
+    uint8_t is_playing;    
 };
 typedef struct AnimationComponent_t AnimationComponent;
 
@@ -99,6 +99,11 @@ struct TimeComponent_t {
     uint64_t expires;
 };
 typedef struct TimeComponent_t TimeComponent;
+
+// struct PlayerComponent_t {
+
+// };
+// typedef struct PlayerComponent_t PlayerComponent;
 
 int component_index(ComponentBit flag);
 

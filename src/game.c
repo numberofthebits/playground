@@ -8,6 +8,8 @@
 #include "movement_system.h"
 #include "input_system.h"
 #include "time_system.h"
+#include "player_system.h"
+#include "event.h"
 
 #include <core/arena.h>
 #include <core/assetstore.h>
@@ -21,6 +23,8 @@
 // Exclude rarely-used stuff from Windows headers
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#include <core/eventbus.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -46,7 +50,8 @@ struct Game_t {
     GLFWwindow* window;
     Assets assets;
     Map map;
-
+    struct EventBus event_bus;
+    
     int main_loop_running;
     size_t frame_counter;
 };
@@ -174,7 +179,7 @@ static int load_tile_map_layout(const char* file, Map* map) {
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     Game* game = glfwGetWindowUserPointer(window);
-
+    
     struct InputSystem* input_system = (struct InputSystem*)registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
     
     if(key == GLFW_KEY_ESCAPE) {
@@ -182,7 +187,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         return;
     }
 
-    input_system_handle_keyboard(input_system, key, action);
+    input_system_handle_keyboard_input(input_system, key, action);
 }
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -211,33 +216,8 @@ static void print_transform_component(TransformComponent* tc) {
     LOG_INFO("\tTransform pos (%f, %f) ", tc->pos.x, tc->pos.y);
 }
 
-static void movement_update(Registry* reg, SystemBase* system, size_t frame_nr) {
-    BeginScopedTimer(movement_time);
 
-    Entity* entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
-    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-    struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
-    
-    for (int i = 0; i < system->entities.size; ++i) {
-        const int entity_index = entities[i].id;
-        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity_index);
-        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity_index);
-        tc->pos.x += pc->velocity.x;
-        tc->pos.y += pc->velocity.y;
-
-        if (tc->pos.x < 0.f) {
-            pc->velocity.x = -pc->velocity.x;
-        }
-        if (tc->pos.y < 0.f) {
-            pc->velocity.y = -pc->velocity.y;
-        }
-    }
-    
-    AppendScopedTimer(movement_time);
-    PrintScopedTimer(movement_time);
-}
-
-static void physics_update(Registry* reg, SystemBase* s, size_t frame_nr) {
+static void physics_update(Registry* reg, struct SystemBase* s, size_t frame_nr) {
     BeginScopedTimer(physics_time);
 
     Entity* entities = VEC_ITER_BEGIN_T(&s->entities, Entity);
@@ -252,129 +232,8 @@ static void physics_update(Registry* reg, SystemBase* s, size_t frame_nr) {
     PrintScopedTimer(physics_time);
 }
 
-static void render_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
-    BeginScopedTimer(render_time);
 
-    RenderSystem* render_sys = (RenderSystem*)sys;
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
-
-    // This assumes knowledge of which pools the system needs.
-    // That seems okay, since the implementation of a system can't
-    // not need to know about the components. But we already have
-    // this information in the system's signature
-    //
-    // PS: Write better explanations of your thinking when you
-    // have a ideas or concerns. The notes above are not exactly clear.
-    // WHY is was this knowledge of the pools needed considered bad?
-    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-    struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-    Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size);
-    
-    for (int i = 0; i < sys->entities.size; ++i) {
-        Entity entity = entities[i];
-        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
-        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
-
-        RenderData* rd = VEC_GET_T_PTR(render_data, RenderData, entity.id);
-
-        rd->render_layer = rc->render_layer;
-        
-        Vec3f scale;
-        scale.x = tc->scale.x;
-        scale.y = tc->scale.y;
-        scale.z = 1.0f;
-        
-        Vec3f pos;
-        pos.x = tc->pos.x;
-        pos.y = tc->pos.y;
-        pos.z = tc->pos.z;
-
-        rd->tex_coord_offset = rc->tex_coord_offset;
-        rd->tex_coord_scale = rc->tex_coord_scale;
-        rd->model_matrix = identity();
-
-        scale_mat4(&rd->model_matrix, &scale);
-        translate(&rd->model_matrix, &pos);
-
-        rd->material_id = rc->material_id;
-        rd->program_id = rc->pipeline_id;
-    }
-
-    render_system_update(render_sys);
-
-    AppendScopedTimer(render_time);
-    PrintScopedTimer(render_time);
-}
-
-static void animation_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
-    BeginScopedTimer(animation_time);
-
-    struct AnimationSystem* animation_system = (struct AnimationSystem*)sys;
-    struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-    struct Pool* animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
-    struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
-
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
-    
-    for (int i = 0; i < sys->entities.size; ++i) {
-        Entity entity = entities[i];
-        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.id);
-        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
-        AnimationComponent* ac =
-            PoolGetComponent(animation_pool, AnimationComponent, entity.id);
-        size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) % ac->num_animation_frames * ac->is_playing;
-
-        float offset = 0;            
-        float len = length_vec2f(&pc->velocity);
- 
-        if (len) {
-            Vec2f normalized_velocity = normalize_with_len_vec2f(&pc->velocity, len);
-            Vec2f x_axis = {
-                .x = 1.f,
-                .y = 0.f
-            };
-            Vec2f y_axis = {
-                .x = 0.f,
-                .y = 1.f
-            };
-            float dp_x = dot_vec2f(&normalized_velocity, &x_axis);
-            float dp_y = dot_vec2f(&normalized_velocity, &y_axis);
-
-            // Pick which contributes the most to our direction
-            if (fabs(dp_x) > fabs(dp_y)) {
-                if (dp_x > 0) {
-                    // We're going right ish
-                    offset = 1.f;
-                } else {
-                    // left ish
-                    offset = 3.f;
-                }                
-            } else {
-                if (dp_y > 0) {
-                    // up
-                    offset = 0.f;
-                } else {
-                    // down
-                    offset = 2.f;
-                }
-            }
-
-            ac->last_offset = offset;
-
-        }
-        
-        rc->tex_coord_scale.x = 1.f / ac->num_frames_width;
-        rc->tex_coord_scale.y = 1.f / ac->num_frames_height;
-
-        rc->tex_coord_offset.x = 1.f / ac->num_frames_width * animation_frame_nr;
-        rc->tex_coord_offset.y = ((float)ac->num_frames_height - 1.f - ac->last_offset) / (float)ac->num_frames_height;
-    }
-
-    AppendScopedTimer(animation_time);
-    PrintScopedTimer(animation_time);
-}
-
-static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
+static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(collision_time);
 
     struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
@@ -407,97 +266,11 @@ static void collision_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
     PrintScopedTimer(collision_time);
 }
 
-static void input_update(Registry* registry, SystemBase* sys, size_t frame_nr) {
-    struct InputSystem* input_system = (struct InputSystem*)sys;
-    struct Pool* physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
-    if (input_system_is_key_pressed(input_system, GLFW_KEY_SPACE)) {
-        Entity e = registry_create_entity(registry);
-
-        TransformComponent tc = {0};
-        tc.pos.x = 0.f;
-        tc.pos.y = 0.f;
-        tc.pos.z = 0.01f;
-        tc.scale.x = 0.2f;
-        tc.scale.y = 0.2f;
-        tc.rotation = 0.f;
-            
-        registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-
-        PhysicsComponent pc = {0};
-        pc.velocity.x = 0.1f;
-        pc.velocity.y = 0.1f;
-
-        registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-
-        RenderComponent rc;
-        rc.render_layer = 0;
-            
-        rc.tex_coord_offset.x = 0.f;
-        rc.tex_coord_offset.y = 0.f;
-        rc.tex_coord_scale.x = 1.0f;
-        rc.tex_coord_scale.y = 1.0f;
-        rc.material_id = assets_make_id_str("bullet-mat");
-        rc.pipeline_id = assets_make_id_str("tilemap");
-            
-        registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-
-        TimeComponent ttc = {0};
-        ttc.created = time_now();
-        uint64_t expires = time_from_secs(1);
-        ttc.expires = ttc.created + expires;
-
-        registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
-
-        registry_add_entity(registry, e);
-
-    }
-    
-    static float key_to_velocity_factor = 0.011f;
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
-    
-    for(int i = 0; i < sys->entities.size; ++i) {
-        Entity entity = entities[i];
-        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.id);
-
-        if (input_system->key_state[GLFW_KEY_UP] == GLFW_PRESS) {
-            pc->velocity.y += key_to_velocity_factor;
-        }
-
-        int lol = GLFW_PRESS;
-        if (input_system->key_state[GLFW_KEY_DOWN] == GLFW_PRESS) {
-            pc->velocity.y -= key_to_velocity_factor;
-        }
-
-        if(input_system->key_state[GLFW_KEY_LEFT] == GLFW_PRESS) {
-            pc->velocity.x -= key_to_velocity_factor;
-        }
-
-        if(input_system->key_state[GLFW_KEY_RIGHT] == GLFW_PRESS) {
-            pc->velocity.x += key_to_velocity_factor;
-        }
-    }
-
-    input_system_reset(input_system);
-}
-
-void time_update(Registry* reg, SystemBase* sys, size_t frame_nr) {
-    struct Pool* time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
-
-    static float key_to_velocity_factor = 0.011f;
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
-    
-    for(int i = 0; i < sys->entities.size; ++i) {
-        Entity e = entities[i];
-        TimeComponent* tc = PoolGetComponent(time_pool, TimeComponent, e.id);
-        
-        if (time_expired(tc->created, tc->expires)) {
-            registry_remove_entity(reg, e);
-        }
-    }
-}
 
 Game* game_create() {
-    timers_init();
+    Game* game = ArenaAlloc(&allocator, 1, Game);
+    
+    game->frame_counter = 0;
     
     if(!glfwInit()) {
         LOG_ERROR("GLFW init failed");
@@ -529,15 +302,60 @@ Game* game_create() {
         return 0;
     }
 
-    Game* game = ArenaAlloc(&allocator, 1, Game);
-
-    game->window = window;
-
-    registry_init(&game->registry, MAX_ENTITIES, component_table, component_table_size());
-
-    game->frame_counter = 0;
-
     glfwSetWindowUserPointer(window, game);
+    game->window = window;    
+    
+    registry_init(&game->registry, MAX_ENTITIES, component_table, component_table_size());
+    assets_init(&game->assets);
+    event_bus_init(&game->event_bus);
+
+    timers_init();
+    
+    struct InputSystem* input_system = input_system_create(
+        &game->event_bus);
+
+    struct PlayerSystem* player_system = player_system_create(
+        &game->event_bus);
+
+    struct MovementSystem* movement_system = movement_system_create(
+        &game->event_bus);
+    
+    struct CollisionSystem* collision_system = collision_system_create(
+        &collision_update,
+        &game->event_bus);
+
+    struct AnimationSystem* animation_system = animation_system_create(
+        &game->assets,
+        &game->event_bus);
+
+    struct TimeSystem* time_system = time_system_create(
+        &game->assets,
+        &game->event_bus);
+
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, greenbits=%d, bluebits=%d,refresh rate=%d",
+             mode->width,
+             mode->height,
+             mode->redBits,
+             mode->greenBits,
+             mode->blueBits,
+             mode->refreshRate);
+
+    struct RenderSystem* render_system = render_system_create(
+        &game->assets,
+        &game->event_bus,
+        mode->width,
+        mode->height);
+    
+    registry_add_system(&game->registry, (struct SystemBase*)movement_system);
+    /* registry_add_system(registry, physics_system); */
+    registry_add_system(&game->registry, (struct SystemBase*)animation_system);
+    registry_add_system(&game->registry, (struct SystemBase*)collision_system);
+    registry_add_system(&game->registry, (struct SystemBase*)input_system);
+    registry_add_system(&game->registry, (struct SystemBase*)time_system);
+    registry_add_system(&game->registry, (struct SystemBase*)render_system);
+    registry_add_system(&game->registry, (struct SystemBase*)player_system);
 
     return game;
 }
@@ -725,62 +543,13 @@ static void load_units(Registry* registry, Assets* assets) {
 void game_setup(Game* game) {
     LOG_INFO("Setup");
 
-    assets_init(&game->assets);
-
-    /*     MOVEMENT_SYSTEM_BIT = (1U << 0), */
-    /* RENDER_SYSTEM_BIT = (1U << 1), */
-    /* COLLISION_SYSTEM_BIT = (1U << 2), */
-    /* ANIMATION_SYSTEM_BIT = (1U << 3), */
-
-    /* SystemBase* physics_system = system_create( */
-        
-    /*     &physics_update, */
-    /*     PHYSICS_COMPONENT_BIT); */
-
-    struct InputSystem* input_system = input_system_create(
-        &input_update);
-
-    struct MovementSystem* movement_system = movement_system_create(
-        &movement_update);
-    
-    struct CollisionSystem* collision_system = collision_system_create(
-        &collision_update);
-
-    struct AnimationSystem* animation_system = animation_system_create(
-        &animation_update,
-        &game->assets);
-
-    struct TimeSystem* time_system = time_system_create(
-        &time_update,
-        &game->assets);
-
-    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, greenbits=%d, bluebits=%d,refresh rate=%d",
-             mode->width, mode->height, mode->redBits, mode->greenBits, mode->blueBits, mode->refreshRate);
-
-    struct RenderSystem* render_system = render_system_create(
-        &render_update,
-        &game->assets,
-        mode->width, mode->height);
-
-    Registry* registry = &game->registry;
-    
-    registry_add_system(registry, (SystemBase*)movement_system);
-    /* registry_add_system(registry, physics_system); */
-    registry_add_system(registry, (SystemBase*)animation_system);
-    registry_add_system(registry, (SystemBase*)collision_system);
-    registry_add_system(registry, (SystemBase*)input_system);
-    registry_add_system(registry, (SystemBase*)time_system);
-    registry_add_system(registry, (SystemBase*)render_system);
- 
 
     map_init(&game->map);
     load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
-    map_load(&game->map, registry, &game->assets);
+    map_load(&game->map, &game->registry, &game->assets);
     map_print(&game->map);
     
-    load_units(registry, &game->assets);
+    load_units(&game->registry, &game->assets);
     
     PreparedResources prep;
     prep.program_ids = vec_create();
@@ -793,14 +562,20 @@ void game_setup(Game* game) {
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
 
+    RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
     render_system_prepare_resources(render_system, &prep);
 
     // Push our initial entities before entering main loop
-    registry_commit_entities(registry);
+    registry_commit_entities(&game->registry);
 }
 
 void game_update(Game* game) {
+    struct SystemBase* player_system_base = registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
+
+    event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);
+
     registry_update(&game->registry, game->frame_counter);
+    event_bus_reset(&game->event_bus);
 }
 
 void game_run(Game* game) {
@@ -811,21 +586,21 @@ void game_run(Game* game) {
     QueryPerformanceCounter(&fps);
 
     while (game->main_loop_running) {
-        if (game->frame_counter % 60 == 0) {
-            LARGE_INTEGER fps2;
-            QueryPerformanceCounter(&fps2);
-            LARGE_INTEGER elapsed;
-            elapsed.QuadPart = fps2.QuadPart - fps.QuadPart;
-            elapsed.QuadPart *= 1000000;
-            elapsed.QuadPart /= performance_counter_frequency.QuadPart;
-            LOG_INFO("Time 60 frames %ld", elapsed.QuadPart);
+        /* if (game->frame_counter % 60 == 0) { */
+        /*     LARGE_INTEGER fps2; */
+        /*     QueryPerformanceCounter(&fps2); */
+        /*     LARGE_INTEGER elapsed; */
+        /*     elapsed.QuadPart = fps2.QuadPart - fps.QuadPart; */
+        /*     elapsed.QuadPart *= 1000000; */
+        /*     elapsed.QuadPart /= performance_counter_frequency.QuadPart; */
+        /*     LOG_INFO("Time 60 frames %ld", elapsed.QuadPart); */
 
-            QueryPerformanceCounter(&fps);
-        }
+        /*     QueryPerformanceCounter(&fps); */
+        /* } */
         
         BeginScopedTimer(frame_time);
 
-        LOG_INFO("###### FRAME %zu #####", game->frame_counter);
+//        LOG_INFO("###### FRAME %zu #####", game->frame_counter);
         glfwPollEvents();
 
         BeginScopedTimer(update_time);

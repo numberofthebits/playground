@@ -119,7 +119,7 @@ static Entity create_entity(struct EntityIdPool* entity_id_pool) {
 }
 
 
-static void zero_system_pointers(SystemBase** systems, size_t count) {
+static void zero_system_pointers(struct SystemBase** systems, size_t count) {
     for (int i = 0; i < count; ++i) {
         *systems = 0;
         systems++;
@@ -159,8 +159,6 @@ void registry_init(Registry* reg,
     reg->entity_component_signatures = ArenaAlloc(&allocator, max_entity_count, SignatureT);
 
     reg->num_systems = 0;
-
-    event_bus_init(&reg->event_bus);
 }
 
 struct Pool* registry_get_pool(Registry* reg, enum component_bit bit) {
@@ -183,7 +181,7 @@ static void registry_add_entity_to_systems(Registry* registry, Entity entity) {
     SignatureT entity_signature = registry->entity_component_signatures[entity_index];
 
     for (int i = 0; i < registry->num_systems; ++i) {
-        SystemBase* system = registry->systems[i];
+        struct SystemBase* system = registry->systems[i];
         if (!system) {
             continue;
         }
@@ -200,7 +198,7 @@ static void registry_remove_entity_from_systems(Registry* registry, Entity entit
     SignatureT entity_signature = registry->entity_component_signatures[entity_index];
     
     for (int i = 0; i < registry->num_systems; ++i) {
-        SystemBase* system = registry_get_system(registry, i);
+        struct SystemBase* system = registry->systems[i];
         if(!system) {
             continue;
         }
@@ -261,15 +259,15 @@ void registry_add_component(Registry* reg, Entity e, enum component_bit componen
     *entity_signature |= component;    
 }
 
-void registry_add_system(Registry* reg, SystemBase* sys) {
+void registry_add_system(Registry* reg, struct SystemBase* sys) {
     if (reg->num_systems >= SYSTEMS_MAX) {
         LOG_EXIT("%zu would SYSTEMS_MAX %zu", reg->num_systems, SYSTEMS_MAX);
     }
-    LOG_INFO("Add system...");
+    LOG_INFO("Add system ID %d", sys->id);
     reg->systems[reg->num_systems++] = sys;
 }
 
-SystemBase* registry_get_system(Registry* reg, int system_id) {
+struct SystemBase* registry_get_system(Registry* reg, int system_id) {
     for(size_t i = 0; i < reg->num_systems; ++i) {
         if(reg->systems[i]->id == system_id) {
             return reg->systems[i];
@@ -280,7 +278,7 @@ SystemBase* registry_get_system(Registry* reg, int system_id) {
 
 void registry_update(Registry* reg, size_t frame_index) {
     for (int i = 0; i < reg->num_systems; ++i) {
-        SystemBase* system = reg->systems[i];
+        struct SystemBase* system = reg->systems[i];
         if (system) {
             system->update_fn(reg, system, frame_index);
         }

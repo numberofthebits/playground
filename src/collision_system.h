@@ -4,10 +4,10 @@
 #include <core/systembase.h>
 
 struct CollisionSystem {
-    SystemBase base;
+    struct SystemBase base;
 };
 
-struct CollisionSystem* collision_system_create(pfnSystemUpdate callback);
+struct CollisionSystem* collision_system_create(pfnSystemUpdate callback, struct EventBus* event_bus);
 
 
 #endif COLLITION_SYSTEM_H

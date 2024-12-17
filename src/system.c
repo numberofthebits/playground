@@ -20,6 +20,21 @@ const System system_table[] = {
         .name = "animation",
         .flag = ANIMATION_SYSTEM_BIT,
         .evaluation_order = 0
+    },
+    {
+        .name = "input",
+        .flag = INPUT_SYSTEM_BIT,
+        .evaluation_order = 0,
+    },
+    {
+        .name = "time",
+        .flag = TIME_SYSTEM_BIT,
+        .evaluation_order = 0
+    },
+    {
+        .name = "player",
+        .flag = PLAYER_SYSTEM_BIT,
+        .evaluation_order = 0
     }
 };
 

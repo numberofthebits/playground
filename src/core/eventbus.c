@@ -14,24 +14,25 @@ void event_bus_reset(struct EventBus* bus) {
     bus->num_subscribers = 0;
 }
 
-void event_bus_subscribe(struct EventBus* bus, int system_id, int event_id, EventCallback callback) {
+void event_bus_subscribe(struct EventBus* bus, struct SystemBase* system, int event_id, EventCallback callback) {
     if(bus->num_subscribers >= MAX_SUBSCRIBERS) {
         LOG_ERROR("Failed to subscribe: Exceeds max subscribers %d", MAX_SUBSCRIBERS);
         return;
     }
 
-    struct Subscriber sub;
-    sub.callback = callback;
-    sub.system_id = system_id;
-    sub.event_id = event_id;
+    struct Subscriber subscription;
+    subscription.callback = callback;
+    subscription.system = system;
+    subscription.event_id = event_id;
     
-    bus->subscribers[bus->num_subscribers++] = sub;
+    bus->subscribers[bus->num_subscribers++] = subscription;
 }
 
-void event_bus_publish(struct EventBus* bus, int system_id, struct Event event) {
+void event_bus_emit(struct EventBus* bus, struct Event* event) {
     for (int i = 0; i < bus->num_subscribers; ++i) {
-        if (event.id == bus->subscribers[i].event_id) {
-            bus->subscribers[i].callback(system_id, &event);
+        struct Subscriber* subscriber = &bus->subscribers[i];
+        if (event->id == subscriber->event_id) {
+            subscriber->callback(subscriber->system, *event);
         }
     }
 }

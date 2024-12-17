@@ -5,9 +5,9 @@
 #include <core/systembase.h>
 
 struct TimeSystem {
-    SystemBase base;
+    struct SystemBase base;
 };
 
-struct TimeSystem* time_system_create(pfnSystemUpdate callback, Assets* assets);
+struct TimeSystem* time_system_create(Assets* assets, struct EventBus* event_bus);
 
 #endif

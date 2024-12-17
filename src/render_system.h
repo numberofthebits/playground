@@ -56,7 +56,7 @@ typedef struct {
 } PreparedResources;
 
 struct RenderSystem {
-    SystemBase base;
+    struct SystemBase base;
     DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
     DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
     HashMap material_asset_index_mapping;
@@ -76,11 +76,9 @@ struct RenderSystem {
 };
 typedef struct RenderSystem RenderSystem;
 
-RenderSystem* render_system_create(pfnSystemUpdate callback, Assets* assets, int intitial_width, int initial_height);
+RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, int intitial_width, int initial_height);
 
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources);
-
-void render_system_update(RenderSystem* system);
 
 uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta);
 

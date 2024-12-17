@@ -4,10 +4,10 @@
 #include <core/systembase.h>
 
 struct MovementSystem {
-    SystemBase base;
+    struct SystemBase base;
 };
 
-struct MovementSystem* movement_system_create(pfnSystemUpdate update_callback);
+struct MovementSystem* movement_system_create(struct EventBus* event_bus);
 
 
 #endif

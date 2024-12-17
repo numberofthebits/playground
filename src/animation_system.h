@@ -6,7 +6,7 @@
 #include <core/assetstore.h>
 
 struct AnimationSystem {
-    SystemBase base;
+    struct SystemBase base;
 };
 
 struct AnimationResource {
@@ -20,7 +20,7 @@ struct AnimationResources {
     size_t count;
 };
 
-struct AnimationSystem* animation_system_create(pfnSystemUpdate update_callback, Assets* assets);
+struct AnimationSystem* animation_system_create(Assets* assets, struct EventBus* event_bus);
 
 void animation_system_prepare(struct AnimationSystem* sys, struct AnimationResources* resources);
 

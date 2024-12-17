@@ -44,6 +44,12 @@ const Component component_table[] = {
         .alignment = alignof(TimeComponent),
         .name = "TimeComponent"
     }
+    /* { */
+    /*     .flag = PLAYER_COMPONENT_BIT, */
+    /*     .size = sizeof(PlayerComponent), */
+    /*     .alignment = alignof(PlayerComponent), */
+    /*     .name = "PlayerComponent" */
+    /* } */
 };
 
 size_t component_table_size() {

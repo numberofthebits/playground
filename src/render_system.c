@@ -37,7 +37,7 @@
 
 
 void __stdcall gl_debug_callback(GLenum source, GLenum type, GLuint id,
-                              GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+                                 GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     switch (severity) {
     case GL_DEBUG_SEVERITY_HIGH:
         LOG_GL_HIGH(message);
@@ -124,297 +124,6 @@ static GLuint create_program(GLuint* shaders, int count) {
     return prog;
 }
 
-void render_system_create_program(RenderSystem* system, AssetId program_id) {
-    AssetShaderProgram* program_asset = assets_get_program(system->assets, program_id);
-    if(!program_asset) {
-        LOG_EXIT("Failed to create program with id '%d'", program_id);
-    }
-    
-    int num_shaders_in_program = 0;
-    GLuint shader_handles[6];
-
-    for (int i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId); ++i) {
-        if(assets_shader_program_has_shader(program_asset, i)) {
-            AssetShader* shader_asset = assets_get_shader(system->assets, program_asset->shader_ids[i]);
-
-            GLenum gl_shader_type = 0;
-            switch (0x1 << i) {
-            case AssetShaderVertex:
-                gl_shader_type = GL_VERTEX_SHADER;
-                break;
-            case AssetShaderFragment:
-                gl_shader_type = GL_FRAGMENT_SHADER;
-                break;
-            default:
-                LOG_EXIT("Unhandled shader type");
-            }
-
-            LOG_INFO("Compiling shader '%s'", shader_asset->file_path.path);
-            shader_handles[num_shaders_in_program++] = compile_shader(shader_asset->shader_src, gl_shader_type);
-        }
-    }
-    
-    GLuint program_handle = create_program(shader_handles, num_shaders_in_program);
-    hash_map_insert_value(&system->programs,
-                          &program_asset->id,
-                          sizeof(program_asset->id),
-                          (void*)(uintptr_t)program_handle);
-}
-
-
-RenderSystem* render_system_create(pfnSystemUpdate callback, Assets* assets, int initial_width, int initial_height ) {
-    LOG_INFO("Create render system implementation...");
-    // init function pointer loader 
-    gladLoadGL();
-    glDebugMessageCallback(&gl_debug_callback, 0);
-    glEnable(GL_DEBUG_OUTPUT);
-
-    glClearColor(0.f, 0.0f, 0.0f, 255.f);
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
-    system_base_init((SystemBase*)system, RENDER_SYSTEM_BIT, callback, RENDER_COMPONENT_BIT, assets);
-
-    system->assets = assets;
-    system->render_data = vec_create();
-    system->materials = vec_create();
-    system->main_framebuffer.width = initial_width;
-    system->main_framebuffer.height = initial_height;;
-
-
-    hash_map_init(&system->programs, 100);
-    hash_map_init(&system->textures, 1000);
-    hash_map_init(&system->material_asset_index_mapping, 1000);
-    
-    memset(&system->draw_commands, 0x0, sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
-    memset(&system->draw_command_data, 0x0, sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
-
-
-//    glEnable(GL_BLEND);
-    glCreateVertexArrays(1, &system->vao);
-    glCreateBuffers(BO_INDEX_MAX, system->buffer_objects);
-
-    CHECK_GL_ERROR();
-    
-    glEnableVertexArrayAttrib(system->vao, 0);
-    glEnableVertexArrayAttrib(system->vao, 1);
-    glEnableVertexArrayAttrib(system->vao, 2);
-    
-
-    glVertexArrayAttribBinding(system->vao, 0, 0);
-    glVertexArrayAttribBinding(system->vao, 1, 1);
-    glVertexArrayAttribBinding(system->vao, 2, 2);
-
-    glVertexArrayVertexBuffer(system->vao, 0, system->buffer_objects[BO_INDEX_POSITION], 0, sizeof(float) * 3);
-    glVertexArrayVertexBuffer(system->vao, 1, system->buffer_objects[BO_INDEX_COLOR], 0, sizeof(uint8_t)* 3);
-    glVertexArrayVertexBuffer(system->vao, 2, system->buffer_objects[BO_INDEX_UV], 0, sizeof(float)* 2);
-    
-    glVertexArrayAttribFormat(system->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribIFormat(system->vao, 1, 3, GL_UNSIGNED_BYTE, 0);
-    glVertexArrayAttribFormat(system->vao, 2, 2, GL_FLOAT, GL_FALSE, 0);
-    
-    float pos_data[] = {
-        -1.0f, -1.0f, -0.0f, // lower left
-        1.0f, -1.0f, -0.0f, // lower right
-        1.0f, 1.0f, -0.0f, // upper right
-        -1.0f, 1.0f, -0.0f, // upper left
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_POSITION], sizeof(pos_data), &pos_data, GL_STATIC_DRAW);
-    
-    uint8_t color_data[] = {
-        255,   0,   0,
-          0, 255,   0,
-          0,   0, 255,
-        255, 255, 255
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_COLOR], sizeof(color_data), &color_data, GL_STATIC_DRAW);
-    
-    float uv_data[] = {
-        0.0f, 0.0f, // lower left,
-        1.0f, 0.0f, // lower right,
-        1.0f, 1.0f, // upper right,
-        0.0f, 1.0f, // upper left
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_UV], sizeof(uv_data), &uv_data, GL_STATIC_DRAW);
-
-    uint16_t index_data[] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_ELEMENT_ARRAY],
-                      sizeof(index_data),
-                      index_data,
-                      GL_STATIC_DRAW);
-
-    glVertexArrayElementBuffer(system->vao, system->buffer_objects[BO_INDEX_ELEMENT_ARRAY]);
-
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
-    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
-                      sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
-                      0,
-                      GL_DYNAMIC_DRAW);
-
-    glBindBufferBase( GL_SHADER_STORAGE_BUFFER,
-                      BO_INDEX_DRAW_COMMAND_DATA,
-                      system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA] );
-    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
-                      sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
-                      0,
-                      GL_DYNAMIC_DRAW);
-
-
-    /* glBindBufferBase(GL_SHADER_STORAGE_BUFFER, */
-    /*                  BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES, */
-    /*                  system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES]); */
-    /* glNamedBufferData(system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES], */
-    /*                   sizeof(GLuint64) * MAX_BINDLESS_TEXTURE_2D_HANDLES, */
-    /*                   0, */
-    /*                   GL_DYNAMIC_DRAW); */
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                     BO_INDEX_MATERIALS,
-                     system->buffer_objects[BO_INDEX_MATERIALS]);
-    glNamedBufferData(system->buffer_objects[BO_INDEX_MATERIALS],
-                      sizeof(Material) * MAX_MATERIALS,
-                      0,
-                      GL_DYNAMIC_DRAW);
-    
-    LOG_INFO("Created render system implementation");
-
-    return system;
-}
-
-static void render_system_create_material(RenderSystem* system, AssetId material_id) {
-    Material new_material;
-    AssetMaterial* mat = assets_get_material(system->assets, material_id);
-    if (!mat) {
-        LOG_EXIT("Failed to find material with id %u", material_id);
-    }
-    new_material.color = mat->color;
-
-    void* texture_handle_ptr = 0; 
-    int found_texture_handle = (GLuint64)(uintptr_t)hash_map_get(&system->textures, &mat->texture_id, sizeof(AssetId), &texture_handle_ptr );
-    // Careful. Don't know if it's valid before testing hash_map_get return value
-    GLuint64 texture_handle = (GLuint64)texture_handle_ptr;
-    if (!found_texture_handle) {
-
-        ImageMeta meta;
-        void* data = 0;
-        if (!assets_load_asset(system->assets, mat->texture_id, &data, &meta)) {
-            LOG_EXIT("Failed to load texture asset '%d'", mat->texture_id);
-        }
-
-        // Store the new handle as a void* in the hash map to avoid allocating just for
-        // a pointer sized type
-        GLuint64 new_handle = render_system_create_texture(system, data, &meta);
-        uintptr_t new_handle_ptr = (uintptr_t)new_handle;
-
-        hash_map_insert_value(&system->textures, &mat->texture_id, sizeof(AssetId), (void*)new_handle_ptr);
-
-        if (data) {
-            free(data);
-        }
-
-        new_material.handle = new_handle;
-                
-    } else {
-        new_material.handle = texture_handle;
-    }
-
-    unsigned int new_material_index = system->materials.size;
-    hash_map_insert_value(&system->material_asset_index_mapping,
-                          &material_id,
-                          sizeof(AssetId),
-                          (void*)(uintptr_t)new_material_index);
-
-    VEC_PUSH_T(&system->materials, Material, new_material);
-}
-
-void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources) {
-    for (int i = 0; i < resources->program_ids.size; ++i) {
-        AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i);
-        render_system_create_program(system, program_id);        
-    }
-
-    for (int i = 0; i < resources->material_ids.size; ++i) {
-        AssetId material_id =  VEC_GET_T(&resources->material_ids, AssetId, i);
-        render_system_create_material(system, material_id);
-    }
-}
-
-
-uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta) {
-    GLuint tex_handle;
-    glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
-
-    CHECK_GL_ERROR();
-    GLenum format = 0;
-    GLenum internal_fmt = 0;
-    switch (meta->channels) {
-    case 3: 
-        format = GL_RGB;
-        internal_fmt = GL_RGB8;
-        break;
-    case 4:
-        format = GL_RGBA;
-        internal_fmt = GL_RGBA8;
-        break;
-    default:
-        LOG_EXIT("Unimplemented number of image channels (%d) to GL enum mapping", meta->channels);
-    }
-    
-    int levels = 1;
-    int border = 0;
-    glTextureStorage2D(tex_handle, levels, internal_fmt, meta->width, meta->height);
-    CHECK_GL_ERROR();
-
-    int level = 0;
-    int xoffset = 0;
-    int yoffset = 0;
-
-    GLenum type = GL_UNSIGNED_BYTE;
-    glTextureSubImage2D(tex_handle, level, xoffset, yoffset, meta->width, meta->height, format, type, data);
-
-    CHECK_GL_ERROR();
-
-     // Hack set up a texture unit
-
-    glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, tex_handle);
-    glGenerateTextureMipmap(tex_handle);
-
-    CHECK_GL_ERROR();
-
-    GLuint64 bindless_handle = glGetTextureHandleARB(tex_handle);
-    glMakeTextureHandleResidentARB(bindless_handle);
-
-    CHECK_GL_ERROR();
-
-    return bindless_handle;
-}
-
-Vec* render_system_get_render_data(RenderSystem* system, int num_entities) {
-    if (num_entities > system->render_data.size) {
-        VEC_RESIZE_T(&system->render_data, RenderData, num_entities);
-    }
-    
-    return &system->render_data;
-}
-
-static GLint get_uniform_location_checked(GLuint program, const char* name) {
-    GLint loc = glGetUniformLocation(program, name);
-    CHECK_GL_ERROR();
-    
-    if(loc == -1) {
-        LOG_EXIT("Invalid uniform location '%s'", name);
-    }
-
-    return loc;
-}
 
 static int render_data_order_comp(const void* lhs, const void* rhs) {
     const RenderData* a = lhs;
@@ -447,7 +156,18 @@ static void render_batch(RenderSystem* system, unsigned int batch_size) {
     CHECK_GL_ERROR();
 }
 
-void render_system_update(RenderSystem* system) {
+static GLint get_uniform_location_checked(GLuint program, const char* name) {
+    GLint loc = glGetUniformLocation(program, name);
+    CHECK_GL_ERROR();
+    
+    if(loc == -1) {
+        LOG_EXIT("Invalid uniform location '%s'", name);
+    }
+
+    return loc;
+}
+
+static void render_system_update(RenderSystem* system) {
     CHECK_GL_ERROR();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -562,6 +282,339 @@ void render_system_update(RenderSystem* system) {
 
     // Dispatch the final batch
     render_batch(system, count_in_batch);
+}
+
+
+static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
+    BeginScopedTimer(render_time);
+
+    RenderSystem* render_sys = (RenderSystem*)sys;
+    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+
+    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+    struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+    Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size);
+    
+    for (int i = 0; i < sys->entities.size; ++i) {
+        Entity entity = entities[i];
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
+        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
+
+        RenderData* rd = VEC_GET_T_PTR(render_data, RenderData, entity.id);
+
+        rd->render_layer = rc->render_layer;
+        
+        Vec3f scale;
+        scale.x = tc->scale.x;
+        scale.y = tc->scale.y;
+        scale.z = 1.0f;
+        
+        Vec3f pos;
+        pos.x = tc->pos.x;
+        pos.y = tc->pos.y;
+        pos.z = tc->pos.z;
+
+        rd->tex_coord_offset = rc->tex_coord_offset;
+        rd->tex_coord_scale = rc->tex_coord_scale;
+        rd->model_matrix = identity();
+
+        scale_mat4(&rd->model_matrix, &scale);
+        translate(&rd->model_matrix, &pos);
+
+        rd->material_id = rc->material_id;
+        rd->program_id = rc->pipeline_id;
+    }
+
+    render_system_update(render_sys);
+
+    AppendScopedTimer(render_time);
+    PrintScopedTimer(render_time);
+}
+
+
+void render_system_create_program(RenderSystem* system, AssetId program_id) {
+    AssetShaderProgram* program_asset = assets_get_program(system->assets, program_id);
+    if(!program_asset) {
+        LOG_EXIT("Failed to create program with id '%d'", program_id);
+    }
+    
+    int num_shaders_in_program = 0;
+    GLuint shader_handles[6];
+
+    for (int i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId); ++i) {
+        if(assets_shader_program_has_shader(program_asset, i)) {
+            AssetShader* shader_asset = assets_get_shader(system->assets, program_asset->shader_ids[i]);
+
+            GLenum gl_shader_type = 0;
+            switch (0x1 << i) {
+            case AssetShaderVertex:
+                gl_shader_type = GL_VERTEX_SHADER;
+                break;
+            case AssetShaderFragment:
+                gl_shader_type = GL_FRAGMENT_SHADER;
+                break;
+            default:
+                LOG_EXIT("Unhandled shader type");
+            }
+
+            LOG_INFO("Compiling shader '%s'", shader_asset->file_path.path);
+            shader_handles[num_shaders_in_program++] = compile_shader(shader_asset->shader_src, gl_shader_type);
+        }
+    }
+    
+    GLuint program_handle = create_program(shader_handles, num_shaders_in_program);
+    hash_map_insert_value(&system->programs,
+                          &program_asset->id,
+                          sizeof(program_asset->id),
+                          (void*)(uintptr_t)program_handle);
+}
+
+
+RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, int initial_width, int initial_height ) {
+    LOG_INFO("Create render system implementation...");
+    // init function pointer loader 
+    gladLoadGL();
+    glDebugMessageCallback(&gl_debug_callback, 0);
+    glEnable(GL_DEBUG_OUTPUT);
+
+    glClearColor(0.f, 0.0f, 0.0f, 255.f);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
+    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT, assets, event_bus);
+
+    system->assets = assets;
+    system->render_data = vec_create();
+    system->materials = vec_create();
+    system->main_framebuffer.width = initial_width;
+    system->main_framebuffer.height = initial_height;;
+
+
+    hash_map_init(&system->programs, 100);
+    hash_map_init(&system->textures, 1000);
+    hash_map_init(&system->material_asset_index_mapping, 1000);
+    
+    memset(&system->draw_commands, 0x0, sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
+    memset(&system->draw_command_data, 0x0, sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
+
+
+//    glEnable(GL_BLEND);
+    glCreateVertexArrays(1, &system->vao);
+    glCreateBuffers(BO_INDEX_MAX, system->buffer_objects);
+
+    CHECK_GL_ERROR();
+    
+    glEnableVertexArrayAttrib(system->vao, 0);
+    glEnableVertexArrayAttrib(system->vao, 1);
+    glEnableVertexArrayAttrib(system->vao, 2);
+    
+
+    glVertexArrayAttribBinding(system->vao, 0, 0);
+    glVertexArrayAttribBinding(system->vao, 1, 1);
+    glVertexArrayAttribBinding(system->vao, 2, 2);
+
+    glVertexArrayVertexBuffer(system->vao, 0, system->buffer_objects[BO_INDEX_POSITION], 0, sizeof(float) * 3);
+    glVertexArrayVertexBuffer(system->vao, 1, system->buffer_objects[BO_INDEX_COLOR], 0, sizeof(uint8_t)* 3);
+    glVertexArrayVertexBuffer(system->vao, 2, system->buffer_objects[BO_INDEX_UV], 0, sizeof(float)* 2);
+    
+    glVertexArrayAttribFormat(system->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribIFormat(system->vao, 1, 3, GL_UNSIGNED_BYTE, 0);
+    glVertexArrayAttribFormat(system->vao, 2, 2, GL_FLOAT, GL_FALSE, 0);
+    
+    float pos_data[] = {
+        -1.0f, -1.0f, -0.0f, // lower left
+        1.0f, -1.0f, -0.0f, // lower right
+        1.0f, 1.0f, -0.0f, // upper right
+        -1.0f, 1.0f, -0.0f, // upper left
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_POSITION], sizeof(pos_data), &pos_data, GL_STATIC_DRAW);
+    
+    uint8_t color_data[] = {
+        255,   0,   0,
+        0, 255,   0,
+        0,   0, 255,
+        255, 255, 255
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_COLOR], sizeof(color_data), &color_data, GL_STATIC_DRAW);
+    
+    float uv_data[] = {
+        0.0f, 0.0f, // lower left,
+        1.0f, 0.0f, // lower right,
+        1.0f, 1.0f, // upper right,
+        0.0f, 1.0f, // upper left
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_UV], sizeof(uv_data), &uv_data, GL_STATIC_DRAW);
+
+    uint16_t index_data[] = {
+        0, 1, 2,
+        0, 2, 3
+    };
+    glNamedBufferData(system->buffer_objects[BO_INDEX_ELEMENT_ARRAY],
+                      sizeof(index_data),
+                      index_data,
+                      GL_STATIC_DRAW);
+
+    glVertexArrayElementBuffer(system->vao, system->buffer_objects[BO_INDEX_ELEMENT_ARRAY]);
+
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
+    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
+                      sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+
+    glBindBufferBase( GL_SHADER_STORAGE_BUFFER,
+                      BO_INDEX_DRAW_COMMAND_DATA,
+                      system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA] );
+    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
+                      sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+
+
+    /* glBindBufferBase(GL_SHADER_STORAGE_BUFFER, */
+    /*                  BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES, */
+    /*                  system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES]); */
+    /* glNamedBufferData(system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES], */
+    /*                   sizeof(GLuint64) * MAX_BINDLESS_TEXTURE_2D_HANDLES, */
+    /*                   0, */
+    /*                   GL_DYNAMIC_DRAW); */
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                     BO_INDEX_MATERIALS,
+                     system->buffer_objects[BO_INDEX_MATERIALS]);
+    glNamedBufferData(system->buffer_objects[BO_INDEX_MATERIALS],
+                      sizeof(Material) * MAX_MATERIALS,
+                      0,
+                      GL_DYNAMIC_DRAW);
+    
+    LOG_INFO("Created render system implementation");
+
+    return system;
+}
+
+static void render_system_create_material(RenderSystem* system, AssetId material_id) {
+    Material new_material;
+    AssetMaterial* mat = assets_get_material(system->assets, material_id);
+    if (!mat) {
+        LOG_EXIT("Failed to find material with id %u", material_id);
+    }
+    new_material.color = mat->color;
+
+    void* texture_handle_ptr = 0; 
+    int found_texture_handle = (GLuint64)(uintptr_t)hash_map_get(&system->textures, &mat->texture_id, sizeof(AssetId), &texture_handle_ptr );
+    // Careful. Don't know if it's valid before testing hash_map_get return value
+    GLuint64 texture_handle = (GLuint64)texture_handle_ptr;
+    if (!found_texture_handle) {
+
+        ImageMeta meta;
+        void* data = 0;
+        if (!assets_load_asset(system->assets, mat->texture_id, &data, &meta)) {
+            LOG_EXIT("Failed to load texture asset '%d'", mat->texture_id);
+        }
+
+        // Store the new handle as a void* in the hash map to avoid allocating just for
+        // a pointer sized type
+        GLuint64 new_handle = render_system_create_texture(system, data, &meta);
+        uintptr_t new_handle_ptr = (uintptr_t)new_handle;
+
+        hash_map_insert_value(&system->textures, &mat->texture_id, sizeof(AssetId), (void*)new_handle_ptr);
+
+        if (data) {
+            free(data);
+        }
+
+        new_material.handle = new_handle;
+                
+    } else {
+        new_material.handle = texture_handle;
+    }
+
+    unsigned int new_material_index = system->materials.size;
+    hash_map_insert_value(&system->material_asset_index_mapping,
+                          &material_id,
+                          sizeof(AssetId),
+                          (void*)(uintptr_t)new_material_index);
+
+    VEC_PUSH_T(&system->materials, Material, new_material);
+}
+
+
+
+
+
+void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources) {
+    for (int i = 0; i < resources->program_ids.size; ++i) {
+        AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i);
+        render_system_create_program(system, program_id);        
+    }
+
+    for (int i = 0; i < resources->material_ids.size; ++i) {
+        AssetId material_id =  VEC_GET_T(&resources->material_ids, AssetId, i);
+        render_system_create_material(system, material_id);
+    }
+}
+
+
+uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta) {
+    GLuint tex_handle;
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
+
+    CHECK_GL_ERROR();
+    GLenum format = 0;
+    GLenum internal_fmt = 0;
+    switch (meta->channels) {
+    case 3: 
+        format = GL_RGB;
+        internal_fmt = GL_RGB8;
+        break;
+    case 4:
+        format = GL_RGBA;
+        internal_fmt = GL_RGBA8;
+        break;
+    default:
+        LOG_EXIT("Unimplemented number of image channels (%d) to GL enum mapping", meta->channels);
+    }
+    
+    int levels = 1;
+    int border = 0;
+    glTextureStorage2D(tex_handle, levels, internal_fmt, meta->width, meta->height);
+    CHECK_GL_ERROR();
+
+    int level = 0;
+    int xoffset = 0;
+    int yoffset = 0;
+
+    GLenum type = GL_UNSIGNED_BYTE;
+    glTextureSubImage2D(tex_handle, level, xoffset, yoffset, meta->width, meta->height, format, type, data);
+
+    CHECK_GL_ERROR();
+
+    // Hack set up a texture unit
+
+    glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, tex_handle);
+    glGenerateTextureMipmap(tex_handle);
+
+    CHECK_GL_ERROR();
+
+    GLuint64 bindless_handle = glGetTextureHandleARB(tex_handle);
+    glMakeTextureHandleResidentARB(bindless_handle);
+
+    CHECK_GL_ERROR();
+
+    return bindless_handle;
+}
+
+Vec* render_system_get_render_data(RenderSystem* system, int num_entities) {
+    if (num_entities > system->render_data.size) {
+        VEC_RESIZE_T(&system->render_data, RenderData, num_entities);
+    }
+    
+    return &system->render_data;
 }
 
 void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height) {
