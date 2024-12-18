@@ -14,6 +14,8 @@ void arena_init(struct ArenaAllocator* allocator, size_t s);
 
 void* arena_alloc(struct ArenaAllocator* allocator, size_t element_size, size_t element_count, size_t alignment);
 
+void arena_dealloc_all(struct ArenaAllocator* allocator);
+
 // Allocate memory for for 'count' objects of size sizeof('type')
 #define ArenaAlloc(allocator, count, type) \
     arena_alloc(allocator, sizeof(type), count, alignof(type)); 

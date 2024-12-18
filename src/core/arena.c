@@ -71,3 +71,7 @@ void* arena_alloc(struct ArenaAllocator* allocator,
     
     return return_ptr;    
 }
+
+void arena_dealloc_all(struct ArenaAllocator* allocator) {
+    allocator->used = 0;
+}
