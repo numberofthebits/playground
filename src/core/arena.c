@@ -6,6 +6,8 @@
 
 struct ArenaAllocator allocator;
 
+struct ArenaAllocator frame_allocator;
+
 void arena_init(struct ArenaAllocator* allocator, size_t capacity) {
     if(!allocator) {
         LOG_EXIT("Null pointer allocator");
