@@ -34,6 +34,13 @@
 
 #define MAX_ENTITIES 1024
 
+// Try to define all the memory we will ever need up front.
+// 
+// NOTE: There's quite a few dynamic arrays and hash maps
+//       left to remove.
+#define STATIC_ARENA_SIZE 1024 * 1024 * 32
+#define FRAME_ARENA_SIZE  1024 * 1024 * 16
+
 typedef struct {
     Vec2u8 atlas_coord;
 } MapTile;
@@ -268,6 +275,8 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
 
 
 Game* game_create() {
+    arena_init(&allocator, STATIC_ARENA_SIZE);
+    arena_init(&frame_allocator, FRAME_ARENA_SIZE);
     Game* game = ArenaAlloc(&allocator, 1, Game);
     
     game->frame_counter = 0;
@@ -570,6 +579,7 @@ void game_setup(Game* game) {
 }
 
 void game_update(Game* game) {
+    arena_dealloc_all(&frame_allocator);
     struct SystemBase* player_system_base = registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
 
     event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);

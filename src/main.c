@@ -5,12 +5,6 @@
 
 #include <stdio.h>
 
-// Try to define all the memory we will ever need up front.
-// 
-// NOTE: There's quite a few dynamic arrays and hash maps
-//       left to remove.
-#define STATIC_ARENA_SIZE 1024*1024*64
-
 int main(void) {
 
     if (!log_init(0)) {
@@ -18,7 +12,6 @@ int main(void) {
         return -1;
     }
 
-    arena_init(&allocator, STATIC_ARENA_SIZE);
     
     Game* game = game_create();
     if (!game) {
