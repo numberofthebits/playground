@@ -13,6 +13,17 @@
 
 static Vec2f BULLET_MIN_VELOCITY = {0.1f, 0.1f};
 
+static float f32_constrain_to_pi(float f) {
+    if (f < -PI) {
+        f = PI - fmodf(f, PI);
+    }
+    else if (f > PI) {
+        f = -PI - fmodf(f, -PI);
+    }
+
+    return f;
+}
+
 void player_system_reset(struct PlayerSystem* system) {
     memset(system->movement, 0x0, sizeof(system->movement));
     system->bullets_spawned = 0;
@@ -34,20 +45,17 @@ static void player_system_spawn_bullet(Registry* registry, Vec3f player_pos, Vec
 
     TransformComponent tc = {0};
     tc.pos = player_pos;
-    tc.scale.x = 0.2f;
-    tc.scale.y = 0.2f;
+    tc.pos.z = 0.0f;
+    tc.scale.x = 0.1f;
+    tc.scale.y = 0.1f;
     tc.rotation = 0.f;
             
-    registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-
     PhysicsComponent pc = {0};
     pc.velocity.x = Max(player_velocity.x, player_velocity.x + BULLET_MIN_VELOCITY.x);
     pc.velocity.y = Max(player_velocity.y, player_velocity.y + BULLET_MIN_VELOCITY.y);
-
-    registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-
+    
     RenderComponent rc;
-    rc.render_layer = 0;
+    rc.render_layer = 1;
             
     rc.tex_coord_offset.x = 0.f;
     rc.tex_coord_offset.y = 0.f;
@@ -56,14 +64,15 @@ static void player_system_spawn_bullet(Registry* registry, Vec3f player_pos, Vec
     rc.material_id = assets_make_id_str("bullet-mat");
     rc.pipeline_id = assets_make_id_str("tilemap");
             
-    registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-
     TimeComponent ttc = {0};
     ttc.created = time_now();
     uint64_t expires = time_from_secs(5);
     ttc.expires = ttc.created + expires;
 
     registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
+    registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+    registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+    registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
     registry_add_entity(registry, e);
 }
@@ -79,9 +88,9 @@ void player_system_update(Registry* registry, struct SystemBase* sys, size_t fra
 
     for(int i = 0; i < player_system->base.entities.size; ++i) {
         Entity entity = entities[i];
-        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.index);
         
-        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.id);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.index);
 
         // NOTE: It would probably be fine to spawn 1 bullet per frame
         for (int j = 0; i < player_system->bullets_spawned; ++i) {
@@ -92,6 +101,8 @@ void player_system_update(Registry* registry, struct SystemBase* sys, size_t fra
             player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX];
         pc->velocity.y +=
             player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX];
+
+        tc->rotation = player_system->angle;
     }
 
     player_system_reset(player_system);
@@ -124,9 +135,25 @@ static void player_system_handle_keyboard_update(struct PlayerSystem* sys, struc
             sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] +=
                 (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
+        case GLFW_KEY_A:
+            /* sys->angle += (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR; */
+            /* if (sys->angle > 360.f) { */
+            /*     sys->angle -= 360.f; */
+            /* } */
+            sys->angle += PI_DIV_4;
+            break;
+        case GLFW_KEY_D:
+            sys->angle -= PI_DIV_4;
+            /* sys->angle -= (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR; */
+            if(sys->angle < 0.f) {
+                sys->angle += 360.f;
+            }
+            break;
         default:
             LOG_WARN("Unhandled key input: Key code %d", key_state.key);
         }
+
+        sys->angle = f32_constrain_to_pi(sys->angle);
     }
 }
 

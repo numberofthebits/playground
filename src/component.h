@@ -6,12 +6,6 @@
 
 #include <stdalign.h>
 
-
-// Code smell. The user should be able to define this
-// and he can, as ComponentBit is just an int, but
-// what about the actual data type the enum represents?
-// registry_add_component takes void* so that's okay, but
-// didn't check the rest of them, or even what "the rest" is.
 enum ComponentBit {
     TRANSFORM_COMPONENT_BIT = (1U << 0),
     RENDER_COMPONENT_BIT = (1U << 1),

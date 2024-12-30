@@ -62,14 +62,14 @@ void* arena_alloc(struct ArenaAllocator* allocator,
 
     allocator->used += total_bytes;
 
-    LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with alignment bump %lu) at %p. %lu / %lu bytes used",
-             count_bytes,
-             alignment,
-             total_bytes,
-             alignment_bump,
-             return_ptr,
-             allocator->used,
-             allocator->capacity);
+    /* LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with alignment bump %lu) at %p. %lu / %lu bytes used", */
+    /*          count_bytes, */
+    /*          alignment, */
+    /*          total_bytes, */
+    /*          alignment_bump, */
+    /*          return_ptr, */
+    /*          allocator->used, */
+    /*          allocator->capacity); */
     
     return return_ptr;    
 }

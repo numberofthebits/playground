@@ -15,19 +15,11 @@ static void movement_update(Registry* reg, struct SystemBase* system, size_t fra
     struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
     
     for (int i = 0; i < system->entities.size; ++i) {
-        const int entity_index = entities[i].id;
-        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity_index);
-        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity_index);
+        Entity e = entities[i];
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.index);
+        PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, e.index);
         tc->pos.x += pc->velocity.x;
         tc->pos.y += pc->velocity.y;
-
-        if (tc->pos.x < 0.f) {
-            pc->velocity.x = -pc->velocity.x;
-        }
-        
-        if (tc->pos.y < 0.f) {
-            pc->velocity.y = -pc->velocity.y;
-        }
     }
     
     AppendScopedTimer(movement_time);

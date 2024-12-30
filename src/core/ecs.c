@@ -44,7 +44,7 @@ the next free index.
 static void print_entity_id_pool(struct EntityIdPool* entity_id_pool) {
     LOG_INFO("Entity ID pool used %zu / %zu", entity_id_pool->used, entity_id_pool->size);
     for(int i = 0; i < entity_id_pool->used; ++i) {
-        LOG_INFO("Pool index %i: entity index %zu", i, entity_id_pool->pool[i]);
+        LOG_INFO("EntityIdPool[%d]=%zu", i, entity_id_pool->pool[i]);
     }
 }
 
@@ -64,7 +64,7 @@ static void entity_id_pool_init(struct EntityIdPool* entity_ids, size_t max_enti
         entity_ids->pool[i] = i;
     }
 
-    print_entity_id_pool(entity_ids);
+//    print_entity_id_pool(entity_ids);
 
 }
 
@@ -75,35 +75,43 @@ static size_t entity_id_pool_reserve_index(struct EntityIdPool* entity_ids) {
         return ENTITY_INVALID_INDEX;
     }
 
-    LOG_INFO("Reserve entity index %zu", entity_ids->used);
-    if(entity_ids->used == 513) {
-        print_entity_id_pool(entity_ids);
-    }
     size_t index = entity_ids->pool[entity_ids->used];
+    LOG_INFO("Reserve entity index %zu (in use total %zu)", index, entity_ids->used + 1);
     entity_ids->used++;
+
+//    print_entity_id_pool(entity_ids);
 
     return index;
 }
 
 static void entity_id_pool_remove_entity(struct EntityIdPool* entity_ids, Entity entity) {
 
-    size_t* to_remove = 0;
+    int to_remove = -1;
     
     for (int i = 0; i < entity_ids->used; ++i) {
         if (entity.index == entity_ids->pool[i]) {
-            to_remove = &entity_ids->pool[i];
+            to_remove =  i;
             break;
         }
     }
 
-    if (!to_remove) {
+    if (to_remove == -1) {
         LOG_WARN("Failed to remove entity with id %d @ index %zu. Not found", entity.id, entity.index);
+        for (int i = 0; i < entity_ids->used; ++i) {
+            print_entity_id_pool(entity_ids);
+        }
         return;
     }
-    
-    entity_ids->used -= 1;
 
-    *to_remove = entity_ids->pool[entity_ids->used];
+    LOG_INFO("Remove entity ID %d index %zu from ID pool index %d . In use %zu",
+             entity.id, entity.index, to_remove, entity_ids->used);
+
+    size_t tmp = entity_ids->pool[to_remove];
+    entity_ids->used--;
+    entity_ids->pool[to_remove] = entity_ids->pool[entity_ids->used];
+    entity_ids->pool[entity_ids->used] = tmp;
+    
+//    print_entity_id_pool(entity_ids);
 }
 
 static Entity create_entity(struct EntityIdPool* entity_id_pool) {
@@ -211,16 +219,17 @@ static void registry_remove_entity_from_systems(Registry* registry, Entity entit
 }
 
 void registry_add_entity(Registry* reg, Entity e) {
-    LOG_INFO("Add entity %d", e.id);
+    LOG_INFO("Add entity ID %d index %zu", e.id, e.index);
     reg->to_add[reg->count_to_add++] = e;
 }
 
 void registry_remove_entity(Registry* reg, Entity e) {
-    LOG_INFO("Remove entity %d", e.id);
+    LOG_INFO("Remove entity ID %d index %zu", e.id, e.index);
     reg->to_remove[reg->count_to_remove++] = e;
 }
 
 void registry_commit_entities(Registry* reg) {
+    
 //    LOG_INFO("Add %d entities", reg->count_to_remove);
     for (int i = 0; i < reg->count_to_add; ++i) {
         registry_add_entity_to_systems(reg, reg->to_add[i]);
@@ -228,7 +237,10 @@ void registry_commit_entities(Registry* reg) {
 
     reg->count_to_add = 0;
 
-//    LOG_INFO("Remove %d entities", reg->count_to_remove);
+// Note: Switched add and remove around so
+    // entities are freed and can be reused the same
+    // frame
+    
     for (int j = 0; j < reg->count_to_remove; ++j) {
         Entity e = reg->to_remove[j];
         registry_remove_entity_from_systems(reg, e); 
@@ -236,6 +248,9 @@ void registry_commit_entities(Registry* reg) {
     }
 
     reg->count_to_remove = 0;
+
+
+//    LOG_INFO("Remove %d entities", reg->count_to_remove);
 }
 
 void registry_add_component(Registry* reg, Entity e, enum component_bit component, void* data) {
@@ -244,7 +259,7 @@ void registry_add_component(Registry* reg, Entity e, enum component_bit componen
         LOG_EXIT("DED");
     }
     
-    LOG_INFO("Entity %d: add %s component %d (pool index %d)", e.id, component_name(index), index);
+    LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index, component_name(index));
    
     struct Pool* pool = registry_get_pool(reg, component);
     if (!pool) {
@@ -252,10 +267,10 @@ void registry_add_component(Registry* reg, Entity e, enum component_bit componen
         return;
     }
 
-    ptrdiff_t ptr_offset = e.id * pool->descriptor->size;
+    ptrdiff_t ptr_offset = e.index * pool->descriptor->size;
     memcpy((char*)pool->data + ptr_offset, data, pool->descriptor->size);
 
-    SignatureT* entity_signature = &reg->entity_component_signatures[e.id];
+    SignatureT* entity_signature = &reg->entity_component_signatures[e.index];
     *entity_signature |= component;    
 }
 

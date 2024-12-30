@@ -63,7 +63,6 @@ struct RenderSystem {
     HashMap textures;
     // Program asset ID => GL program handle
     HashMap programs;
-    Vec render_data;
     // Keep track of which materials we've seen as
     // Key: AssetId, Value: Material SSBO vector index
     Vec materials;

@@ -384,6 +384,8 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
     const float frows = (float)map->map_size.y;
     const float atlas_cols_f = (float)map->atlas_size.x;
     const float atlas_rows_f = (float)map->atlas_size.y;
+    const float half_cols = fcols / 2.f;
+    const float half_rows = frows / 2.f;
     
     for (int row = 0; row < map->map_size.y; ++row) {
         for (int col = 0; col < map->map_size.x; ++col) {
@@ -392,14 +394,17 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             TransformComponent tc = {0};
             /* tc.pos.x = (float)(col - 24.f / 2.f); */
             /* tc.pos.y = (float)(row - 19.f / 2.f); */
-            tc.pos.x = (float)col;
-            tc.pos.y = (float)row;
+            tc.scale.x = 4.f;  // * 9.f/16.f;
+            tc.scale.y = 4.f; // * 16.f/9.f;
+
+            // Kind-of center the map tile positions around 0,0.
+            tc.pos.x = (float)(col - half_cols) * tc.scale.x;
+            tc.pos.y = (float)(row - half_rows) * tc.scale.y;
             tc.pos.z = 0.0f;
-            tc.scale.x = 0.5f;// * 9.f/16.f;
-            tc.scale.y = 0.5f;// * 16.f/9.f;
+
             /* tc.scale.x_= 1.0f / 50.0f; */
             /* tc.scale.y = 1.0f / 40.0f; */
-            tc.rotation = 0.f;
+            tc.rotation = 0.0f;
             
             registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
@@ -413,8 +418,8 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             // Offset.y must be the bottom of the texture rect.
             rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f; 
             rc.tex_coord_offset.y = (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f;
-            rc.tex_coord_scale.x = 1.0f / (atlas_cols_f);
-            rc.tex_coord_scale.y = 1.0f / (atlas_rows_f);
+            rc.tex_coord_scale.x = 2.0f / (atlas_cols_f);
+            rc.tex_coord_scale.y = 2.0f / (atlas_rows_f);
             rc.material_id = assets_make_id_str("jungle-mat");
             rc.pipeline_id = assets_make_id_str("tilemap");
             
@@ -506,52 +511,11 @@ static void load_units(Registry* registry, Assets* assets) {
         registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
 
         registry_add_entity(registry, chopper);
-
-        /* Entity chopper2 = registry_create_entity(registry); */
-
-        /* pc.velocity.x = -0.01f; */
-        /* pc.velocity.y = 0.00f; */
-
-        /* registry_add_component(registry, chopper2, RENDER_COMPONENT_BIT, &rc); */
-        /* registry_add_component(registry, chopper2, TRANSFORM_COMPONENT_BIT, &tc); */
-        /* registry_add_component(registry, chopper2, PHYSICS_COMPONENT_BIT, &pc); */
-        /* registry_add_component(registry, chopper2, ANIMATION_COMPONENT_BIT, &ac); */
-
-        /* registry_add_entity(registry, chopper2); */
-
-
-        /* Entity chopper3 = registry_create_entity(registry); */
-
-        /* pc.velocity.x = 0.00f; */
-        /* pc.velocity.y = 0.01f; */
-
-        /* registry_add_component(registry, chopper3, RENDER_COMPONENT_BIT, &rc); */
-        /* registry_add_component(registry, chopper3, TRANSFORM_COMPONENT_BIT, &tc); */
-        /* registry_add_component(registry, chopper3, PHYSICS_COMPONENT_BIT, &pc); */
-        /* registry_add_component(registry, chopper3, ANIMATION_COMPONENT_BIT, &ac); */
-
-        /* registry_add_entity(registry, chopper3); */
-
-
-        /* Entity chopper4 = registry_create_entity(registry); */
-
-        /* pc.velocity.x = 0.00f; */
-        /* pc.velocity.y = -0.01f; */
-
-        /* registry_add_component(registry, chopper4, RENDER_COMPONENT_BIT, &rc); */
-        /* registry_add_component(registry, chopper4, TRANSFORM_COMPONENT_BIT, &tc); */
-        /* registry_add_component(registry, chopper4, PHYSICS_COMPONENT_BIT, &pc); */
-        /* registry_add_component(registry, chopper4, ANIMATION_COMPONENT_BIT, &ac); */
-
-        /* registry_add_entity(registry, chopper4); */
-
     }
-
 }
 
 void game_setup(Game* game) {
     LOG_INFO("Setup");
-
 
     map_init(&game->map);
     load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
@@ -585,6 +549,7 @@ void game_update(Game* game) {
     event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);
 
     registry_update(&game->registry, game->frame_counter);
+    
     event_bus_reset(&game->event_bus);
 }
 
@@ -607,10 +572,10 @@ void game_run(Game* game) {
 
         /*     QueryPerformanceCounter(&fps); */
         /* } */
-        
+
+        LOG_INFO("###### FRAME %zu #####", game->frame_counter);
         BeginScopedTimer(frame_time);
 
-//        LOG_INFO("###### FRAME %zu #####", game->frame_counter);
         glfwPollEvents();
 
         BeginScopedTimer(update_time);

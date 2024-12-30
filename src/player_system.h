@@ -7,15 +7,20 @@
 #include <core/eventbus.h>
 
 #define PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR (1.f / 100000000000000.f)
+#define PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR (1.f / 1000000000000.f)
 #define PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX 0
 #define PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX 1
+#define PLAYER_SYSTEM_DIRECTION_AXIS_X_INDEX 0
+#define PLAYER_SYSTEM_DIRECTION_AXIS_Y_INDEX 1
+
 
 struct PlayerSystem {
     struct SystemBase base;
 
     // 4 Axes of keyboard movement
     float movement[2];
-    uint8_t bullets_spawned;
+    float angle;
+    uint16_t bullets_spawned;
 };
 
 struct PlayerSystem* player_system_create(struct EventBus* event_bus);

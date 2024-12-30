@@ -15,9 +15,12 @@ static void time_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) 
     
     for(int i = 0; i < sys->entities.size; ++i) {
         Entity e = entities[i];
-        TimeComponent* tc = PoolGetComponent(time_pool, TimeComponent, e.id);
+
+        TimeComponent* tc = PoolGetComponent(time_pool, TimeComponent, e.index);
         
         if (time_expired(tc->created, tc->expires)) {
+            LOG_INFO("entity id %d %zu", e.id, e.index);
+            LOG_INFO("What the fuck %llu %llu", tc->created, tc->expires);
             registry_remove_entity(reg, e);
         }
     }

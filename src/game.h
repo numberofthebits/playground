@@ -1,6 +1,7 @@
 #ifndef _GAME_H
 #define _GAME_H
 
+
 typedef struct Game_t Game;
 
 Game* game_create();

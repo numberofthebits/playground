@@ -14,7 +14,6 @@
 #include <stb_image.h>
 #include <stdint.h>
 
-#define MAX_BINDLESS_TEXTURE_2D_HANDLES sizeof(GLuint64) * 16384
 #define MAX_MATERIALS 10000
 
 #define BO_INDEX_POSITION 0
@@ -78,7 +77,6 @@ static GLuint compile_shader(const char* src, GLenum type) {
             GLsizei actual_len = 0;
             glGetShaderInfoLog(handle, log_len, &actual_len, log_buf);
             LOG_EXIT("Failed to compile shader: %s\n%s", log_buf, src);
-            
         } else {
             LOG_EXIT("Failed to compile shader: Log len is 0");
         }
@@ -118,7 +116,8 @@ static GLuint create_program(GLuint* shaders, int count) {
             free(log_buf);
             CHECK_GL_ERROR();
         } else {
-            LOG_EXIT("Failed to validate program, but info log length is 0");        }
+            LOG_EXIT("Failed to validate program, but info log length is 0");
+        }
     }
     
     return prog;
@@ -130,20 +129,12 @@ static int render_data_order_comp(const void* lhs, const void* rhs) {
     const RenderData* b = rhs;
 
     static int i = 0;
-    
-    LOG_INFO("%p cmp %p - %d ", lhs, rhs, i++);
-    if(a->render_layer < b->render_layer) {
-        return -1;
-    } else if (a->render_layer > b->render_layer) {
-        return 1;
-    }
 
-    return 0;
+    return a->render_layer - b->render_layer;
 }
 
-static void sort_render_data(RenderSystem* system) {
-    void* ptr = system->render_data.storage.ptr;
-    qsort(ptr, system->render_data.size, sizeof(RenderData), &render_data_order_comp);
+static void sort_render_data(RenderData* data, size_t count) {
+    qsort(data, count, sizeof(RenderData), &render_data_order_comp);
 }
 
 static void render_batch(RenderSystem* system, unsigned int batch_size) {
@@ -167,12 +158,12 @@ static GLint get_uniform_location_checked(GLuint program, const char* name) {
     return loc;
 }
 
-static void render_system_update(RenderSystem* system) {
+static void render_system_update(RenderSystem* system, RenderData* data, size_t render_data_size ) {
     CHECK_GL_ERROR();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (system->render_data.size == 0) {
+    if (render_data_size == 0) {
         return;
     }
     
@@ -191,13 +182,13 @@ static void render_system_update(RenderSystem* system) {
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
     CHECK_GL_ERROR();
 
-//    sort_render_data(system);
+    sort_render_data(data, render_data_size);
 
     unsigned int count_in_batch = 0;
     AssetId current_program = 0;
 
-    for (int i = 0; i < system->render_data.size; ++i) {
-        RenderData* render_data = VEC_GET_T_PTR(&system->render_data, RenderData, i);
+    for (int i = 0; i < render_data_size; ++i) {
+        RenderData* render_data = data + i;
 
         if(render_data->program_id != current_program) {
             // We we encounter a new program/pipeline
@@ -293,14 +284,16 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
 
     struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-    Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size);
+    /* Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size); */
+
+    RenderData* render_data = ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
     
     for (int i = 0; i < sys->entities.size; ++i) {
         Entity entity = entities[i];
-        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.id);
-        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.id);
+        TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, entity.index);
+        RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.index);
 
-        RenderData* rd = VEC_GET_T_PTR(render_data, RenderData, entity.id);
+        RenderData* rd = &render_data[i];
 
         rd->render_layer = rc->render_layer;
         
@@ -316,16 +309,28 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
 
         rd->tex_coord_offset = rc->tex_coord_offset;
         rd->tex_coord_scale = rc->tex_coord_scale;
-        rd->model_matrix = identity();
 
-        scale_mat4(&rd->model_matrix, &scale);
-        translate(&rd->model_matrix, &pos);
+        Vec3f axis = {0.f, 0.f, 1.f};
+        Mat4x4 matrix_scale = identity();
+        Mat4x4 matrix_translate = identity();
+        Mat4x4 matrix_rotate = identity();
 
+        scale_mat4(&matrix_scale, &scale);
+        translate(&matrix_translate, &pos);
+        mat4_rotate(&matrix_rotate, &axis, tc->rotation);
+        
+
+        Mat4x4 m = identity();
+        m = mul(&m, &matrix_scale);
+        m = mul(&m, &matrix_translate);
+        m = mul(&m, &matrix_rotate);
+        rd->model_matrix = m;
+        
         rd->material_id = rc->material_id;
         rd->program_id = rc->pipeline_id;
     }
 
-    render_system_update(render_sys);
+    render_system_update(render_sys, render_data, sys->entities.size);
 
     AppendScopedTimer(render_time);
     PrintScopedTimer(render_time);
@@ -378,18 +383,16 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
     glEnable(GL_DEBUG_OUTPUT);
 
     glClearColor(0.f, 0.0f, 0.0f, 255.f);
-    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
     system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT, assets, event_bus);
 
     system->assets = assets;
-    system->render_data = vec_create();
     system->materials = vec_create();
     system->main_framebuffer.width = initial_width;
     system->main_framebuffer.height = initial_height;;
-
 
     hash_map_init(&system->programs, 100);
     hash_map_init(&system->textures, 1000);
@@ -409,7 +412,6 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
     glEnableVertexArrayAttrib(system->vao, 1);
     glEnableVertexArrayAttrib(system->vao, 2);
     
-
     glVertexArrayAttribBinding(system->vao, 0, 0);
     glVertexArrayAttribBinding(system->vao, 1, 1);
     glVertexArrayAttribBinding(system->vao, 2, 2);
@@ -470,7 +472,6 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
                       sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
                       0,
                       GL_DYNAMIC_DRAW);
-
 
     /* glBindBufferBase(GL_SHADER_STORAGE_BUFFER, */
     /*                  BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES, */
@@ -540,9 +541,6 @@ static void render_system_create_material(RenderSystem* system, AssetId material
 }
 
 
-
-
-
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources) {
     for (int i = 0; i < resources->program_ids.size; ++i) {
         AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i);
@@ -607,14 +605,6 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
     CHECK_GL_ERROR();
 
     return bindless_handle;
-}
-
-Vec* render_system_get_render_data(RenderSystem* system, int num_entities) {
-    if (num_entities > system->render_data.size) {
-        VEC_RESIZE_T(&system->render_data, RenderData, num_entities);
-    }
-    
-    return &system->render_data;
 }
 
 void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height) {

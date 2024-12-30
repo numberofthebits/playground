@@ -11,13 +11,13 @@ int main(void) {
         printf("Failed to initialize logger");
         return -1;
     }
-
     
     Game* game = game_create();
     if (!game) {
         LOG_ERROR("Failed to initialize game");
         return -1;
     }
+    
     game_setup(game);
     game_run(game);
     

@@ -10,6 +10,7 @@
 #define PI_DIV_2 PI / 2.f
 #define PI_3_DIV_4 3.f / 4.f * PI
 #define PI_DIV_4 PI / 4.f
+#define PI_7_DIV_4 7.f / 4.f * PI
 
 
 typedef struct {
@@ -17,12 +18,11 @@ typedef struct {
     float y;
 } Vec2f;
 
-typedef struct Vec3f_t {
+typedef struct {
     float x;
     float y;
     float z;
 } Vec3f;
-
 
 typedef struct {
     uint8_t x;
@@ -49,7 +49,7 @@ typedef struct {
     uint32_t a;
 } Vec4u32;
 
-typedef struct Mat4x4_t {
+typedef struct {
     float data[16];
 } Mat4x4;
 
@@ -90,6 +90,8 @@ Mat4x4 ortho(float near, float far, float right, float left, float top, float bo
 void translate(Mat4x4* mat, Vec3f* v);
 void scale_mat4(Mat4x4* mat, Vec3f* v);
 void transpose(Mat4x4* mat);
+// 'axis' should be normalized 
+void mat4_rotate(Mat4x4* mat, Vec3f* axis, float radians);
 Mat4x4 mul(Mat4x4* a, Mat4x4* b);
 
 int intersect_rectf(Rectf* a, Rectf* b);

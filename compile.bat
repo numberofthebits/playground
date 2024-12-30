@@ -25,6 +25,7 @@ cl.exe ^
  Shlwapi.lib ^
  "./libs/GLFW/lib/glfw3dll.lib"^
  /D_CRT_SECURE_NO_WARNINGS^
+ /DENABLE_DEBUG_TIMERS^
  /MP16^
  /arch:AVX^
  /Zi^

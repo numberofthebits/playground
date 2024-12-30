@@ -189,6 +189,30 @@ void scale_mat4(Mat4x4* mat, Vec3f* v) {
     mat->data[10] *= v->z;
 }
 
+void mat4_rotate(Mat4x4* mat, Vec3f* axis, float radians) {
+    float cos_r = cosf(radians);
+    float sin_r = sinf(radians);
+    float one_min_cos_r = 1.0f - cos_r;
+    float x2 = axis->x * axis->x;
+    float y2 = axis->y * axis->y;
+    float z2 = axis->z * axis->z;
+    float xy = axis->x * axis->y;
+    float xz = axis->x * axis->z;
+    float yz = axis->y * axis->z;
+
+    mat->data[0] = x2 * one_min_cos_r + cos_r;
+    mat->data[1] = xy * one_min_cos_r + axis->z * sin_r;
+    mat->data[2] = xz * one_min_cos_r - axis->y * sin_r;
+
+    mat->data[4] = xy * one_min_cos_r - axis->z * sin_r;
+    mat->data[5] = y2 * one_min_cos_r + cos_r;
+    mat->data[6] = yz * one_min_cos_r + axis->x * sin_r;
+
+    mat->data[8] = xz * one_min_cos_r + axis->y * sin_r;
+    mat->data[9] = yz * one_min_cos_r - axis->x * sin_r;
+    mat->data[10] = z2 * one_min_cos_r + cos_r;
+}
+
 void transpose(Mat4x4* mat) {
     float values[16] = {
         mat->data[0], mat->data[4], mat->data[8], mat->data[12],
