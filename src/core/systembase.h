@@ -13,7 +13,6 @@ struct SystemBase {
     SignatureT signature;
     Vec entities;
     pfnSystemUpdate update_fn;
-    void* system_impl;
     Assets* assets;
     struct EventBus* event_bus;
 };
