@@ -185,7 +185,6 @@ Entity registry_create_entity(Registry* reg) {
 
 static void registry_add_entity_to_systems(Registry* registry, Entity entity) {
     size_t entity_index = entity.index;
-    /* int entity_signature = VEC_GET_T(&registry->entity_component_signatures, int, entity_id); */
     SignatureT entity_signature = registry->entity_component_signatures[entity_index];
 
     for (int i = 0; i < registry->num_systems; ++i) {
@@ -228,29 +227,19 @@ void registry_remove_entity(Registry* reg, Entity e) {
     reg->to_remove[reg->count_to_remove++] = e;
 }
 
-void registry_commit_entities(Registry* reg) {
-    
-//    LOG_INFO("Add %d entities", reg->count_to_remove);
-    for (int i = 0; i < reg->count_to_add; ++i) {
-        registry_add_entity_to_systems(reg, reg->to_add[i]);
-    }
-
-    reg->count_to_add = 0;
-
-// Note: Switched add and remove around so
-    // entities are freed and can be reused the same
-    // frame
-    
+void registry_commit_entities(Registry* reg) {    
     for (int j = 0; j < reg->count_to_remove; ++j) {
         Entity e = reg->to_remove[j];
         registry_remove_entity_from_systems(reg, e); 
         entity_id_pool_remove_entity(&reg->entity_id_pool, e);       
     }
-
     reg->count_to_remove = 0;
 
+    for (int i = 0; i < reg->count_to_add; ++i) {
+        registry_add_entity_to_systems(reg, reg->to_add[i]);
+    }
 
-//    LOG_INFO("Remove %d entities", reg->count_to_remove);
+    reg->count_to_add = 0;
 }
 
 void registry_add_component(Registry* reg, Entity e, enum component_bit component, void* data) {

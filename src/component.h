@@ -14,8 +14,7 @@ enum ComponentBit {
     COLLISION_COMPONENT_BIT = (1U << 4),
     INPUT_COMPONENT_BIT = (1U << 5),
     TIME_COMPONENT_BIT = (1U << 6),
-//    PLAYER_COMPONENT_BIT = (1U << 7),
-    
+
     INVALID_COMPONENT_BIT = (1U << 31)
 };
 typedef enum ComponentBit ComponentBit;
@@ -79,7 +78,8 @@ struct AnimationComponent_t {
 typedef struct AnimationComponent_t AnimationComponent;
 
 struct CollisionComponent_t {
-    Rectf bounding_rect;
+    // axis aligned bounding rect
+    Rectf aabr;
 };
 typedef struct CollisionComponent_t CollisionComponent;
 

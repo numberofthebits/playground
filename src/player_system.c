@@ -11,6 +11,8 @@
 
 #include <GLFW/glfw3.h>
 
+#define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
+
 static Vec2f BULLET_MIN_VELOCITY = {0.1f, 0.1f};
 
 static float f32_constrain_to_pi(float f) {
@@ -136,24 +138,19 @@ static void player_system_handle_keyboard_update(struct PlayerSystem* sys, struc
                 (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
         case GLFW_KEY_A:
-            /* sys->angle += (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR; */
-            /* if (sys->angle > 360.f) { */
-            /*     sys->angle -= 360.f; */
-            /* } */
-            sys->angle += PI_DIV_4;
+            sys->angle += PLAYER_ROTATE_ANGLE_DELTA;
+            sys->angle = fmodf(sys->angle, PI_MUL_2);
             break;
         case GLFW_KEY_D:
-            sys->angle -= PI_DIV_4;
-            /* sys->angle -= (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR; */
+            sys->angle -= PLAYER_ROTATE_ANGLE_DELTA;
+            sys->angle = fmodf(sys->angle, PI_MUL_2);
             if(sys->angle < 0.f) {
-                sys->angle += 360.f;
+                sys->angle += PI_MUL_2;
             }
             break;
         default:
             LOG_WARN("Unhandled key input: Key code %d", key_state.key);
         }
-
-        sys->angle = f32_constrain_to_pi(sys->angle);
     }
 }
 

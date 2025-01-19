@@ -240,40 +240,6 @@ static void physics_update(Registry* reg, struct SystemBase* s, size_t frame_nr)
 }
 
 
-static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
-    BeginScopedTimer(collision_time);
-
-    struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
-    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
-    
-    for (int i = 0; i < sys->entities.size; ++i) {
-        Entity self = entities[i];
-        CollisionComponent* self_collision = PoolGetComponent(collision_pool, CollisionComponent, self.id);
-        TransformComponent* self_transform = PoolGetComponent(transform_pool, TransformComponent, self.id);
-            
-        for (int j = i; i < sys->entities.size; ++j) {
-            Entity other = entities[j];
-
-            if(other.id == self.id) {
-                continue;
-            }
-            
-            TransformComponent* other_transform = PoolGetComponent(transform_pool, TransformComponent, other.id);
-            CollisionComponent* other_collision = PoolGetComponent(collision_pool, CollisionComponent, other.id);
-
-            if (intersect_rectf(&self_collision->bounding_rect, &other_collision->bounding_rect)) {
-                LOG_INFO("YOU HAVE TAKEN THE LEAD");
-            }
-        }
-    }
-
-    AppendScopedTimer(collision_time);
-    PrintScopedTimer(collision_time);
-}
-
-
 Game* game_create() {
     arena_init(&allocator, STATIC_ARENA_SIZE);
     arena_init(&frame_allocator, FRAME_ARENA_SIZE);
@@ -330,7 +296,6 @@ Game* game_create() {
         &game->event_bus);
     
     struct CollisionSystem* collision_system = collision_system_create(
-        &collision_update,
         &game->event_bus);
 
     struct AnimationSystem* animation_system = animation_system_create(
@@ -418,8 +383,8 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
             // Offset.y must be the bottom of the texture rect.
             rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f; 
             rc.tex_coord_offset.y = (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f;
-            rc.tex_coord_scale.x = 2.0f / (atlas_cols_f);
-            rc.tex_coord_scale.y = 2.0f / (atlas_rows_f);
+            rc.tex_coord_scale.x = 1.f / (atlas_cols_f);
+            rc.tex_coord_scale.y = 1.f / (atlas_rows_f);
             rc.material_id = assets_make_id_str("jungle-mat");
             rc.pipeline_id = assets_make_id_str("tilemap");
             
@@ -460,6 +425,8 @@ static void load_units(Registry* registry, Assets* assets) {
         pc.velocity.y = -0.01f;
 
         InputComponent ic = {0};
+
+        
         
         registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
@@ -472,17 +439,15 @@ static void load_units(Registry* registry, Assets* assets) {
         Entity chopper = registry_create_entity(registry);
 
         TransformComponent tc = {0};
-        tc.pos.x = 0.2f;
-        tc.pos.y = 0.2f;
-        tc.pos.z = 0.1f;
-        tc.scale.x = 1.f;
-        tc.scale.y = 1.f;
-        /* tc.scale.x = 1.0f / 51.0f * 2.f; */
-        /* tc.scale.y = 1.0f / 41.f * 2.f; */
+        tc.pos.x = 0.0f;
+        tc.pos.y = 0.0f;
+        tc.pos.z = 0.0f;
+        tc.scale.x = 10.f;
+        tc.scale.y = 10.f;
         tc.rotation = 0.f;
 
         RenderComponent rc;
-        rc.render_layer = 0;
+        rc.render_layer = 1;
         rc.tex_coord_offset.x = 0.f;
         rc.tex_coord_offset.y = 0.f;
         rc.tex_coord_scale.x = 1.f;

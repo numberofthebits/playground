@@ -7,7 +7,7 @@ struct CollisionSystem {
     struct SystemBase base;
 };
 
-struct CollisionSystem* collision_system_create(pfnSystemUpdate callback, struct EventBus* event_bus);
+struct CollisionSystem* collision_system_create(struct EventBus* event_bus);
 
 
 #endif COLLITION_SYSTEM_H

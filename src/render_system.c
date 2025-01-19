@@ -315,17 +315,17 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
         Mat4x4 matrix_translate = identity();
         Mat4x4 matrix_rotate = identity();
 
+        mat4_rotate(&matrix_rotate, &axis, tc->rotation);        
         scale_mat4(&matrix_scale, &scale);
         translate(&matrix_translate, &pos);
-        mat4_rotate(&matrix_rotate, &axis, tc->rotation);
-        
+
 
         Mat4x4 m = identity();
+        m = mul(&m, &matrix_rotate);
         m = mul(&m, &matrix_scale);
         m = mul(&m, &matrix_translate);
-        m = mul(&m, &matrix_rotate);
-        rd->model_matrix = m;
         
+        rd->model_matrix = m;
         rd->material_id = rc->material_id;
         rd->program_id = rc->pipeline_id;
     }
@@ -387,7 +387,7 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
-    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT, assets, event_bus);
+    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, assets, event_bus);
 
     system->assets = assets;
     system->materials = vec_create();
@@ -425,10 +425,10 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
     glVertexArrayAttribFormat(system->vao, 2, 2, GL_FLOAT, GL_FALSE, 0);
     
     float pos_data[] = {
-        -1.0f, -1.0f, -0.0f, // lower left
-        1.0f, -1.0f, -0.0f, // lower right
-        1.0f, 1.0f, -0.0f, // upper right
-        -1.0f, 1.0f, -0.0f, // upper left
+        -0.48f, -0.48f, 0.0f, // lower left
+        0.48f, -0.48f, 0.0f, // lower right
+        0.48f, 0.48f, 0.0f, // upper right
+        -0.48f, 0.48f, 0.0f, // upper left
     };
     glNamedBufferData(system->buffer_objects[BO_INDEX_POSITION], sizeof(pos_data), &pos_data, GL_STATIC_DRAW);
     
