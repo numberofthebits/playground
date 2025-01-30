@@ -35,9 +35,15 @@
     }                                                           \
 
 
-void __stdcall gl_debug_callback(GLenum source, GLenum type, GLuint id,
-                                 GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
-    switch (severity) {
+void CALLING_CONVENTION gl_debug_callback(GLenum source,
+					  GLenum type,
+					  GLuint id,
+					  GLenum severity,
+					  GLsizei length,
+					  const GLchar* message,
+					  const void* userParam) {
+  (void)source; (void)type; (void)id; (void)length; (void)userParam;
+  switch (severity) {
     case GL_DEBUG_SEVERITY_HIGH:
         LOG_GL_HIGH(message);
         break;
@@ -51,12 +57,6 @@ void __stdcall gl_debug_callback(GLenum source, GLenum type, GLuint id,
         LOG_GL_NOTIFY(message);
         break;
     }
-}
-
-static void hash_map_asset_printer(void* key, size_t key_len, void* value) {
-    AssetId id = *(AssetId*)key;
-    GLuint tex_id = (GLuint)(uintptr_t)value;
-    printf("AssetId %d Texture handle %d\n", id, tex_id);
 }
 
 static GLuint compile_shader(const char* src, GLenum type) {
@@ -128,8 +128,6 @@ static int render_data_order_comp(const void* lhs, const void* rhs) {
     const RenderData* a = lhs;
     const RenderData* b = rhs;
 
-    static int i = 0;
-
     return a->render_layer - b->render_layer;
 }
 
@@ -138,6 +136,7 @@ static void sort_render_data(RenderData* data, size_t count) {
 }
 
 static void render_batch(RenderSystem* system, unsigned int batch_size) {
+  (void)system;
     glMultiDrawElementsIndirect(GL_TRIANGLES,
                                 GL_UNSIGNED_SHORT,
                                 0, // *indirect *
@@ -187,7 +186,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     unsigned int count_in_batch = 0;
     AssetId current_program = 0;
 
-    for (int i = 0; i < render_data_size; ++i) {
+    for (size_t i = 0; i < render_data_size; ++i) {
         RenderData* render_data = data + i;
 
         if(render_data->program_id != current_program) {
@@ -198,7 +197,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
             count_in_batch = 0;
             
             GLuint* program = 0;
-            if (!hash_map_get(&system->programs, &render_data->program_id, sizeof(render_data->program_id), &program)) {
+            if (!hash_map_get(&system->programs, &render_data->program_id, sizeof(render_data->program_id), (void**)&program)) {
                 LOG_EXIT("Failed to find shader program");
             }
             GLuint program_handle = (GLuint)(uintptr_t)program;
@@ -277,6 +276,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
 
 
 static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
+  (void)frame_nr;
     BeginScopedTimer(render_time);
 
     RenderSystem* render_sys = (RenderSystem*)sys;
@@ -346,7 +346,7 @@ void render_system_create_program(RenderSystem* system, AssetId program_id) {
     int num_shaders_in_program = 0;
     GLuint shader_handles[6];
 
-    for (int i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId); ++i) {
+    for (size_t i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId); ++i) {
         if(assets_shader_program_has_shader(program_asset, i)) {
             AssetShader* shader_asset = assets_get_shader(system->assets, program_asset->shader_ids[i]);
 
@@ -555,6 +555,7 @@ void render_system_prepare_resources(RenderSystem* system, PreparedResources* re
 
 
 uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta) {
+  (void)system;
     GLuint tex_handle;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
 
@@ -575,7 +576,6 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
     }
     
     int levels = 1;
-    int border = 0;
     glTextureStorage2D(tex_handle, levels, internal_fmt, meta->width, meta->height);
     CHECK_GL_ERROR();
 

@@ -1,7 +1,7 @@
 #include "assetstore.h"
 
-#include "log.h"
-#include "os.h"
+#include <core/log.h>
+#include <core/util.h>
 
 #include <stb_image.h>
 
@@ -54,7 +54,7 @@ typedef struct _TileInfo {
     uint16_t y;
 } TileInfo;
 
-static int load_texture_data(Assets* assets, const char* file_path, TileInfo* tile_info, ImageMeta* meta, void** data) {
+static int load_texture_data(const char* file_path, ImageMeta* meta, void** data) {
     stbi_set_flip_vertically_on_load(1);
     int x = 0;
     int y = 0;
@@ -143,7 +143,7 @@ static int load_shader_source(const FileSystemListResult* result, void* user_dat
     shader_asset.name = assets_make_asset_name_str(result->file_name);
     shader_asset.file_path = assets_make_asset_file_path(result->file_path);
 
-    const char* shader_src = file_read_all(result->file_path);
+    const char* shader_src = (const char*)file_read_all(result->file_path);
     if(!shader_src) {
         LOG_EXIT("Failed to load shader from '%s'", result->file_path);
     }
@@ -151,8 +151,8 @@ static int load_shader_source(const FileSystemListResult* result, void* user_dat
     LOG_INFO("Loaded shader source:\n%s", shader_src);
     shader_asset.shader_src = shader_src;
 
-    int shader_index = 0;
-    if (!_BitScanReverse(&shader_index, shader_type)) {
+    int shader_index = get_msb_set(shader_type);
+    if (shader_index < 0) {
         LOG_EXIT("Failed to find shader index from shader type '%d', file ext '%s'", shader_type, result->extension);
     }
     context->program->has_shader |= shader_type;
@@ -180,8 +180,11 @@ static void load_shaders(Assets* assets) {
     context.program = &unit;
     file_system_list("./assets/shaders/", "unit.*", &load_shader_source, &context);
 
-    VEC_PUSH_T(&assets->programs, AssetShaderProgram, unit);
-    
+    VEC_PUSH_T(&assets->programs, AssetShaderProgram, unit);   
+}
+
+int assets_shader_program_has_shader(AssetShaderProgram* program, int index) {
+    return program->has_shader & (0x1 << index);
 }
 
 static void load_materials(Assets* assets) {
@@ -254,7 +257,7 @@ AssetId assets_make_id_str(const char* name) {
     return assets_make_id(name, strlen(name));
 }
 
-static int assets_make_file_path(const char* path, const char* file_name, char* buf, int buf_len) {
+static int assets_make_file_path(const char* path, const char* file_name, char* buf, unsigned int buf_len) {
     // +2 add one for newline and one for path separator
     if(strlen(path) + strlen(file_name) + 2 >= buf_len) {
         return 0;
@@ -287,7 +290,6 @@ int assets_load_asset(Assets* assets, AssetId id, void** data, void* meta) {
 
     Asset* asset = (Asset*)asset_ptr;
 
-    TileInfo tileInfo = {0};
     char buf[MAKE_FILE_PATH_BUF_MAX] = {0};
     if(!assets_make_file_path(asset->file_path, asset->name.name, buf, sizeof(buf))) {
         LOG_ERROR("Failed to make file path for path '%s' file '%s': Concat buffer size=%d", asset->file_path, asset->name, MAKE_FILE_PATH_BUF_MAX);
@@ -297,10 +299,10 @@ int assets_load_asset(Assets* assets, AssetId id, void** data, void* meta) {
     int ret = 0;
     switch (asset->type) {
     case AssetTypeTexture:
-        ret = load_texture_data(assets, asset->file_path, &tileInfo, meta, data );
+        ret = load_texture_data(asset->file_path, meta, data );
         break;
     case AssetTypeTextureTiled:
-        ret = load_texture_data(assets, asset->file_path, &tileInfo, meta, data);        
+        ret = load_texture_data(asset->file_path, meta, data);        
         break;
     case AssetTypeShaderProgram:
         break;

@@ -6,8 +6,8 @@
 #include <memory.h>
 #include <stdio.h>
 
-unsigned int hash(void* ptr, size_t len) {
-    char* data = ptr;
+unsigned int hash(const void* ptr, size_t len) {
+    const char* data = ptr;
     const size_t block_size = sizeof(int);
     const size_t blocks_end = len - len % sizeof(unsigned int);
     unsigned int hash = (unsigned int)len;
@@ -168,7 +168,7 @@ void hash_map_print(HashMap* map) {
         } else {
             int chain = 0;
             while (iter != 0) {
-                printf("\n\t%d --- value %p current %p => next %p\n", chain, iter->value, iter, iter->next);
+	      printf("\n\t%d --- value %p current %p => next %p\n", chain, (void*)iter->value, (void*)iter, (void*)iter->next);
                 chain++;
                 iter = iter->next;
             }

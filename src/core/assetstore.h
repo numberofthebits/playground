@@ -1,5 +1,5 @@
-#ifndef _ASSETSTORE_H
-#define _ASSETSTORE_H
+#ifndef ASSETSTORE_H
+#define ASSETSTORE_H
 
 #define ASSET_NAME_MAX_LEN 64
 #define ASSET_FILE_PATH_MAX 256
@@ -8,7 +8,7 @@
 #include "math.h"
 #include "types.h"
 #include "hashmap.h"
-#include "util.h"
+#include <core/os.h>
 
 #include <stdint.h>
 
@@ -86,9 +86,7 @@ typedef struct {
     int has_shader;
 } AssetShaderProgram;
 
-inline int assets_shader_program_has_shader(AssetShaderProgram* program, int index) {
-    return program->has_shader & (0x1 << index);
-}
+int assets_shader_program_has_shader(AssetShaderProgram* program, int index);
 
 typedef struct {
     // Map of AssetId, Asset
@@ -124,4 +122,4 @@ AssetShader* assets_get_shader(Assets* assets, AssetId shader_id);
 
 
 
-#endif _ASSETSTORE_H
+#endif // ASSETSTORE_H

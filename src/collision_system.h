@@ -10,4 +10,4 @@ struct CollisionSystem {
 struct CollisionSystem* collision_system_create(struct EventBus* event_bus);
 
 
-#endif COLLITION_SYSTEM_H
+#endif // COLLISION_SYSTEM_H

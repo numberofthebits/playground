@@ -3,7 +3,7 @@
 #include "system.h"
 #include "component.h"
 #include "input_system.h"
-#include "event.h"
+#include "events.h"
 
 #include <core/math.h>
 #include <core/arena.h>
@@ -14,17 +14,6 @@
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
 static Vec2f BULLET_MIN_VELOCITY = {0.1f, 0.1f};
-
-static float f32_constrain_to_pi(float f) {
-    if (f < -PI) {
-        f = PI - fmodf(f, PI);
-    }
-    else if (f > PI) {
-        f = -PI - fmodf(f, -PI);
-    }
-
-    return f;
-}
 
 void player_system_reset(struct PlayerSystem* system) {
     memset(system->movement, 0x0, sizeof(system->movement));
@@ -68,8 +57,8 @@ static void player_system_spawn_bullet(Registry* registry, Vec3f player_pos, Vec
             
     TimeComponent ttc = {0};
     ttc.created = time_now();
-    uint64_t expires = time_from_secs(5);
-    ttc.expires = ttc.created + expires;
+    TimeT expires = time_from_secs(5);
+    ttc.expires = time_add(ttc.created, expires);
 
     registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
     registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
@@ -81,7 +70,7 @@ static void player_system_spawn_bullet(Registry* registry, Vec3f player_pos, Vec
 
 void player_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr) {
     BeginScopedTimer(player_system_update);
-    
+    (void)frame_nr;
     struct PlayerSystem* player_system = (struct PlayerSystem*)sys;
     struct Pool* physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
     struct Pool* transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
@@ -95,7 +84,7 @@ void player_system_update(Registry* registry, struct SystemBase* sys, size_t fra
         PhysicsComponent* pc = PoolGetComponent(physics_pool, PhysicsComponent, entity.index);
 
         // NOTE: It would probably be fine to spawn 1 bullet per frame
-        for (int j = 0; i < player_system->bullets_spawned; ++i) {
+        for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
             player_system_spawn_bullet(registry, tc->pos, pc->velocity);
         }
 
@@ -123,19 +112,19 @@ static void player_system_handle_keyboard_update(struct PlayerSystem* sys, struc
             break;
         case GLFW_KEY_UP:
             sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX] +=
-                (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
+	      (float)time_to_nanosecs(key_state.elapsed) * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
         case GLFW_KEY_DOWN:
             sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX] -=
-                (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
+                (float)time_to_nanosecs(key_state.elapsed) * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
         case GLFW_KEY_LEFT:
             sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] -=
-                (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
+                (float)time_to_nanosecs(key_state.elapsed) * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
         case GLFW_KEY_RIGHT:
             sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] +=
-                (float)key_state.elapsed * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
+                (float)time_to_nanosecs(key_state.elapsed) * PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
             break;
         case GLFW_KEY_A:
             sys->angle += PLAYER_ROTATE_ANGLE_DELTA;

@@ -1,5 +1,5 @@
-#ifndef _ECS_H
-#define _ECS_H
+#ifndef ECS_H
+#define ECS_H
 
 #include "vec.h"
 #include "component.h"
@@ -59,7 +59,7 @@ typedef struct Registry_t Registry;
  */
 void registry_init(Registry* registry, size_t max_entity_count, const Component* components, size_t component_count);
 
-struct Pool* registry_get_pool(Registry* reg, enum component_bit bit);
+struct Pool* registry_get_pool(Registry* reg, ComponentBit bit);
 
 #define PoolGetComponent(pool, type, index) \
     ((type*)pool->data) + index;
@@ -82,8 +82,8 @@ void registry_remove_entity(Registry* reg, Entity e);
 
 void registry_commit_entities(Registry* reg);
 
-void registry_add_component(Registry* reg, Entity e, enum component_bit, void* data);
+void registry_add_component(Registry* reg, Entity e, ComponentBit component_bit, void* data);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
 
 
-#endif _ECS_H
+#endif // ECS_H

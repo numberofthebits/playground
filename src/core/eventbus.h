@@ -5,6 +5,8 @@
 
 #include <core/systembase.h>
 
+struct SystemBase;
+
 // General event type
 // The producer and consumber needs to know the meaning
 // of both the type of event and its data

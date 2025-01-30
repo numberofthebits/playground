@@ -2,13 +2,15 @@
 
 #include "component.h"
 #include "system.h"
-#include "event.h"
+#include "events.h"
 
 #include <core/systembase.h>
 #include <core/arena.h>
 #include <core/ecs.h>
+#include <core/os.h>
 
 static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
+  (void)frame_nr;
     BeginScopedTimer(collision_time);
 
     struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);

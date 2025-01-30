@@ -9,7 +9,7 @@
 #include "input_system.h"
 #include "time_system.h"
 #include "player_system.h"
-#include "event.h"
+#include "events.h"
 
 #include <core/arena.h>
 #include <core/assetstore.h>
@@ -21,8 +21,8 @@
 #include <core/systembase.h>
 
 // Exclude rarely-used stuff from Windows headers
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+/* #define WIN32_LEAN_AND_MEAN */
+/* #include <windows.h> */
 
 #include <core/eventbus.h>
 
@@ -69,12 +69,11 @@ enum ReadlineResult {
     READLINE_BUFFER_TOO_SMALL = -2,
     READLINE_READ_ERROR = -3
 };
-typedef enum ReadlineResult_t ReadlineResult;
+//typedef enum ReadlineResult_t ReadlineResult;
 
-static ReadlineResult readline(FILE* fp, char* buffer, int buf_size, int*line_len) {
+static enum ReadlineResult readline(FILE* fp, char* buffer, int buf_size) {
     long int curr_pos = ftell(fp);
     int len = 0;
-    char curr_char = 0;
     int more_lines = 0;
     int line_done = 0;
     do {
@@ -140,17 +139,15 @@ static int load_tile_map_layout(const char* file, Map* map) {
     }
 
     char line_buf[1024];
-    int map_row_index = 0;
-    ReadlineResult read_result;
+    enum ReadlineResult read_result;
     int map_index_row = 0;
     int map_index_col = 0;
 
     do {
         int tile_row = 0;
         int tile_col = 0;
-        int line_len = 0;
         memset(line_buf, 0x0, 1024);
-        read_result = readline(fp, line_buf, 1024, &line_len);
+        read_result = readline(fp, line_buf, 1024);
 
         switch (read_result) {
         case READLINE_READ_ERROR:
@@ -185,6 +182,7 @@ static int load_tile_map_layout(const char* file, Map* map) {
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+  (void)scancode; (void)mods;
     Game* game = glfwGetWindowUserPointer(window);
     
     struct InputSystem* input_system = (struct InputSystem*)registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
@@ -219,27 +217,6 @@ static void window_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 
-static void print_transform_component(TransformComponent* tc) {
-    LOG_INFO("\tTransform pos (%f, %f) ", tc->pos.x, tc->pos.y);
-}
-
-
-static void physics_update(Registry* reg, struct SystemBase* s, size_t frame_nr) {
-    BeginScopedTimer(physics_time);
-
-    Entity* entities = VEC_ITER_BEGIN_T(&s->entities, Entity);
-    struct Pool* physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
-    struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-
-    for (int i = 0; i < s->entities.size; ++i) {
-        ; //Entity entity = entities[i];
-    }
-    
-    AppendScopedTimer(physics_time);
-    PrintScopedTimer(physics_time);
-}
-
-
 Game* game_create() {
     arena_init(&allocator, STATIC_ARENA_SIZE);
     arena_init(&frame_allocator, FRAME_ARENA_SIZE);
@@ -256,7 +233,7 @@ Game* game_create() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "1,2,3 techno", 0, 0);
 
@@ -284,7 +261,7 @@ Game* game_create() {
     assets_init(&game->assets);
     event_bus_init(&game->event_bus);
 
-    timers_init();
+    time_init();
     
     struct InputSystem* input_system = input_system_create(
         &game->event_bus);
@@ -345,6 +322,7 @@ static void map_init(Map* map) {
 }
 
 static void map_load(Map* map, Registry* registry, Assets* assets) {
+  (void)assets;
     const float fcols = (float)map->map_size.x;
     const float frows = (float)map->map_size.y;
     const float atlas_cols_f = (float)map->atlas_size.x;
@@ -396,6 +374,7 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
 }
 
 static void load_units(Registry* registry, Assets* assets) {
+  (void)assets;
 //    const char* unit_shader_name = "unit";
     const char* unit_shader_name = "tilemap";
     AssetId unit_shader_id = assets_make_id(unit_shader_name, strlen(unit_shader_name));
@@ -424,9 +403,6 @@ static void load_units(Registry* registry, Assets* assets) {
         pc.velocity.x = 0.01f;
         pc.velocity.y = -0.01f;
 
-        InputComponent ic = {0};
-
-        
         
         registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
@@ -522,22 +498,7 @@ void game_run(Game* game) {
     LOG_INFO("Main loop");
     game->main_loop_running = 1;
 
-    LARGE_INTEGER fps;
-    QueryPerformanceCounter(&fps);
-
     while (game->main_loop_running) {
-        /* if (game->frame_counter % 60 == 0) { */
-        /*     LARGE_INTEGER fps2; */
-        /*     QueryPerformanceCounter(&fps2); */
-        /*     LARGE_INTEGER elapsed; */
-        /*     elapsed.QuadPart = fps2.QuadPart - fps.QuadPart; */
-        /*     elapsed.QuadPart *= 1000000; */
-        /*     elapsed.QuadPart /= performance_counter_frequency.QuadPart; */
-        /*     LOG_INFO("Time 60 frames %ld", elapsed.QuadPart); */
-
-        /*     QueryPerformanceCounter(&fps); */
-        /* } */
-
         LOG_INFO("###### FRAME %zu #####", game->frame_counter);
         BeginScopedTimer(frame_time);
 
@@ -570,7 +531,7 @@ void game_destroy(Game* game) {
 void game_frame_buffer_size_changed(Game* game, int width, int height) {
     LOG_INFO("Framebuffer size changed: (%d, %d)", width, height);
     RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
-    if (!system) {
+    if (!render_system) {
         LOG_ERROR("Failed to resize frame buffer: System not found");
     }
 
@@ -578,5 +539,6 @@ void game_frame_buffer_size_changed(Game* game, int width, int height) {
 }
 
 void game_window_size_changed(Game* game, int width, int height) {
+  (void)game;
     LOG_INFO("Window size changed: (%d, %d)", width, height);    
 }

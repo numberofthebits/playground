@@ -1,5 +1,5 @@
-#ifndef _MATH_H
-#define _MATH_H
+#ifndef MATH_H
+#define MATH_H
 
 #include <math.h>
 #include <stdint.h>
@@ -81,9 +81,9 @@ Vec3f normalize_with_len_vec3f(Vec3f* v, float len);
 // Subtract "b" from "a"
 Vec3f sub(Vec3f* a, Vec3f* b);
 Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up);    
-Mat4x4 zero();
+Mat4x4 zero(void);
     
-Mat4x4 identity();
+Mat4x4 identity(void);
 Mat4x4 perspective(float near, float far, float fov, float aspect);
 Mat4x4 ortho(float near, float far, float right, float left, float top, float bottom);
 

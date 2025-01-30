@@ -8,6 +8,7 @@
 #include <core/ecs.h>
 
 static void movement_update(Registry* reg, struct SystemBase* system, size_t frame_nr) {
+    (void)frame_nr;
     BeginScopedTimer(movement_time);
 
     Entity* entities = VEC_ITER_BEGIN_T(&system->entities, Entity);

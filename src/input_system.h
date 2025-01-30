@@ -15,13 +15,13 @@ enum KeyFlag {
 };
 
 struct KeyState {
-    uint64_t time_start;
-    uint64_t elapsed;
+    TimeT time_start;
+    TimeT elapsed;
     int flags;
 };
 
 struct KeyStateEventData {
-    uint64_t elapsed;
+    TimeT elapsed;
     int key;
 };
 

@@ -29,7 +29,7 @@ void event_bus_subscribe(struct EventBus* bus, struct SystemBase* system, int ev
 }
 
 void event_bus_emit(struct EventBus* bus, struct Event* event) {
-    for (int i = 0; i < bus->num_subscribers; ++i) {
+    for (size_t i = 0; i < bus->num_subscribers; ++i) {
         struct Subscriber* subscriber = &bus->subscribers[i];
         if (event->id == subscriber->event_id) {
             subscriber->callback(subscriber->system, *event);

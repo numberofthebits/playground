@@ -5,18 +5,22 @@
 #include <core/assetstore.h>
 #include <core/systembase.h>
 #include <core/arena.h>
+#include <core/os.h>
+#include <core/math.h>
 
-static void animation_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
+static void animation_update(Registry* reg, struct SystemBase* system, size_t frame_nr) {
+    (void)frame_nr;
+    (void)system;
     BeginScopedTimer(animation_time);
 
-    struct AnimationSystem* animation_system = (struct AnimationSystem*)sys;
+    //struct AnimationSystem* animation_system = (struct AnimationSystem*)system;
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
     struct Pool* animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
     struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
 
-    Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+    Entity* entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
     
-    for (int i = 0; i < sys->entities.size; ++i) {
+    for (int i = 0; i < system->entities.size; ++i) {
         Entity entity = entities[i];
         RenderComponent* rc = PoolGetComponent(render_pool, RenderComponent, entity.index);
         AnimationComponent* ac =
@@ -49,7 +53,7 @@ static void animation_update(Registry* reg, struct SystemBase* sys, size_t frame
         // which is PI/2 total. Adding PI/4 maps our rotation to +/- PI/4 radians.
         // Making it wrap correctly at PI_DIV_4. To map inversely, subtract PI/4 radians
         // again.
-        tc->rotation = fmodf((tc->rotation + PI_DIV_4), PI_DIV_2) - PI_DIV_4;
+        tc->rotation = (float)fmod((tc->rotation + PI_DIV_4), PI_DIV_2) - PI_DIV_4;
 
         ac->last_offset = offset;
 
@@ -80,5 +84,6 @@ struct AnimationSystem* animation_system_create(Assets* assets, struct EventBus*
 }
 
 void animation_system_prepare(struct AnimationSystem* sys, struct AnimationResources* resources) {
-    ;
+  (void)sys;
+  (void)resources;
 }

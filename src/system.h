@@ -1,6 +1,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
+#include <stddef.h>
+
 enum SystemBit {
     SYSTEM_BIT_ITER_BEGIN =(1U << 0),
     
@@ -14,7 +16,7 @@ enum SystemBit {
 
     SYSTEM_BIT_ITER_END   =(1U << 7),
     
-    INVALID_SYSTEM_BIT =   (1U << 31)
+    INVALID_SYSTEM_BIT =   (1U << 30)
 };
 typedef enum SystemBit SystemBit;
 
@@ -28,7 +30,7 @@ typedef struct System System;
 
 extern const System system_table[];
 
-size_t system_table_size();
+size_t system_table_size(void);
 
 int system_get_index(SystemBit flag);
 

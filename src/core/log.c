@@ -8,7 +8,7 @@
 static char log_buffer[4096*4];
 static FILE* fp;
 
-typedef void(*LogFunc)();
+typedef void(*LogFunc)(int);
 
 static LogFunc log_impl;
 
@@ -40,7 +40,7 @@ int log_init(const char* file_path) {
     return 1;
 }
 
-void log_destroy() {
+void log_destroy(void) {
     if (fp) {
         fflush(fp);
         fclose(fp);

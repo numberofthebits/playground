@@ -100,4 +100,4 @@ void vec_destroy(Vec* v);
     }                                                           \
     (vec)->size -= 1;                                           \
 
-#endif _VEC_H
+#endif

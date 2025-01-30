@@ -6,13 +6,13 @@
 #include <stdio.h>
 
 int main(void) {
-
     if (!log_init(0)) {
         printf("Failed to initialize logger");
         return -1;
     }
     
     Game* game = game_create();
+    
     if (!game) {
         LOG_ERROR("Failed to initialize game");
         return -1;
@@ -23,6 +23,7 @@ int main(void) {
     
     game_destroy(game);
     log_destroy();
+    
     return 0;
 }
 

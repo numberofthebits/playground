@@ -1,12 +1,14 @@
-#ifndef _SYSTEMBASE_H
-#define _SYSTEMBASE_H
+#ifndef SYSTEMBASE_H
+#define SYSTEMBASE_H
 
-#include "types.h"
-#include "vec.h"
-#include "assetstore.h"
-#include "eventbus.h"
+#include <core/types.h>
+#include <core/vec.h>
+#include <core/assetstore.h>
+#include <core/eventbus.h>
+#include <core/ecs.h>
 
-typedef void(*pfnSystemUpdate)(struct Registry_t*, struct SystemBase*, size_t);
+typedef struct Registry_t Registry;
+typedef void(*pfnSystemUpdate)(Registry*, struct SystemBase*, size_t);
 
 struct SystemBase {
     int id;
@@ -16,7 +18,6 @@ struct SystemBase {
     Assets* assets;
     struct EventBus* event_bus;
 };
-//typedef struct SystemBase_t SystemBase;
 
 void system_base_init(struct SystemBase* system,
                       int system_id,
@@ -25,14 +26,10 @@ void system_base_init(struct SystemBase* system,
                       Assets* assets,
                       struct EventBus* event_bus);
 
-void system_add_entity(struct SystemBase* system, Entity e);
+void system_add_entity(struct SystemBase* system, Entity entity);
 
-void system_remove_entity(struct SystemBase* sys, Entity e);
+void system_remove_entity(struct SystemBase* system, Entity entity);
 
-void system_require_component(struct SystemBase* sys, int bit);
+void system_require_component(struct SystemBase* system, int bit);
 
-// void system_subscribe_to_event(SystemBase* sys, int event_id, EventCallback callback);
-
-// void system_emit_event(SystemBase* sys, struct Event* event);
-
-#endif _SYSTEM_H
+#endif // SYSTEMBASE_H

@@ -1,5 +1,8 @@
-#ifndef _HASHMAP_H
-#define _HASHMAP_H
+#ifndef HASHMAP_H
+#define HASHMAP_H
+
+//#include <stdint.h>
+#include <stdlib.h>
 
 typedef struct {                           
     void* next;

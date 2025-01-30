@@ -24,5 +24,4 @@ struct AnimationSystem* animation_system_create(Assets* assets, struct EventBus*
 
 void animation_system_prepare(struct AnimationSystem* sys, struct AnimationResources* resources);
 
-
 #endif

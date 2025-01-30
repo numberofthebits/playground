@@ -1,12 +1,10 @@
-#ifndef _LOG_H
-#define _LOG_H
-
+#ifndef LOG_H
+#define LOG_H
 
 int log_init(const char* file_path);
 
-void log_destroy();
-
-void log_msg(const char* level, const char* file, int line, const char* format,  ...);
+void log_destroy(void);
+void log_msg(const char* level, const char* file, int line, const char* func_name, const char* format,  ...);
 
 #define LOG_INFO(...) \
     log_msg("Info", __FILE__, __LINE__, __FUNCTION__,  __VA_ARGS__);
@@ -34,4 +32,4 @@ void log_msg(const char* level, const char* file, int line, const char* format, 
     log_msg("GL NOTIFICATION", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__);
     
 
-#endif _LOG_H
+#endif

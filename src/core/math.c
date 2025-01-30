@@ -114,13 +114,13 @@ Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up) {
     return m;
 }
     
-Mat4x4 zero() {
+Mat4x4 zero(void) {
     Mat4x4 m;
     memset(&m, 0x0, sizeof(Mat4x4));
     return m;
 }
 
-Mat4x4 identity() {
+Mat4x4 identity(void) {
     Mat4x4 m;
 
     m.data[0] = 1.0f;

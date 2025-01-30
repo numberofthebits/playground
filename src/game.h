@@ -23,4 +23,4 @@ void game_frame_buffer_size_changed(Game* game, int width, int height);
 // Simply log window size changes for now
 void game_window_size_changed(Game* game, int width, int height);
 
-#endif _GAME_H
+#endif // GAME_H

@@ -7,6 +7,8 @@
 #include "systembase.h"
 #include "types.h"
 
+#include <stddef.h>
+
 #define REGISTRY_ENTITY_COMMIT_BUFFER_CAPACITY 1024
 
 #define REGISTRY_ARENA_SIZE 1024*1024*64
@@ -43,7 +45,7 @@ the next free index.
 */
 static void print_entity_id_pool(struct EntityIdPool* entity_id_pool) {
     LOG_INFO("Entity ID pool used %zu / %zu", entity_id_pool->used, entity_id_pool->size);
-    for(int i = 0; i < entity_id_pool->used; ++i) {
+    for(size_t i = 0; i < entity_id_pool->used; ++i) {
         LOG_INFO("EntityIdPool[%d]=%zu", i, entity_id_pool->pool[i]);
     }
 }
@@ -60,7 +62,7 @@ static void entity_id_pool_init(struct EntityIdPool* entity_ids, size_t max_enti
     entity_ids->size = max_entity_count;
     entity_ids->used = 0;
 
-    for (int i = 0; i < max_entity_count; ++i) {
+    for (size_t i = 0; i < max_entity_count; ++i) {
         entity_ids->pool[i] = i;
     }
 
@@ -88,7 +90,7 @@ static void entity_id_pool_remove_entity(struct EntityIdPool* entity_ids, Entity
 
     int to_remove = -1;
     
-    for (int i = 0; i < entity_ids->used; ++i) {
+    for (size_t i = 0; i < entity_ids->used; ++i) {
         if (entity.index == entity_ids->pool[i]) {
             to_remove =  i;
             break;
@@ -97,7 +99,7 @@ static void entity_id_pool_remove_entity(struct EntityIdPool* entity_ids, Entity
 
     if (to_remove == -1) {
         LOG_WARN("Failed to remove entity with id %d @ index %zu. Not found", entity.id, entity.index);
-        for (int i = 0; i < entity_ids->used; ++i) {
+        for (size_t i = 0; i < entity_ids->used; ++i) {
             print_entity_id_pool(entity_ids);
         }
         return;
@@ -128,7 +130,7 @@ static Entity create_entity(struct EntityIdPool* entity_id_pool) {
 
 
 static void zero_system_pointers(struct SystemBase** systems, size_t count) {
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         *systems = 0;
         systems++;
     }
@@ -144,7 +146,7 @@ void registry_init(Registry* reg,
     // Initialize all pools to null size null pointer data and
     // null pointer 
     memset(&reg->pools[0], 0x0, sizeof(reg->pools));
-    for (int i = 0; i < component_count; ++i) {
+    for (size_t i = 0; i < component_count; ++i) {
         const Component* component = &components[i];
         struct Pool pool;
         pool.descriptor = component;
@@ -169,7 +171,7 @@ void registry_init(Registry* reg,
     reg->num_systems = 0;
 }
 
-struct Pool* registry_get_pool(Registry* reg, enum component_bit bit) {
+struct Pool* registry_get_pool(Registry* reg, ComponentBit bit) {
     const int index = component_index(bit);
     return &reg->pools[index];
 }
@@ -187,7 +189,7 @@ static void registry_add_entity_to_systems(Registry* registry, Entity entity) {
     size_t entity_index = entity.index;
     SignatureT entity_signature = registry->entity_component_signatures[entity_index];
 
-    for (int i = 0; i < registry->num_systems; ++i) {
+    for (size_t i = 0; i < registry->num_systems; ++i) {
         struct SystemBase* system = registry->systems[i];
         if (!system) {
             continue;
@@ -204,7 +206,7 @@ static void registry_remove_entity_from_systems(Registry* registry, Entity entit
     size_t entity_index = entity.index;
     SignatureT entity_signature = registry->entity_component_signatures[entity_index];
     
-    for (int i = 0; i < registry->num_systems; ++i) {
+    for (size_t i = 0; i < registry->num_systems; ++i) {
         struct SystemBase* system = registry->systems[i];
         if(!system) {
             continue;
@@ -228,21 +230,21 @@ void registry_remove_entity(Registry* reg, Entity e) {
 }
 
 void registry_commit_entities(Registry* reg) {    
-    for (int j = 0; j < reg->count_to_remove; ++j) {
+    for (size_t j = 0; j < reg->count_to_remove; ++j) {
         Entity e = reg->to_remove[j];
         registry_remove_entity_from_systems(reg, e); 
         entity_id_pool_remove_entity(&reg->entity_id_pool, e);       
     }
     reg->count_to_remove = 0;
 
-    for (int i = 0; i < reg->count_to_add; ++i) {
+    for (size_t i = 0; i < reg->count_to_add; ++i) {
         registry_add_entity_to_systems(reg, reg->to_add[i]);
     }
 
     reg->count_to_add = 0;
 }
 
-void registry_add_component(Registry* reg, Entity e, enum component_bit component, void* data) {
+void registry_add_component(Registry* reg, Entity e, ComponentBit component, void* data) {
     int index = component_index(component);
     if (index < 0 || index >= COMPONENT_POOLS_MAX) {
         LOG_EXIT("DED");
@@ -281,7 +283,7 @@ struct SystemBase* registry_get_system(Registry* reg, int system_id) {
 }
 
 void registry_update(Registry* reg, size_t frame_index) {
-    for (int i = 0; i < reg->num_systems; ++i) {
+    for (size_t i = 0; i < reg->num_systems; ++i) {
         struct SystemBase* system = reg->systems[i];
         if (system) {
             system->update_fn(reg, system, frame_index);

@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 #define ENTITY_INVALID_INDEX -1
@@ -22,4 +23,4 @@ struct Entity_t {
 };
 typedef struct Entity_t Entity;
 
-#endif
+#endif // TYPES_H

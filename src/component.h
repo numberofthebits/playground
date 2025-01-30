@@ -3,6 +3,7 @@
 
 #include <core/math.h>
 #include <core/types.h>
+#include <core/os.h>
 
 #include <stdalign.h>
 
@@ -15,7 +16,7 @@ enum ComponentBit {
     INPUT_COMPONENT_BIT = (1U << 5),
     TIME_COMPONENT_BIT = (1U << 6),
 
-    INVALID_COMPONENT_BIT = (1U << 31)
+    INVALID_COMPONENT_BIT = (1U << 30) // Apparently 1U << 31 is too large for ISO C
 };
 typedef enum ComponentBit ComponentBit;
 
@@ -89,8 +90,8 @@ struct InputComponent_t {
 typedef struct InputComponent_t InputComponent;
 
 struct TimeComponent_t {
-    uint64_t created;
-    uint64_t expires;
+  TimeT created;
+  TimeT expires;
 };
 typedef struct TimeComponent_t TimeComponent;
 
@@ -101,16 +102,14 @@ typedef struct TimeComponent_t TimeComponent;
 
 int component_index(ComponentBit flag);
 
-int component_flag(int index);
+ComponentBit component_flag(int index);
 
 size_t component_size(ComponentBit flag);
 
-size_t component_table_size();
+int component_table_size(void);
 
 const char* component_name(int index);
 
 extern const Component component_table[];
 
-
-
-#endif _COMPONENT_H
+#endif // COMPONENT_H

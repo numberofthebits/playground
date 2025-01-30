@@ -2,7 +2,7 @@
 
 #include "system.h"
 #include "component.h"
-#include "event.h"
+#include "events.h"
 
 #include <core/arena.h>
 
@@ -30,14 +30,13 @@ void input_system_reset(struct InputSystem* system) {
 }
 
 void input_system_handle_keyboard_input(struct InputSystem* system, int key, int action) {
-    struct EventBus* bus = system->base.event_bus;
     struct KeyState state = system->keys[key];
-    uint64_t now = time_now();
+    TimeT now = time_now();
     
     if (action == 0) {
         state.flags = KeyFlag_Released;
-        state.elapsed += now - state.time_start;
-        state.time_start = 0;
+        time_append(&state.elapsed, time_elapsed(now, state.time_start));
+        memset(&state.time_start, 0x0, sizeof(TimeT));
     } else {
         state.flags = KeyFlag_Pressed;
         state.time_start = now;
@@ -47,6 +46,7 @@ void input_system_handle_keyboard_input(struct InputSystem* system, int key, int
 }
 
 void input_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr) {
+  (void)registry; (void)frame_nr;
     BeginScopedTimer(input_system_update);
     
     struct EventBus* bus = sys->event_bus;
@@ -54,7 +54,7 @@ void input_system_update(Registry* registry, struct SystemBase* sys, size_t fram
     size_t num_events = 0;
     
     for (int i = 0; i < INPUT_SYSTEM_MAX_KEY_STATES; ++i) {
-        if(system->keys[i].elapsed > 0) {
+      if(time_to_nanosecs(system->keys[i].elapsed) > 0) {
             struct KeyStateEventData* data = &system->events[num_events++];
             data->elapsed = system->keys[i].elapsed;
             data->key = i;

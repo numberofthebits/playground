@@ -52,7 +52,7 @@ const Component component_table[] = {
     /* } */
 };
 
-size_t component_table_size() {
+int component_table_size(void) {
     return sizeof(component_table) / sizeof(Component);
 }
 
