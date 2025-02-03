@@ -40,6 +40,7 @@ target_include_directories(game
   ./libs/glad/include
   ./libs/stb
   ./src/
+  $<$<OR:$<BOOL:CMAKE_C_COMPILER_ID:GNU>,$<BOOL:CMAKE_C_COMPILER_ID:Clang>>:/usr/include/>
 )
 
 # TODO: Fix for Windows
@@ -47,3 +48,16 @@ target_link_libraries(game
   PRIVATE
   $<$<PLATFORM_ID:Linux>:m;c;rt;glfw>
 )
+
+target_compile_features(game
+  PRIVATE
+  c_std_11
+)
+
+if ( CMAKE_C_COMPILER STREQUAL "Clang" OR CMAKE_C_COMPILER_STREQUAL STREQUAL "GNU")
+    target_compile_options(game PRIVATE -Wall -Wextra -Werror)
+endif()
+  
+if ( MSVC )
+    target_compile_options(game PRIVATE /W4)
+endif()

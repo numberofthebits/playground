@@ -238,7 +238,9 @@ Game* game_create() {
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "1,2,3 techno", 0, 0);
 
     if (!window) {
-        LOG_ERROR("Window creation failed");
+      const char* error = 0;
+      glfwGetError(&error);
+      LOG_ERROR("Window creation failed: %s", error);
         return 0;
     }
 
