@@ -6,7 +6,8 @@
 
 enum EventType {
   CollisionSystem_Detected,
-  KeyboardInput_Update
+  KeyboardInput_Update,
+  DebugEvent_StateChanged,
 };
 
 struct KeyboardInputUpdate {
@@ -16,6 +17,10 @@ struct KeyboardInputUpdate {
 struct CollisionDetectedEvent {
   Entity entity_a;
   Entity entity_b;
+};
+
+struct DebugEventStateChangedEvent {
+    int enabled;
 };
 
 

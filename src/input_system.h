@@ -1,7 +1,6 @@
 #ifndef INPUT_SYSTEM_H
 #define INPUT_SYSTEM_H
 
-#include <core/ecs.h>
 #include <core/util.h>
 #include <core/systembase.h>
 
@@ -40,7 +39,7 @@ struct InputSystem {
     struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
 };
 
-struct InputSystem* input_system_create(struct EventBus* event_bus);
+struct InputSystem* input_system_create(struct Services* services);
 
 void input_system_handle_keyboard_input(struct InputSystem* input_system, int key, int action);
 

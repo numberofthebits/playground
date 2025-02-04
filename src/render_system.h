@@ -1,5 +1,5 @@
-#ifndef _RENDER_SYSTEM_H
-#define _RENDER_SYSTEM_H
+#ifndef RENDER_SYSTEM_H
+#define RENDER_SYSTEM_H
 
 #include <core/ecs.h>
 #include <core/types.h>
@@ -67,7 +67,7 @@ struct RenderSystem {
     // Key: AssetId, Value: Material SSBO vector index
     Vec materials;
     GLuint buffer_objects[32];
-    Assets* assets;
+    struct Assets* assets;
     GLuint tilemap;
     GLuint vao;
     unsigned int count;
@@ -75,7 +75,7 @@ struct RenderSystem {
 };
 typedef struct RenderSystem RenderSystem;
 
-RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, int intitial_width, int initial_height);
+RenderSystem* render_system_create(struct Services* services, int intitial_width, int initial_height);
 
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources);
 

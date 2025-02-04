@@ -69,7 +69,7 @@ static void animation_update(Registry* reg, struct SystemBase* system, size_t fr
 }
 
 
-struct AnimationSystem* animation_system_create(Assets* assets, struct EventBus* event_bus) {
+struct AnimationSystem* animation_system_create(struct Services* services) {
     struct AnimationSystem* system =
         ArenaAlloc(&allocator, 1, struct AnimationSystem);
     
@@ -77,8 +77,7 @@ struct AnimationSystem* animation_system_create(Assets* assets, struct EventBus*
                      ANIMATION_SYSTEM_BIT,
                      &animation_update,
                      ANIMATION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | RENDER_COMPONENT_BIT,
-                     assets,
-                     event_bus);
+                     services);
      
     return system;
 }

@@ -28,11 +28,11 @@ static void movement_update(Registry* reg, struct SystemBase* system, size_t fra
 }
 
 
-struct MovementSystem* movement_system_create(struct EventBus* event_bus) {
+struct MovementSystem* movement_system_create(struct Services* services) {
     struct MovementSystem* system =
         ArenaAlloc(&allocator, 1, struct MovementSystem);
     
-    system_base_init((struct SystemBase*)system, MOVEMENT_SYSTEM_BIT, &movement_update, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, 0, event_bus);
+    system_base_init((struct SystemBase*)system, MOVEMENT_SYSTEM_BIT, &movement_update, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, services);
     
     return system;
 }

@@ -128,7 +128,7 @@ TimeT time_to_secs(TimeT timepoint) {
 }
 
 TimeT time_from_secs(int seconds) {
-    TimeT result;
+    TimeT result = { 0 };
     result.QuadPart = seconds * performance_counter_frequency.QuadPart;
 
     return result;

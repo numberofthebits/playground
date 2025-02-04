@@ -21,14 +21,13 @@ void system_base_init(struct SystemBase* system,
                       int system_id,
                       pfnSystemUpdate update_fn,
                       int required_component_flags,
-                      Assets* assets,
-                      struct EventBus* event_bus) {
+                      struct Services* services) {
     system->id = system_id;
     system->signature = required_component_flags;
     system->update_fn = update_fn;
     system->entities = vec_create();
-    system->assets = assets;
-    system->event_bus = event_bus;
+    system->services = services;
+    
     VEC_RESERVE_T(&system->entities, Entity, SYSTEM_ENTITIES_DEFAULT_CAPACITY);
 }
 

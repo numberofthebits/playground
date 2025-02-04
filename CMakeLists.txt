@@ -20,6 +20,7 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/hashmap.c
   ${PROJECT_SOURCE_DIR}/src/core/log.c
   ${PROJECT_SOURCE_DIR}/src/core/math.c
+  ${PROJECT_SOURCE_DIR}/src/core/services.h
   ${PROJECT_SOURCE_DIR}/src/core/systembase.c
   ${PROJECT_SOURCE_DIR}/src/core/util.c
   ${PROJECT_SOURCE_DIR}/src/core/vec.c

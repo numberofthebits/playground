@@ -86,7 +86,7 @@ static int handle_texture(const FileSystemListResult* result, void* user_data) {
         return FILE_CALLBACK_RESULT_CONTINUE;
     }
     
-    Assets* assets = user_data;
+    struct Assets* assets = user_data;
 
     AssetId id = assets_make_id_str(result->file_name);
     Asset* asset = malloc(sizeof(Asset));
@@ -100,7 +100,7 @@ static int handle_texture(const FileSystemListResult* result, void* user_data) {
     return FILE_CALLBACK_RESULT_CONTINUE;
 }
 
-static void load_textures(Assets* assets) {
+static void load_textures(struct Assets* assets) {
     LOG_INFO("Loading textures...");    
     file_system_list("./assets/images/", "*.png", &handle_texture, assets);
     file_system_list("./assets/tilemaps/", "jungle.png", &handle_texture, assets);
@@ -108,7 +108,7 @@ static void load_textures(Assets* assets) {
 }
 
 typedef struct {
-    Assets* assets;
+    struct Assets* assets;
     AssetShaderProgram* program;
 } LoadShaderSourceContext;
 
@@ -162,7 +162,7 @@ static int load_shader_source(const FileSystemListResult* result, void* user_dat
     return FILE_CALLBACK_RESULT_CONTINUE;
 }
 
-static void load_shaders(Assets* assets) {
+static void load_shaders(struct Assets* assets) {
     LoadShaderSourceContext context = {0};
     context.assets = assets;
     
@@ -187,7 +187,7 @@ int assets_shader_program_has_shader(AssetShaderProgram* program, size_t index) 
     return program->has_shader & (0x1 << index);
 }
 
-static void load_materials(Assets* assets) {
+static void load_materials(struct Assets* assets) {
     AssetId truck_tex = assets_make_id_str("truck-ford-right.png");
     
     AssetMaterial truck_red;
@@ -237,7 +237,7 @@ static void load_materials(Assets* assets) {
     VEC_PUSH_T(&assets->materials, AssetMaterial, bullet);
 }
 
-void assets_init(Assets* assets) {
+void assets_init(struct Assets* assets) {
     hash_map_init(&assets->textures, 1000);
     assets->shaders = vec_create();
     assets->tiled_textures = vec_create();
@@ -269,7 +269,7 @@ static int assets_make_file_path(const char* path, const char* file_name, char* 
     return 1;
 }
 
-AssetMaterial* assets_get_material(Assets* assets, AssetId material_id) {
+AssetMaterial* assets_get_material(struct Assets* assets, AssetId material_id) {
     
     for (int i = 0; i < assets->materials.size; ++i) {
         AssetMaterial* mat = VEC_GET_T_PTR(&assets->materials, AssetMaterial, i);
@@ -281,7 +281,7 @@ AssetMaterial* assets_get_material(Assets* assets, AssetId material_id) {
     return 0;
 }
 
-int assets_load_asset(Assets* assets, AssetId id, void** data, void* meta) {
+int assets_load_asset(struct Assets* assets, AssetId id, void** data, void* meta) {
     void* asset_ptr = 0;
     int found_asset_id  = hash_map_get(&assets->textures, &id, sizeof(id), &asset_ptr);
     if (!found_asset_id) {
@@ -313,7 +313,7 @@ int assets_load_asset(Assets* assets, AssetId id, void** data, void* meta) {
     
     return ret;
 }
-AssetShaderProgram* assets_get_program(Assets* assets, AssetId program_id) {
+AssetShaderProgram* assets_get_program(struct Assets* assets, AssetId program_id) {
     for (int i = 0; i < assets->programs.size; ++i) {
         AssetShaderProgram* program = VEC_GET_T_PTR(&assets->programs, AssetShaderProgram, i);
         if (program->id == program_id) {
@@ -324,7 +324,7 @@ AssetShaderProgram* assets_get_program(Assets* assets, AssetId program_id) {
     return 0;
 }
 
-AssetShader* assets_get_shader(Assets* assets, AssetId shader_id) {
+AssetShader* assets_get_shader(struct Assets* assets, AssetId shader_id) {
     for (int i = 0; i < assets->shaders.size; ++i) {
         AssetShader* shader = VEC_GET_T_PTR(&assets->shaders, AssetShader, i);
         if (shader->id == shader_id) {
@@ -334,7 +334,7 @@ AssetShader* assets_get_shader(Assets* assets, AssetId shader_id) {
 
     return 0;
 }
-/* void assets_add_texture(Assets* assets, TextureHandle* handle, const char* asset_name, ImageMeta* meta) { */
+/* void assets_add_texture(struct Assets* assets, TextureHandle* handle, const char* asset_name, ImageMeta* meta) { */
 /*     LOG_INFO("Add texture '%s'", asset_name); */
 /*     AssetTexture texture; */
 /*     assets_add_texture_init_shared(&texture, handle, asset_name, meta); */
@@ -342,7 +342,7 @@ AssetShader* assets_get_shader(Assets* assets, AssetId shader_id) {
 /*     LOG_INFO("Done"); */
 /* } */
 
-/* void assets_add_tiled_texture(Assets* assets, TextureHandle* handle, const char* asset_name, ImageMeta* meta, uint16_t tiles_x, uint16_t tiles_y) { */
+/* void assets_add_tiled_texture(struct Assets* assets, TextureHandle* handle, const char* asset_name, ImageMeta* meta, uint16_t tiles_x, uint16_t tiles_y) { */
 /*     LOG_INFO("Add tiled texture '%s'", asset_name); */
 /*     AssetTiledTexture texture; */
 /*     assets_add_texture_init_shared((AssetTexture*)&texture, handle, asset_name, meta); */

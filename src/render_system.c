@@ -375,7 +375,7 @@ void render_system_create_program(RenderSystem* system, AssetId program_id) {
 }
 
 
-RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, int initial_width, int initial_height ) {
+RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
     LOG_INFO("Create render system implementation...");
     // init function pointer loader 
     gladLoadGL();
@@ -387,12 +387,12 @@ RenderSystem* render_system_create(Assets* assets, struct EventBus* event_bus, i
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
-    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, assets, event_bus);
+    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
 
-    system->assets = assets;
+    system->assets = services->assets;
     system->materials = vec_create();
     system->main_framebuffer.width = initial_width;
-    system->main_framebuffer.height = initial_height;;
+    system->main_framebuffer.height = initial_height;
 
     hash_map_init(&system->programs, 100);
     hash_map_init(&system->textures, 1000);

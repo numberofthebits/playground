@@ -88,37 +88,37 @@ typedef struct {
 
 int assets_shader_program_has_shader(AssetShaderProgram* program, size_t index);
 
-typedef struct {
+struct Assets {
     // Map of AssetId, Asset
     HashMap textures;
     Vec programs;
     Vec shaders;
     Vec materials;
     Vec tiled_textures;
-} Assets;
+};
 
-void assets_init(Assets* assets);
+void assets_init(struct Assets* assets);
 
 AssetId assets_make_id(const char* name, size_t len);
 AssetId assets_make_id_str(const char* name);
 
-int assets_load_asset(Assets* assets, AssetId id, void** data, void* meta);
+int assets_load_asset(struct Assets* assets, AssetId id, void** data, void* meta);
 
-AssetMaterial* assets_get_material(Assets* assets, AssetId material_id);
+AssetMaterial* assets_get_material(struct Assets* assets, AssetId material_id);
 
-void assets_load_texture(Assets* assets,
+void assets_load_texture(struct Assets* assets,
                          const char* name,
                          ImageMeta* meta);
 
-void assets_load_tiled_texture(Assets* assets,
+void assets_load_tiled_texture(struct Assets* assets,
                                const char* name,
                                ImageMeta* meta,
                                uint16_t tiles_x,
                                uint16_t tiles_y);
 
-AssetShaderProgram* assets_get_program(Assets* assets, AssetId program_id);
+AssetShaderProgram* assets_get_program(struct Assets* assets, AssetId program_id);
 
-AssetShader* assets_get_shader(Assets* assets, AssetId shader_id);
+AssetShader* assets_get_shader(struct Assets* assets, AssetId shader_id);
 
 
 

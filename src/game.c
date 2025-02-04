@@ -20,12 +20,6 @@
 #include <core/util.h>
 #include <core/systembase.h>
 
-// Exclude rarely-used stuff from Windows headers
-/* #define WIN32_LEAN_AND_MEAN */
-/* #include <windows.h> */
-
-#include <core/eventbus.h>
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -52,15 +46,21 @@ struct Map_t {
 };
 typedef struct Map_t Map;
 
+enum GameState {
+    GAME_RUNNING = 0x1,
+    DEBUG_DRAW_ENABLED = 0x2,
+};
+
 struct Game_t {
     Registry registry;
     GLFWwindow* window;
-    Assets assets;
+    struct Assets assets;
     Map map;
     struct EventBus event_bus;
     
-    int main_loop_running;
+    int state;
     size_t frame_counter;
+    struct Services services;
 };
 
 enum ReadlineResult {
@@ -187,9 +187,26 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     
     struct InputSystem* input_system = (struct InputSystem*)registry_get_system(&game->registry, INPUT_SYSTEM_BIT);
     
-    if(key == GLFW_KEY_ESCAPE) {
-        game->main_loop_running = 0;
+    switch (key) {
+    case GLFW_KEY_ESCAPE:
+        game->state &= ~GAME_RUNNING;
         return;
+    case GLFW_KEY_F5:
+    {
+        struct Event e;
+        e.id = DebugEvent_StateChanged;
+        struct DebugEventStateChangedEvent data;
+        // Toggle debug draw state
+        if(game->state & DEBUG_DRAW_ENABLED) {
+            data.enabled = 0;
+        } else {
+            data.enabled = 1;
+        }
+        e.event_data = &data;
+        event_bus_emit(&game->event_bus, &e);
+    }
+    default:
+        break;
     }
 
     input_system_handle_keyboard_input(input_system, key, action);
@@ -263,27 +280,28 @@ Game* game_create() {
     assets_init(&game->assets);
     event_bus_init(&game->event_bus);
 
+    game->services.assets = &game->assets;
+    game->services.registry = &game->registry;
+    game->services.event_bus = &game->event_bus;
+
     time_init();
     
     struct InputSystem* input_system = input_system_create(
-        &game->event_bus);
+        &game->services);
 
     struct PlayerSystem* player_system = player_system_create(
-        &game->event_bus);
+        &game->services);
 
     struct MovementSystem* movement_system = movement_system_create(
-        &game->event_bus);
+        &game->services);
     
     struct CollisionSystem* collision_system = collision_system_create(
-        &game->event_bus);
+        &game->services);
 
     struct AnimationSystem* animation_system = animation_system_create(
-        &game->assets,
-        &game->event_bus);
+        &game->services);
 
-    struct TimeSystem* time_system = time_system_create(
-        &game->assets,
-        &game->event_bus);
+    struct TimeSystem* time_system = time_system_create(&game->services);
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -296,8 +314,7 @@ Game* game_create() {
              mode->refreshRate);
 
     struct RenderSystem* render_system = render_system_create(
-        &game->assets,
-        &game->event_bus,
+        &game->services,
         mode->width,
         mode->height);
     
@@ -323,7 +340,7 @@ static void map_init(Map* map) {
     map->tiles = ArenaAlloc(&allocator, map->map_size.x * map->map_size.y, MapTile);
 }
 
-static void map_load(Map* map, Registry* registry, Assets* assets) {
+static void map_load(Map* map, Registry* registry, struct Assets* assets) {
   (void)assets;
     const float fcols = (float)map->map_size.x;
     const float frows = (float)map->map_size.y;
@@ -375,7 +392,7 @@ static void map_load(Map* map, Registry* registry, Assets* assets) {
     }
 }
 
-static void load_units(Registry* registry, Assets* assets) {
+static void load_units(Registry* registry, struct Assets* assets) {
   (void)assets;
 //    const char* unit_shader_name = "unit";
     const char* unit_shader_name = "tilemap";
@@ -488,8 +505,11 @@ void game_setup(Game* game) {
 void game_update(Game* game) {
     arena_dealloc_all(&frame_allocator);
     struct SystemBase* player_system_base = registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
+    struct SystemBase* collision_system_base = registry_get_system(&game->registry, COLLISION_SYSTEM_BIT);
 
     event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);
+    
+    event_bus_subscribe(&game->event_bus, collision_system_base, DebugEvent_StateChanged, &collision_system_handle_event);
 
     registry_update(&game->registry, game->frame_counter);
     
@@ -498,9 +518,9 @@ void game_update(Game* game) {
 
 void game_run(Game* game) {
     LOG_INFO("Main loop");
-    game->main_loop_running = 1;
+    game->state |= GAME_RUNNING;
 
-    while (game->main_loop_running) {
+    while ((game->state & GAME_RUNNING) != 0) {
         LOG_INFO("###### FRAME %zu #####", game->frame_counter);
         BeginScopedTimer(frame_time);
 

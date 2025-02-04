@@ -20,12 +20,12 @@ void player_system_reset(struct PlayerSystem* system) {
     system->bullets_spawned = 0;
 }
 
-struct PlayerSystem* player_system_create(struct EventBus* event_bus) {
+struct PlayerSystem* player_system_create(struct Services* services) {
     struct PlayerSystem* system =
         ArenaAlloc(&allocator, 1, struct PlayerSystem);
 
     int component_flags = INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;
-    system_base_init((struct SystemBase*)system, PLAYER_SYSTEM_BIT, &player_system_update, component_flags, (Assets*)0, event_bus);
+    system_base_init((struct SystemBase*)system, PLAYER_SYSTEM_BIT, &player_system_update, component_flags, services);
 
     player_system_reset(system);
     return system;

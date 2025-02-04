@@ -15,7 +15,7 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
 
     struct Pool* collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
     struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-
+    struct EventBus* event_bus = sys->services->event_bus;
     Entity* entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
     
     for (int i = 0; i < sys->entities.size; ++i) {
@@ -50,7 +50,7 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
                 e.id = CollisionSystem_Detected;
                 e.event_data = &event;
                 
-                event_bus_emit(sys->event_bus, &e);
+                event_bus_emit(event_bus, &e);
             }
         }
     }
@@ -59,12 +59,31 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
     PrintScopedTimer(collision_time);
 }
 
-struct CollisionSystem* collision_system_create(struct EventBus* event_bus) {
+struct CollisionSystem* collision_system_create(struct Services* services) {
     struct CollisionSystem* system =
         ArenaAlloc(&allocator, 1, struct CollisionSystem);
     
-    system_base_init((struct SystemBase*)system, COLLISION_SYSTEM_BIT, &collision_update, COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, 0, event_bus);
+    system_base_init((struct SystemBase*)system, 
+        COLLISION_SYSTEM_BIT, 
+        &collision_update, 
+        COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, 
+        services);
     
     return system;
+}
+
+void collision_system_handle_event(struct SystemBase* system, struct Event e) {
+    struct CollisionSystem* cs = (struct CollisionSystem*)system;
+    switch (e.id) {
+    case DebugEvent_StateChanged:
+        for (int i = 0; i < system->entities.size; ++i) {
+            Entity entity = VEC_GET_T(&system->entities, Entity, i);
+            RenderComponent rc;
+            //registry_add_component( , e, RENDER_COMPONENT_BIT, &rc);
+            //#error "Do we want to make Registry* a member of SystemBase?"
+        }
+    default:
+        LOG_WARN("Unhandled event ID %d", e.id);
+    }
 }
 

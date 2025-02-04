@@ -23,7 +23,7 @@ struct PlayerSystem {
     uint16_t bullets_spawned;
 };
 
-struct PlayerSystem* player_system_create(struct EventBus* event_bus);
+struct PlayerSystem* player_system_create(struct Services* services);
 
 void player_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr);
 
