@@ -45,7 +45,7 @@ size_t system_table_size() {
 int system_get_index(SystemBit flag) {
     for (size_t i = 0; i < system_table_size(); ++i) {
         if (system_table[i].flag == flag) {
-            return i;
+            return (int)i;
         }
     }
 

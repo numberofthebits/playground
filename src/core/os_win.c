@@ -123,14 +123,15 @@ int time_expired(TimeT expires_at) {
 }
 
 TimeT time_to_secs(TimeT timepoint) {
-    timepoint.QuadPart =  (float)timepoint.QuadPart * TICKS_TO_SECS;
+    timepoint.QuadPart =  (LONGLONG)((float)timepoint.QuadPart * TICKS_TO_SECS);
     return timepoint;
 }
 
-TimeT time_from_secs(TimeT seconds) {
-    seconds.QuadPart *= performance_counter_frequency.QuadPart;
+TimeT time_from_secs(int seconds) {
+    TimeT result;
+    result.QuadPart = seconds * performance_counter_frequency.QuadPart;
 
-    return seconds;
+    return result;
 }
 
 uint64_t time_to_microsecs(TimeT timepoint) {
