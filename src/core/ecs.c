@@ -92,7 +92,7 @@ static void entity_id_pool_remove_entity(struct EntityIdPool* entity_ids, Entity
     
     for (size_t i = 0; i < entity_ids->used; ++i) {
         if (entity.index == entity_ids->pool[i]) {
-            to_remove =  i;
+            to_remove = (int)i;
             break;
         }
     }
