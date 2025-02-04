@@ -86,7 +86,7 @@ typedef struct {
     int has_shader;
 } AssetShaderProgram;
 
-int assets_shader_program_has_shader(AssetShaderProgram* program, int index);
+int assets_shader_program_has_shader(AssetShaderProgram* program, size_t index);
 
 typedef struct {
     // Map of AssetId, Asset

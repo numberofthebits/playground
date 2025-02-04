@@ -183,7 +183,7 @@ static void load_shaders(Assets* assets) {
     VEC_PUSH_T(&assets->programs, AssetShaderProgram, unit);   
 }
 
-int assets_shader_program_has_shader(AssetShaderProgram* program, int index) {
+int assets_shader_program_has_shader(AssetShaderProgram* program, size_t index) {
     return program->has_shader & (0x1 << index);
 }
 

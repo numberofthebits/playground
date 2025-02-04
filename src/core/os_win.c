@@ -83,7 +83,7 @@ void file_system_list(const char* directory, const char* filter, IterCallback ca
 
 
 
-void timers_init() {
+void time_init() {
     QueryPerformanceFrequency(&performance_counter_frequency);
 }
 
@@ -91,29 +91,64 @@ TimeT time_now() {
     LARGE_INTEGER now;             
     QueryPerformanceCounter(&now);
 
-    return now.QuadPart;
+    return now;
 }
+
+TimeT time_elapsed(TimeT start, TimeT end) {
+    TimeT result = { 0 };
+    result.QuadPart = end.QuadPart - start.QuadPart;
+
+    return result;
+}
+
+void time_append(TimeT* a, TimeT b) {
+    a->QuadPart += b.QuadPart;
+}
+
 
 TimeT time_elapsed_now(TimeT from) {
     TimeT now = time_now();
-    TimeT elapsed = now - from;
+    TimeT elapsed;
+    elapsed.QuadPart = now.QuadPart - from.QuadPart;
     return elapsed;
 }
 
-int time_expired(TimeT created, TimeT expires_at) {
+int time_expired(TimeT expires_at) {
     TimeT now = time_now();
-    if (now >= expires_at) {
+    if (now.QuadPart >= expires_at.QuadPart) {
         return 1;
     }
 
     return 0;
 }
 
-TimeT time_to_secs(TimeT what_unit_is_this) {
-    return (TimeT)((float)(what_unit_is_this * TICKS_TO_SECS));
+TimeT time_to_secs(TimeT timepoint) {
+    timepoint.QuadPart =  (float)timepoint.QuadPart * TICKS_TO_SECS;
+    return timepoint;
 }
 
 TimeT time_from_secs(TimeT seconds) {
-    return seconds * performance_counter_frequency.QuadPart;
+    seconds.QuadPart *= performance_counter_frequency.QuadPart;
+
+    return seconds;
 }
+
+uint64_t time_to_microsecs(TimeT timepoint) {
+    // If timepoint is in nanoseconds, microsecs should be div 1000
+    return timepoint.QuadPart / 1000;
+}
+
+uint64_t time_to_nanosecs(TimeT timepoint) {
+    return timepoint.QuadPart;
+}
+
+TimeT time_add(TimeT a, TimeT b) {
+    TimeT result = { 0 };
+    result.QuadPart = a.QuadPart + b.QuadPart;
+    return result;
+}
+
+
+
+
 

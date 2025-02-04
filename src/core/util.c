@@ -29,7 +29,7 @@ unsigned char* file_read_all(const char* file_path) {
 int get_msb_set(uint64_t value) {
   for (size_t i = 0; i < 64; ++i) {
     if ((value >> i) & 0x1) {
-      return i;
+      return (int)i;
     }
   }
   return -1;

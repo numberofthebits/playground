@@ -16,8 +16,7 @@ typedef int(*IterCallback)(const FileSystemListResult* result, void* context);
 
 #ifdef _WIN32
 #include <windows.h>
-
-typedef TimeT LARGE_INTEGER
+typedef LARGE_INTEGER TimeT;
 #define CALLING_CONVENTION APIENTRY
 
 #elif __linux__ 
@@ -53,7 +52,7 @@ uint64_t time_to_nanosecs(TimeT timepoint);
 
 TimeT time_from_secs(int seconds);
 
-uint64_t time_to_microsecs(TimeT lol);
+uint64_t time_to_microsecs(TimeT timepoint);
 
 #ifdef ENABLE_DEBUG_TIMERS
 #define BeginScopedTimer(name)						\
