@@ -87,6 +87,14 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     -Wextra
     -Werror
   )
+
+  if (ENABLE_SANITIZERS)
+     message(STATUS "Enabling sanitizers")
+     target_compile_options(game PRIVATE -fsanitize=address,undefined,leak)
+     target_link_libraries(game PRIVATE ubsan asan)
+  else()
+     message(STATUS "No sanitizers enabled")
+  endif()
 endif()
   
 if ( MSVC )
