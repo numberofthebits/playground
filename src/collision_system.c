@@ -73,15 +73,16 @@ struct CollisionSystem* collision_system_create(struct Services* services) {
 }
 
 void collision_system_handle_event(struct SystemBase* system, struct Event e) {
-    struct CollisionSystem* cs = (struct CollisionSystem*)system;
+    //struct CollisionSystem* cs = (struct CollisionSystem*)system;
     switch (e.id) {
     case DebugEvent_StateChanged:
         for (int i = 0; i < system->entities.size; ++i) {
-            Entity entity = VEC_GET_T(&system->entities, Entity, i);
-            RenderComponent rc;
+            //Entity entity = VEC_GET_T(&system->entities, Entity, i);
+            //RenderComponent rc;
             //registry_add_component( , e, RENDER_COMPONENT_BIT, &rc);
             //#error "Do we want to make Registry* a member of SystemBase?"
         }
+        break;
     default:
         LOG_WARN("Unhandled event ID %d", e.id);
     }

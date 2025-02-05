@@ -105,12 +105,12 @@ Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up) {
         dot_vec3f(pos, &d)
     };
         
-    Mat4x4 m = {
+    Mat4x4 m = { {
         r.x,  u.x,  d.x, 0.0,
         r.y,  u.y,  d.y, 0.0,
         r.z,  u.z,  d.z, 0.0,
         -t.x, -t.y, -t.z, 1.0
-    };
+        } };
     return m;
 }
     

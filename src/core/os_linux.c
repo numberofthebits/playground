@@ -14,7 +14,11 @@
 static TimeT* clock_resolution;
 
 void file_system_list(const char* directory, const char* filter, IterCallback callback, void* context) {
-
+    (void)directory;
+    (void)filter;
+    (void)callback;
+    (void)context;
+    // TODO: Implement function
 }
 
 void time_init(void) {
