@@ -25,7 +25,6 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/systembase.c
   ${PROJECT_SOURCE_DIR}/src/core/util.c
   ${PROJECT_SOURCE_DIR}/src/core/vec.c
-  ${PROJECT_SOURCE_DIR}/src/event.h
   ${PROJECT_SOURCE_DIR}/src/events.h
   ${PROJECT_SOURCE_DIR}/src/game.c
   ${PROJECT_SOURCE_DIR}/src/game.h
