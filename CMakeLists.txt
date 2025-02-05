@@ -80,7 +80,7 @@ target_compile_features(game
   c_std_11
 )
 
-if ( CMAKE_C_COMPILER STREQUAL "Clang" OR CMAKE_C_COMPILER_STREQUAL STREQUAL "GNU")
+if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
   target_compile_options(game
     PRIVATE
     -Wall
