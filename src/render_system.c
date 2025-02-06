@@ -136,7 +136,10 @@ static void sort_render_data(RenderData* data, size_t count) {
 }
 
 static void render_batch(RenderSystem* system, unsigned int batch_size) {
-  (void)system;
+    if (!batch_size) {
+	return;
+    }
+    (void)system;
     glMultiDrawElementsIndirect(GL_TRIANGLES,
                                 GL_UNSIGNED_SHORT,
                                 0, // *indirect *
