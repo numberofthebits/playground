@@ -32,7 +32,19 @@
     if(glGetError() != GL_NO_ERROR) {                           \
         LOG_ERROR("GL error: %s:%d", __FUNCTION__, __LINE__);   \
         exit(1);                                                \
-    }                                                           \
+    }
+
+
+typedef struct {
+    Mat4x4 model_matrix;
+    AssetId material_id;
+    AssetId program_id;
+    // unsigned int col;
+    // unsigned int row;
+    Vec2f tex_coord_offset;
+    Vec2f tex_coord_scale;
+    int8_t render_layer;
+} RenderData;
 
 
 void CALLING_CONVENTION gl_debug_callback(GLenum source,
@@ -179,7 +191,6 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
     Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
     Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
-
     
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
     CHECK_GL_ERROR();
@@ -272,7 +283,6 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
 
     CHECK_GL_ERROR();
 
-
     // Dispatch the final batch
     render_batch(system, count_in_batch);
 }
@@ -287,7 +297,6 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
 
     struct Pool* transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
     struct Pool* render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-    /* Vec* render_data = render_system_get_render_data(render_sys, sys->entities.size); */
 
     RenderData* render_data = ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
     
@@ -403,7 +412,6 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     
     memset(&system->draw_commands, 0x0, sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
     memset(&system->draw_command_data, 0x0, sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
-
 
 //    glEnable(GL_BLEND);
     glCreateVertexArrays(1, &system->vao);

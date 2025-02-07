@@ -39,16 +39,6 @@ struct Framebuffer {
     int height;
 };
 
-typedef struct {
-    Mat4x4 model_matrix;
-    AssetId material_id;
-    AssetId program_id;
-    // unsigned int col;
-    // unsigned int row;
-    Vec2f tex_coord_offset;
-    Vec2f tex_coord_scale;
-    int8_t render_layer;
-} RenderData;
 
 typedef struct {
     Vec program_ids;
