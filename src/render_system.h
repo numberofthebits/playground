@@ -70,7 +70,6 @@ struct RenderSystem {
     struct Assets* assets;
     GLuint tilemap;
     GLuint vao;
-    unsigned int count;
     struct Framebuffer main_framebuffer;
 };
 typedef struct RenderSystem RenderSystem;
@@ -81,6 +80,20 @@ void render_system_prepare_resources(RenderSystem* system, PreparedResources* re
 
 uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta);
 
-void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height);
+void render_system_frame_buffer_size_changed(RenderSystem *render_system,
+                                             int width, int height);
+
+
+/* struct PipelineLayout { */
+/*     size_t num_attributes; */
+    
+/* }; */
+
+/* struct Pipeline { */
+  
+/* }; */
+
+/* Pipeline* render_system_create_pipeline(const char* name, PipelineLayout* layout); */
+
 
 #endif
