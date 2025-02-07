@@ -81,10 +81,6 @@ void render_system_prepare_resources(RenderSystem* system, PreparedResources* re
 
 uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta);
 
-// Get the render jobs vector and ensure it has space for at least
-// num_entities. No shrink logic implemented.
-Vec* render_system_get_render_data(RenderSystem* system, int num_entities);
-
 void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height);
 
 #endif
