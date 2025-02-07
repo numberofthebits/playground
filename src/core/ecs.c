@@ -1,7 +1,7 @@
 #include "ecs.h"
 
 #include "vec.h"
-#include "component.h"
+#include "componentbase.h"
 #include "log.h"
 #include "arena.h"
 #include "systembase.h"
@@ -138,7 +138,7 @@ static void zero_system_pointers(struct SystemBase** systems, size_t count) {
 
 void registry_init(Registry* reg,
                    size_t max_entity_count,
-                   const Component* components,
+                   const struct Component* components,
                    size_t component_count)
 {
     entity_id_pool_init(&reg->entity_id_pool, max_entity_count);
@@ -147,7 +147,7 @@ void registry_init(Registry* reg,
     // null pointer 
     memset(&reg->pools[0], 0x0, sizeof(reg->pools));
     for (size_t i = 0; i < component_count; ++i) {
-        const Component* component = &components[i];
+        const struct Component* component = &components[i];
         struct Pool pool;
         pool.descriptor = component;
         pool.count = max_entity_count;
@@ -169,10 +169,13 @@ void registry_init(Registry* reg,
     reg->entity_component_signatures = ArenaAlloc(&allocator, max_entity_count, SignatureT);
 
     reg->num_systems = 0;
+
+    reg->components.num_components = component_count;
+    reg->components.components = components;
 }
 
-struct Pool* registry_get_pool(Registry* reg, ComponentBit bit) {
-    const int index = component_index(bit);
+struct Pool* registry_get_pool(Registry* reg, int component_bit) {
+    const int index = component_index(&reg->components, component_bit);
     return &reg->pools[index];
 }
 
@@ -244,17 +247,17 @@ void registry_commit_entities(Registry* reg) {
     reg->count_to_add = 0;
 }
 
-void registry_add_component(Registry* reg, Entity e, ComponentBit component, void* data) {
-    int index = component_index(component);
+void registry_add_component(Registry* reg, Entity e, int component_bit, void* data) {
+    int index = component_index(&reg->components, component_bit);
     if (index < 0 || index >= COMPONENT_POOLS_MAX) {
         LOG_EXIT("DED");
     }
     
-    LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index, component_name(index));
+    LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index, component_name(&reg->components, index));
    
-    struct Pool* pool = registry_get_pool(reg, component);
+    struct Pool* pool = registry_get_pool(reg, component_bit);
     if (!pool) {
-        LOG_EXIT("Could not find pool for component %d", component);
+        LOG_EXIT("Could not find pool for component %d", component_bit);
         return;
     }
 
@@ -262,7 +265,7 @@ void registry_add_component(Registry* reg, Entity e, ComponentBit component, voi
     memcpy((char*)pool->data + ptr_offset, data, pool->descriptor->size);
 
     SignatureT* entity_signature = &reg->entity_component_signatures[e.index];
-    *entity_signature |= component;    
+    *entity_signature |= component_bit;
 }
 
 void registry_add_system(Registry* reg, struct SystemBase* sys) {

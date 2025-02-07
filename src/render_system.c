@@ -1,7 +1,7 @@
 #include "render_system.h"
 
-#include "component.h"
-#include "system.h"
+#include "components.h"
+#include "systems.h"
 
 #include <core/log.h>
 #include <core/math.h>

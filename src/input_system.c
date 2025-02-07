@@ -1,7 +1,6 @@
 #include "input_system.h"
 
-#include "system.h"
-#include "component.h"
+#include "systems.h"
 #include "events.h"
 
 #include <core/arena.h>

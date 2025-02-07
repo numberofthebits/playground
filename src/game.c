@@ -1,7 +1,7 @@
 #include "game.h"
 
-#include "system.h"
-#include "component.h"
+#include "systems.h"
+#include "components.h"
 #include "render_system.h"
 #include "collision_system.h"
 #include "animation_system.h"
@@ -23,7 +23,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <math.h>
 
 
 #define MAX_ENTITIES 1024
@@ -33,7 +32,10 @@
 // NOTE: There's quite a few dynamic arrays and hash maps
 //       left to remove.
 #define STATIC_ARENA_SIZE 1024 * 1024 * 32
-#define FRAME_ARENA_SIZE  1024 * 1024 * 16
+#define FRAME_ARENA_SIZE 1024 * 1024 * 16
+
+/* extern const struct Component component_table[]; */
+/* extern const size_t component_table_len; */
 
 typedef struct {
     Vec2u8 atlas_coord;
@@ -276,7 +278,10 @@ Game* game_create() {
     glfwSetWindowUserPointer(window, game);
     game->window = window;    
     
-    registry_init(&game->registry, MAX_ENTITIES, component_table, component_table_size());
+    registry_init(&game->registry,
+		  MAX_ENTITIES,
+		  component_table,
+		  sizeof(component_table) / sizeof(component_table[0]));
     assets_init(&game->assets);
     event_bus_init(&game->event_bus);
 

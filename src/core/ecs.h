@@ -1,16 +1,11 @@
 #ifndef ECS_H
 #define ECS_H
 
-#include "vec.h"
-#include "component.h"
-#include "assetstore.h"
-#include "types.h"
-#include "systembase.h"
-
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <core/vec.h>
+#include <core/componentbase.h>
+#include <core/assetstore.h>
+#include <core/types.h>
+#include <core/systembase.h>
 
 #define COMPONENT_POOLS_MAX 32
 #define SYSTEMS_MAX 32
@@ -18,18 +13,16 @@
 struct Pool {
     void* data;
     size_t count;
-    const Component* descriptor;
+    const struct Component* descriptor;
 };
 
-//Track our entity indexes so we can reuse destroyed entities
+// Track our entity indexes so we can reuse destroyed entities
 // Note this is not a component pool
 struct EntityIdPool {
     size_t size;
     size_t used;
     size_t* pool;
 };
-// static struct EntityIdPool entity_id_pool;
-
 
 struct Registry_t {
     struct Pool pools[COMPONENT_POOLS_MAX];
@@ -48,18 +41,19 @@ struct Registry_t {
     Entity* to_remove;
     size_t count_to_remove;
 
-    // Dynamically allocated signatures array sized. Must
-    // be 'num_entities' size always
+    // Array must must be 'num_entities' size always
     SignatureT* entity_component_signatures;
+
+    struct Components components;
 };
 typedef struct Registry_t Registry;
 
 /*
  Registry API
  */
-void registry_init(Registry* registry, size_t max_entity_count, const Component* components, size_t component_count);
+void registry_init(Registry* registry, size_t max_entity_count, const struct Component* components, size_t component_count);
 
-struct Pool* registry_get_pool(Registry* reg, ComponentBit bit);
+struct Pool* registry_get_pool(Registry* reg, int component_bit);
 
 #define PoolGetComponent(pool, type, index) \
     ((type*)pool->data) + index;
@@ -82,7 +76,7 @@ void registry_remove_entity(Registry* reg, Entity e);
 
 void registry_commit_entities(Registry* reg);
 
-void registry_add_component(Registry* reg, Entity e, ComponentBit component_bit, void* data);
+void registry_add_component(Registry* reg, Entity e, int component_bit, void* data);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
 
 

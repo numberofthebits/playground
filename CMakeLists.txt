@@ -11,20 +11,34 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/animation_system.h
   ${PROJECT_SOURCE_DIR}/src/collision_system.c
   ${PROJECT_SOURCE_DIR}/src/collision_system.h
-  ${PROJECT_SOURCE_DIR}/src/component.c
-  ${PROJECT_SOURCE_DIR}/src/component.h
+  ${PROJECT_SOURCE_DIR}/src/components.c
+  ${PROJECT_SOURCE_DIR}/src/components.h
   ${PROJECT_SOURCE_DIR}/src/core/arena.c
+  ${PROJECT_SOURCE_DIR}/src/core/arena.h
   ${PROJECT_SOURCE_DIR}/src/core/assetstore.c
+  ${PROJECT_SOURCE_DIR}/src/core/assetstore.h
+  ${PROJECT_SOURCE_DIR}/src/core/componentbase.c
+  ${PROJECT_SOURCE_DIR}/src/core/componentbase.h
   ${PROJECT_SOURCE_DIR}/src/core/ecs.c
+  ${PROJECT_SOURCE_DIR}/src/core/ecs.h
   ${PROJECT_SOURCE_DIR}/src/core/eventbus.c
+  ${PROJECT_SOURCE_DIR}/src/core/eventbus.h
   ${PROJECT_SOURCE_DIR}/src/core/hashmap.c
+  ${PROJECT_SOURCE_DIR}/src/core/hashmap.h
   ${PROJECT_SOURCE_DIR}/src/core/log.c
+  ${PROJECT_SOURCE_DIR}/src/core/log.h
   ${PROJECT_SOURCE_DIR}/src/core/math.c
+  ${PROJECT_SOURCE_DIR}/src/core/math.h
+  ${PROJECT_SOURCE_DIR}/src/core/os.h
   ${PROJECT_SOURCE_DIR}/src/core/services.c
   ${PROJECT_SOURCE_DIR}/src/core/services.h
   ${PROJECT_SOURCE_DIR}/src/core/systembase.c
+  ${PROJECT_SOURCE_DIR}/src/core/systembase.h
+  ${PROJECT_SOURCE_DIR}/src/core/types.h
   ${PROJECT_SOURCE_DIR}/src/core/util.c
+  ${PROJECT_SOURCE_DIR}/src/core/util.h
   ${PROJECT_SOURCE_DIR}/src/core/vec.c
+  ${PROJECT_SOURCE_DIR}/src/core/vec.h
   ${PROJECT_SOURCE_DIR}/src/events.h
   ${PROJECT_SOURCE_DIR}/src/game.c
   ${PROJECT_SOURCE_DIR}/src/game.h
@@ -37,23 +51,10 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/player_system.h
   ${PROJECT_SOURCE_DIR}/src/render_system.c
   ${PROJECT_SOURCE_DIR}/src/render_system.h
-  ${PROJECT_SOURCE_DIR}/src/system.c
-  ${PROJECT_SOURCE_DIR}/src/system.h
+  ${PROJECT_SOURCE_DIR}/src/systems.c
+  ${PROJECT_SOURCE_DIR}/src/systems.h
   ${PROJECT_SOURCE_DIR}/src/time_system.c
   ${PROJECT_SOURCE_DIR}/src/time_system.h
-  ${PROJECT_SOURCE_DIR}/src/core/arena.h
-  ${PROJECT_SOURCE_DIR}/src/core/assetstore.h
-  ${PROJECT_SOURCE_DIR}/src/core/ecs.h
-  ${PROJECT_SOURCE_DIR}/src/core/eventbus.h
-  ${PROJECT_SOURCE_DIR}/src/core/hashmap.h
-  ${PROJECT_SOURCE_DIR}/src/core/log.h
-  ${PROJECT_SOURCE_DIR}/src/core/math.h
-  ${PROJECT_SOURCE_DIR}/src/core/os.h
-  ${PROJECT_SOURCE_DIR}/src/core/services.h
-  ${PROJECT_SOURCE_DIR}/src/core/systembase.h
-  ${PROJECT_SOURCE_DIR}/src/core/types.h
-  ${PROJECT_SOURCE_DIR}/src/core/util.h
-  ${PROJECT_SOURCE_DIR}/src/core/vec.h
   $<$<PLATFORM_ID:Windows>:${PROJECT_SOURCE_DIR}/src/core/os_win.c>
   $<$<PLATFORM_ID:Linux>:${PROJECT_SOURCE_DIR}/src/core/os_linux.c>
 )
@@ -94,7 +95,14 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
      target_link_libraries(game PRIVATE ubsan asan)
   else()
      message(STATUS "No sanitizers enabled")
-  endif()
+   endif()
+
+   # Because / and - are two completely different things ... :) 
+   target_compile_options(game
+     PRIVATE
+     $<$<PLATFORM_ID:Windows>:-D_CRT_SECURE_NO_WARNINGS>
+   )
+
 endif()
   
 if ( MSVC )

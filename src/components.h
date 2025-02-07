@@ -1,11 +1,14 @@
-#ifndef _COMPONENT_H
-#define _COMPONENT_H
+#ifndef COMPONENTS_H
+#define COMPONENTS_H
 
+#include <core/componentbase.h>
 #include <core/math.h>
 #include <core/types.h>
 #include <core/os.h>
 
 #include <stdalign.h>
+
+
 
 enum ComponentBit {
     TRANSFORM_COMPONENT_BIT = (1U << 0),
@@ -15,18 +18,8 @@ enum ComponentBit {
     COLLISION_COMPONENT_BIT = (1U << 4),
     INPUT_COMPONENT_BIT = (1U << 5),
     TIME_COMPONENT_BIT = (1U << 6),
-
-    INVALID_COMPONENT_BIT = (1U << 30) // Apparently 1U << 31 is too large for ISO C
 };
 typedef enum ComponentBit ComponentBit;
-
-struct Component_t {
-    ComponentBit flag;
-    size_t size;
-    size_t alignment;
-    const char* name;
-};
-typedef struct Component_t Component;
 
 struct Transform_Component_t {
     Vec3f pos;
@@ -95,21 +88,54 @@ struct TimeComponent_t {
 };
 typedef struct TimeComponent_t TimeComponent;
 
-// struct PlayerComponent_t {
+// Our "user defined" component table. We feed this
+// to the entity component system, so that it has a way
+// to differentiate components, and to know the size and
+// alignment for allocating the component pools. Nifty.
+static const struct Component component_table[] = {
+    {
+        .flag = TRANSFORM_COMPONENT_BIT,
+        .size = sizeof(TransformComponent),
+        .alignment = alignof(TransformComponent),
+        .name = "TransformComponent"
+    },
+    {
+        .flag = RENDER_COMPONENT_BIT,
+        .size = sizeof(RenderComponent),
+        .alignment = alignof(RenderComponent),
+        .name = "RenderComponent" },
+    {
+        .flag = PHYSICS_COMPONENT_BIT,
+        .size = sizeof(PhysicsComponent),
+        .alignment = alignof(TransformComponent),
+        .name = "PhysicsComponent"
+    },
+    {
+        .flag = ANIMATION_COMPONENT_BIT,
+        .size = sizeof(AnimationComponent),
+        .alignment = alignof(AnimationComponent),
+        .name = "AnimationComponent"
+    },
+    {
+        .flag = COLLISION_COMPONENT_BIT,
+        .size = sizeof(CollisionComponent),
+        .alignment = alignof(CollisionComponent),
+        .name = "CollisionComponent"
+    },
+    {
+        .flag = INPUT_COMPONENT_BIT,
+        .size = sizeof(InputComponent),
+        .alignment = alignof(InputComponent),
+        .name = "InputComponent"
+    },
+    {
+        .flag = TIME_COMPONENT_BIT,
+        .size = sizeof(TimeComponent),
+        .alignment = alignof(TimeComponent),
+        .name = "TimeComponent"
+    }
+};
 
-// };
-// typedef struct PlayerComponent_t PlayerComponent;
 
-int component_index(ComponentBit flag);
 
-ComponentBit component_flag(int index);
-
-size_t component_size(ComponentBit flag);
-
-int component_table_size(void);
-
-const char* component_name(int index);
-
-extern const Component component_table[];
-
-#endif // COMPONENT_H
+#endif // COMPONENTS_H

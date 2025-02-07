@@ -1,7 +1,9 @@
 #include "animation_system.h"
 
-#include "system.h"
+#include "systems.h"
+#include "components.h"
 
+#include <core/componentbase.h>
 #include <core/assetstore.h>
 #include <core/systembase.h>
 #include <core/arena.h>

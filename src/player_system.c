@@ -1,7 +1,7 @@
 #include "player_system.h"
 
-#include "system.h"
-#include "component.h"
+#include "systems.h"
+#include "components.h"
 #include "input_system.h"
 #include "events.h"
 
@@ -103,7 +103,8 @@ void player_system_update(Registry* registry, struct SystemBase* sys, size_t fra
 }
 
 
-static void player_system_handle_keyboard_update(struct PlayerSystem* sys, struct AggregatedKeyboardEvents* event_data) {
+static void player_system_handle_keyboard_update(struct PlayerSystem* sys,
+						 struct AggregatedKeyboardEvents* event_data) {
     for(size_t i = 0; i < event_data->num_events; ++i) {
         struct KeyStateEventData key_state = event_data->events[i];
         switch (key_state.key) {

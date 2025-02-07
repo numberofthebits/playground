@@ -1,7 +1,7 @@
 #include "movement_system.h"
 
-#include "system.h"
-#include "component.h"
+#include "systems.h"
+#include "components.h"
 
 #include <core/arena.h>
 #include <core/systembase.h>

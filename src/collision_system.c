@@ -1,7 +1,7 @@
 #include "collision_system.h"
 
-#include "component.h"
-#include "system.h"
+#include "components.h"
+#include "systems.h"
 #include "events.h"
 
 #include <core/systembase.h>
@@ -27,7 +27,7 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
         self_rect.pos.x += self_transform->pos.x;
         self_rect.pos.y += self_transform->pos.y;
         
-        for (int j = i; i < sys->entities.size; ++j) {
+        for (int j = i; j < sys->entities.size; ++j) {
             Entity other = entities[j];
 
             if(other.id == self.id) {

@@ -1,7 +1,7 @@
 #include "time_system.h"
 
-#include "component.h"
-#include "system.h"
+#include "components.h"
+#include "systems.h"
 
 #include <core/ecs.h>
 #include <core/systembase.h>
