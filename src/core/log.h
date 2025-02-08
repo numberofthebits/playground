@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdlib.h>
+
 int log_init(const char* file_path);
 
 void log_destroy(void);
@@ -17,7 +19,7 @@ void log_msg(const char* level, const char* file, int line, const char* func_nam
 
 #define LOG_EXIT(...)                                                    \
     log_msg("Exit", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__);      \
-    exit(-1); 
+    exit(-1);
 
 #define LOG_GL_HIGH(...)                        \
     log_msg("GL HIGH", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__);

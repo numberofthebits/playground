@@ -318,6 +318,8 @@ Game* game_create() {
              mode->blueBits,
              mode->refreshRate);
 
+    render_system_global_init();
+    
     struct RenderSystem* render_system = render_system_create(
         &game->services,
         mode->width,

@@ -3,6 +3,7 @@
 #include "components.h"
 #include "systems.h"
 
+#include <core/renderer.h>
 #include <core/log.h>
 #include <core/math.h>
 #include <core/hashmap.h>
@@ -14,38 +15,15 @@
 #include <stb_image.h>
 #include <stdint.h>
 
-#define MAX_MATERIALS 10000
-
-#define BO_INDEX_POSITION 0
-#define BO_INDEX_COLOR 1
-#define BO_INDEX_UV 2
-
-#define BO_INDEX_ELEMENT_ARRAY 16      // IBO
-#define BO_INDEX_DRAW_INDIRECT 17      // Command buffer
-#define BO_INDEX_DRAW_COMMAND_DATA 18  // gl_DrawID indexed array
-//#define BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES 19 // Bindless textures
-#define BO_INDEX_MATERIALS 20
-#define BO_INDEX_MAX 32
-
-
-#define CHECK_GL_ERROR()                                        \
-    if(glGetError() != GL_NO_ERROR) {                           \
-        LOG_ERROR("GL error: %s:%d", __FUNCTION__, __LINE__);   \
-        exit(1);                                                \
-    }
-
 
 typedef struct {
     Mat4x4 model_matrix;
     AssetId material_id;
     AssetId program_id;
-    // unsigned int col;
-    // unsigned int row;
     Vec2f tex_coord_offset;
     Vec2f tex_coord_scale;
     int8_t render_layer;
 } RenderData;
-
 
 void CALLING_CONVENTION gl_debug_callback(GLenum source,
 					  GLenum type,
@@ -175,13 +153,15 @@ static GLint get_uniform_location_checked(GLuint program, const char* name) {
 static void render_system_update(RenderSystem* system, RenderData* data, size_t render_data_size ) {
     CHECK_GL_ERROR();
 
+    glClearColor(0.2f, 0.2f, 0.2f, 255.f);
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (render_data_size == 0) {
         return;
     }
-    
-    glBindVertexArray(system->vao);
+
+    glBindVertexArray(system->tile_renderer->vertex_array_object);
     GLint loc_view;
     GLint loc_proj;
 
@@ -192,7 +172,8 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
     Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
     
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->tile_renderer->multi_draw_indirect_buffer);
+    //    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, system->tile_renderer->element_array_buffer);
     CHECK_GL_ERROR();
 
     sort_render_data(data, render_data_size);
@@ -264,24 +245,27 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
         count_in_batch++;
     }
 
-    glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
+    CHECK_GL_ERROR();
+    glNamedBufferSubData(system->tile_renderer->multi_draw_indirect_buffer,
                          0,
                          sizeof(DrawElementsIndirectCommand) * count_in_batch,
                          system->draw_commands);
     CHECK_GL_ERROR();
 
-    glNamedBufferSubData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
+    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects[0],
                          0,
                          sizeof(DrawCommandDataTiled) * count_in_batch,
                          system->draw_command_data);
     CHECK_GL_ERROR();
 
-    glNamedBufferSubData(system->buffer_objects[BO_INDEX_MATERIALS],
+    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects[1],
                          0,
                          sizeof(Material) * system->materials.size,
                          VEC_ITER_BEGIN_T(&system->materials, Material));
 
     CHECK_GL_ERROR();
+
+    glFinish();
 
     // Dispatch the final batch
     render_batch(system, count_in_batch);
@@ -386,12 +370,141 @@ void render_system_create_program(RenderSystem* system, AssetId program_id) {
                           (void*)(uintptr_t)program_handle);
 }
 
+void render_system_global_init() {
+    gladLoadGL();
+    glDebugMessageCallback(&gl_debug_callback, 0);
+    glEnable(GL_DEBUG_OUTPUT);
+}
 
 RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
     LOG_INFO("Create render system implementation...");
+
+    // TODO: This is per renderer data. Should be set up when invoking each individual renderer
+    glClearColor(0.f, 0.0f, 0.0f, 255.f);
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
+    system_base_init((struct SystemBase*)system,
+		     RENDER_SYSTEM_BIT,
+		     &render_update,
+		     RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
+
+    system->assets = services->assets;
+    system->materials = vec_create();
+    system->main_framebuffer.width = initial_width;
+    system->main_framebuffer.height = initial_height;
+
+    hash_map_init(&system->programs, 100);
+    hash_map_init(&system->textures, 1000);
+    hash_map_init(&system->material_asset_index_mapping, 1000);
+
+    system->tile_renderer = (struct Renderer*)ArenaAlloc(&allocator, 1, struct Renderer);
+   
+    struct VertexAttributeDescriptor attrib_desc[2];
+    attrib_desc[0].vertex_attribute = 0;
+    attrib_desc[0].element_count = 3;
+    attrib_desc[0].element_type = GL_FLOAT;
+    attrib_desc[0].normalize  = GL_FALSE;
+    attrib_desc[0].relative_offset = 0;
+   
+    attrib_desc[1].vertex_attribute = 1;
+    attrib_desc[1].element_count = 2;
+    attrib_desc[1].element_type = GL_FLOAT;
+    attrib_desc[1].normalize  = GL_FALSE;
+    attrib_desc[1].relative_offset = 0;
+
+    struct BindingPointDescriptor bp_desc[2];
+    bp_desc[0].attrib_descriptors = &attrib_desc[0];
+    bp_desc[0].num_attrib_descriptors = 1;
+    bp_desc[0].binding_point_index = 0;
+    bp_desc[0].offset = 0;
+    bp_desc[0].stride = sizeof(float) * 5;//calc_stride(attrib_desc, 2);
+
+    bp_desc[1].attrib_descriptors = &attrib_desc[1];
+    bp_desc[1].num_attrib_descriptors = 1;
+    bp_desc[1].binding_point_index = 1;
+    bp_desc[1].offset = sizeof(float) * 3;
+    bp_desc[1].stride = sizeof(float) * 5;//calc_stride(attrib_desc, 2);
+ 
+    struct VertexBufferDescriptor vb_desc;
+    vb_desc.binding_descriptors = bp_desc;
+    vb_desc.binding_point_count = 2;
+
+    uint16_t index_data[] = {
+	0, 1, 2,
+	0, 2, 3
+    };
+    
+    struct RendererParameters tile_params;
+    tile_params.index_buffer_size = sizeof(index_data);
+    tile_params.num_vertices = 4;
+    tile_params.num_buffer_descriptors = 1;
+    tile_params.buffer_descriptors = &vb_desc;
+
+    renderer_init(system->tile_renderer, &tile_params);
+
+    float pos_data[] = {
+        -0.48f, -0.48f, 0.0f, // lower left
+        0.48f, -0.48f, 0.0f, // lower right
+        0.48f, 0.48f, 0.0f, // upper right
+        -0.48f, 0.48f, 0.0f, // upper left
+    };
+
+    float uv_data[] = {
+	    0.0f, 0.0f, // lower left,
+	    1.0f, 0.0f, // lower right,
+	    1.0f, 1.0f, // upper right,
+	    0.0f, 1.0f, // upper left
+    };
+
+    int lol = sizeof(pos_data);
+    int fak = sizeof(uv_data);
+    int size_interleaved = lol + fak;// sizeof(pos_data) + sizeof(uv_data);
+    char interleaved[size_interleaved];
+    memset(interleaved, 0x0, size_interleaved);
+    struct Interleave args;
+    args.dst = interleaved;
+    args.element_count = 4;
+
+    struct VertexDataSource attribs[2];
+    attribs[0].src =  pos_data;
+    attribs[0].vertex_size_bytes = 3 * sizeof(float);
+    attribs[1].src = uv_data;
+    attribs[1].vertex_size_bytes = 2 * sizeof(float);
+
+    args.num_attribs = 2;
+    args.attribs = attribs;
+
+    interleave_attributes(&args);
+
+    glNamedBufferSubData(system->tile_renderer->vertex_buffer_objects[0], 0, sizeof(interleaved), interleaved);
+
+    // Draw command aux data
+    renderer_ssbo_create(system->tile_renderer,
+			 0,
+			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(DrawCommandDataTiled));
+
+    // Materials
+    renderer_ssbo_create(system->tile_renderer,
+			 1,
+			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(Material));
+
+
+
+    renderer_write_element_array_buffer(system->tile_renderer, 0, sizeof(index_data), index_data);
+    CHECK_GL_ERROR();
+    
+    LOG_INFO("Created render system implementation");
+
+    return system;
+}
+
+/*
+RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
+    LOG_INFO("Create render system implementation...");
     // init function pointer loader 
-    gladLoadGL();
-    glDebugMessageCallback(&gl_debug_callback, 0);
+
     glEnable(GL_DEBUG_OUTPUT);
 
     glClearColor(0.f, 0.0f, 0.0f, 255.f);
@@ -399,7 +512,10 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
-    system_base_init((struct SystemBase*)system, RENDER_SYSTEM_BIT, &render_update, RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
+    system_base_init((struct SystemBase*)system,
+		     RENDER_SYSTEM_BIT,
+		     &render_update,
+		     RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
 
     system->assets = services->assets;
     system->materials = vec_create();
@@ -484,14 +600,6 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
                       0,
                       GL_DYNAMIC_DRAW);
 
-    /* glBindBufferBase(GL_SHADER_STORAGE_BUFFER, */
-    /*                  BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES, */
-    /*                  system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES]); */
-    /* glNamedBufferData(system->buffer_objects[BO_INDEX_BINDLESS_TEXTURE_2D_HANDLES], */
-    /*                   sizeof(GLuint64) * MAX_BINDLESS_TEXTURE_2D_HANDLES, */
-    /*                   0, */
-    /*                   GL_DYNAMIC_DRAW); */
-
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                      BO_INDEX_MATERIALS,
                      system->buffer_objects[BO_INDEX_MATERIALS]);
@@ -504,7 +612,7 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
 
     return system;
 }
-
+*/
 static void render_system_create_material(RenderSystem* system, AssetId material_id) {
     Material new_material;
     AssetMaterial* mat = assets_get_material(system->assets, material_id);

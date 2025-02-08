@@ -6,7 +6,8 @@
 #include <stdio.h>
 
 int main(void) {
-    if (!log_init(0)) {
+    if (!log_init(NULL)) {
+    //    if (!log_init("log.txt")) {
         printf("Failed to initialize logger");
         return -1;
     }

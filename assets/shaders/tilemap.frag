@@ -3,9 +3,8 @@
 
 // TILEMAP.FRAG
 
-layout (location = 0) in vec3 fCol;
-layout (location = 1) in vec2 fUV;
-layout (location = 2) flat in uint mat_idx;
+layout (location = 0) in vec2 fUV;
+layout (location = 1) flat in uint mat_idx;
 
 layout (location = 0) out vec4 fragColor;
 
@@ -33,5 +32,5 @@ void main() {
     vec3 color = uint_to_rgba(mat.color).rgb;
     vec3 blend = tex_color.rgb * color;
 
-    fragColor = vec4(blend, 1.0);
+    fragColor = vec4(blend + vec3(1.0), 1.0);
 }

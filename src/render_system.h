@@ -1,6 +1,7 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
+#include <core/renderer.h>
 #include <core/ecs.h>
 #include <core/types.h>
 #include <core/assetstore.h>
@@ -12,32 +13,6 @@
 #include <stdint.h>
 
 #define MAX_DRAW_INDIRECT_DRAW_COMMANDS 10000
-
-typedef struct {
-    unsigned int count;
-    unsigned int instance_count;
-    unsigned int first_index;
-    int base_vertex;
-    unsigned int base_instance;
-} DrawElementsIndirectCommand;
-
-typedef struct {
-    Mat4x4 model; // 64 bytes
-    Vec2f tex_coord_offset; // 8 bytes
-    Vec2f tex_coord_scale; // 8 bytes
-    unsigned int material_index; // 4 bytes
-    char padding[12];
-} DrawCommandDataTiled;
-
-typedef struct {
-    GLuint64 handle;
-    Vec4u8 color;
-} Material;
-
-struct Framebuffer {
-    int width;
-    int height;
-};
 
 
 typedef struct {
@@ -61,8 +36,12 @@ struct RenderSystem {
     GLuint tilemap;
     GLuint vao;
     struct Framebuffer main_framebuffer;
+
+    struct Renderer* tile_renderer;
 };
 typedef struct RenderSystem RenderSystem;
+
+void render_system_global_init();
 
 RenderSystem* render_system_create(struct Services* services, int intitial_width, int initial_height);
 
@@ -72,18 +51,6 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
 void render_system_frame_buffer_size_changed(RenderSystem *render_system,
                                              int width, int height);
-
-
-/* struct PipelineLayout { */
-/*     size_t num_attributes; */
-    
-/* }; */
-
-/* struct Pipeline { */
-  
-/* }; */
-
-/* Pipeline* render_system_create_pipeline(const char* name, PipelineLayout* layout); */
 
 
 #endif
