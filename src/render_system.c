@@ -129,12 +129,18 @@ static void render_batch(RenderSystem* system, unsigned int batch_size) {
     if (!batch_size) {
 	return;
     }
+
+    float* vbo_data = malloc(80);   
+    glGetNamedBufferSubData(system->tile_renderer->vertex_buffer_objects[0], 0, 80, vbo_data);
+    free(vbo_data);
+    
     (void)system;
     glMultiDrawElementsIndirect(GL_TRIANGLES,
                                 GL_UNSIGNED_SHORT,
                                 0, // *indirect *
                                 batch_size,
                                 sizeof(DrawElementsIndirectCommand));
+    
     
     CHECK_GL_ERROR();
 }
@@ -154,7 +160,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     CHECK_GL_ERROR();
 
     glClearColor(0.2f, 0.2f, 0.2f, 255.f);
-    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (render_data_size == 0) {
@@ -167,7 +173,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
 
     CHECK_GL_ERROR();
 
-    Vec3f cam_pos = { 10.f, 10.0f, 20.f };
+    Vec3f cam_pos = { 10.f, 10.0f, 40.f };
     Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
     Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
     Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
@@ -214,7 +220,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
             /*                               (float)system->main_framebuffer.height); */
             float scale = 1.0f;
             float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
-            Mat4x4 proj_mat = ortho(0.01f, 2.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
+            Mat4x4 proj_mat = ortho(0.01f, 100.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
             glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
             CHECK_GL_ERROR();
         }
@@ -264,8 +270,6 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
                          VEC_ITER_BEGIN_T(&system->materials, Material));
 
     CHECK_GL_ERROR();
-
-    glFinish();
 
     // Dispatch the final batch
     render_batch(system, count_in_batch);
@@ -412,24 +416,18 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     attrib_desc[1].element_count = 2;
     attrib_desc[1].element_type = GL_FLOAT;
     attrib_desc[1].normalize  = GL_FALSE;
-    attrib_desc[1].relative_offset = 0;
+    attrib_desc[1].relative_offset = sizeof(float) * 3;
 
-    struct BindingPointDescriptor bp_desc[2];
+    struct BindingPointDescriptor bp_desc[1];
     bp_desc[0].attrib_descriptors = &attrib_desc[0];
-    bp_desc[0].num_attrib_descriptors = 1;
+    bp_desc[0].num_attrib_descriptors = 2;
     bp_desc[0].binding_point_index = 0;
     bp_desc[0].offset = 0;
-    bp_desc[0].stride = sizeof(float) * 5;//calc_stride(attrib_desc, 2);
+    bp_desc[0].stride = sizeof(float) * 5;
 
-    bp_desc[1].attrib_descriptors = &attrib_desc[1];
-    bp_desc[1].num_attrib_descriptors = 1;
-    bp_desc[1].binding_point_index = 1;
-    bp_desc[1].offset = sizeof(float) * 3;
-    bp_desc[1].stride = sizeof(float) * 5;//calc_stride(attrib_desc, 2);
- 
     struct VertexBufferDescriptor vb_desc;
     vb_desc.binding_descriptors = bp_desc;
-    vb_desc.binding_point_count = 2;
+    vb_desc.binding_point_count = 1;
 
     uint16_t index_data[] = {
 	0, 1, 2,
@@ -458,11 +456,8 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
 	    0.0f, 1.0f, // upper left
     };
 
-    int lol = sizeof(pos_data);
-    int fak = sizeof(uv_data);
-    int size_interleaved = lol + fak;// sizeof(pos_data) + sizeof(uv_data);
-    char interleaved[size_interleaved];
-    memset(interleaved, 0x0, size_interleaved);
+    char interleaved[sizeof(pos_data) + sizeof(uv_data)];
+    memset(interleaved, 0x0, sizeof(pos_data) + sizeof(uv_data));
     struct Interleave args;
     args.dst = interleaved;
     args.element_count = 4;
@@ -483,11 +478,13 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     // Draw command aux data
     renderer_ssbo_create(system->tile_renderer,
 			 0,
+			 BO_INDEX_DRAW_COMMAND_DATA,
 			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(DrawCommandDataTiled));
 
     // Materials
     renderer_ssbo_create(system->tile_renderer,
 			 1,
+			 BO_INDEX_MATERIALS,
 			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(Material));
 
 
@@ -677,8 +674,8 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
   (void)system;
     GLuint tex_handle;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
-
     CHECK_GL_ERROR();
+    
     GLenum format = 0;
     GLenum internal_fmt = 0;
     switch (meta->channels) {

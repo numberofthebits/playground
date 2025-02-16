@@ -30,6 +30,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/math.c
   ${PROJECT_SOURCE_DIR}/src/core/math.h
   ${PROJECT_SOURCE_DIR}/src/core/os.h
+  ${PROJECT_SOURCE_DIR}/src/core/renderer.c
+  ${PROJECT_SOURCE_DIR}/src/core/renderer.h
   ${PROJECT_SOURCE_DIR}/src/core/services.c
   ${PROJECT_SOURCE_DIR}/src/core/services.h
   ${PROJECT_SOURCE_DIR}/src/core/systembase.c
