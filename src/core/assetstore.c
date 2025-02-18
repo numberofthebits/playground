@@ -164,7 +164,7 @@ static int load_shader_source(const FileSystemListResult* result, void* user_dat
 
 static void load_shaders(struct Assets* assets) {
     LoadShaderSourceContext context = {0};
-    context.assets = assets;
+    context.assets = assets; 
     
     AssetShaderProgram tilemap = {0};
     tilemap.id = assets_make_id_str("tilemap");
@@ -181,6 +181,14 @@ static void load_shaders(struct Assets* assets) {
     file_system_list("./assets/shaders/", "unit.*", &load_shader_source, &context);
 
     VEC_PUSH_T(&assets->programs, AssetShaderProgram, unit);   
+
+    AssetShaderProgram debug = {0};
+    debug.id = assets_make_id_str("collision_debug");
+    debug.name = assets_make_asset_name_str("collision_debug");
+    context.program = &debug;
+    file_system_list("./assets/shaders/", "collision_debug.*", &load_shader_source, &context);
+
+    VEC_PUSH_T(&assets->programs, AssetShaderProgram, debug);
 }
 
 int assets_shader_program_has_shader(AssetShaderProgram* program, size_t index) {
@@ -313,6 +321,7 @@ int assets_load_asset(struct Assets* assets, AssetId id, void** data, void* meta
     
     return ret;
 }
+
 AssetShaderProgram* assets_get_program(struct Assets* assets, AssetId program_id) {
     for (int i = 0; i < assets->programs.size; ++i) {
         AssetShaderProgram* program = VEC_GET_T_PTR(&assets->programs, AssetShaderProgram, i);
