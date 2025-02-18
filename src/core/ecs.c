@@ -302,3 +302,6 @@ void registry_update(Registry* reg, size_t frame_index) {
 }
 
 
+int registry_has_component(Registry* reg, Entity e, int component_bit) {
+    return reg->entity_component_signatures[e.index] & component_bit;
+}

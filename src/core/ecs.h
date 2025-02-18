@@ -76,7 +76,10 @@ void registry_remove_entity(Registry* reg, Entity e);
 
 void registry_commit_entities(Registry* reg);
 
-void registry_add_component(Registry* reg, Entity e, int component_bit, void* data);
+void registry_add_component(Registry *reg, Entity e, int component_bit,
+                            void *data);
+
+int registry_has_component(Registry* reg, Entity e, int component_bit);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
 
 
