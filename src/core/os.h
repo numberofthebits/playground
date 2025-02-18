@@ -59,16 +59,14 @@ uint64_t time_to_microsecs(TimeT timepoint);
   static const char* timer_name_##name = (#name);			\
   TimeT start_##name = time_now();					\
   TimeT end_##name = {0};						\
-  TimeT elapsed_total_##name = time_elapsed(start_##name, end_##name);	\
   TimeT elapsed_##name = {0};						\
 
 #define AppendScopedTimer(name)					        \
   end_##name = time_now();					        \
-  elapsed_##name = time_elapsed(start_##name, end_##name);		\
-  time_append(&elapsed_total_##name, elapsed_##name);			\
+  elapsed_##name = time_elapsed(start_##name, end_##name);
 
 #define PrintScopedTimer(name)						\
-  LOG_INFO("Timer '%s': %ld", timer_name_##name, time_to_microsecs(elapsed_total_##name)); \
+  LOG_INFO("Timer '%s': %ld", timer_name_##name, time_to_microsecs(elapsed_##name)); \
     
 #else // !ENABLE_DEBUG_TIMERS
 #define BeginScopedTimer(name)

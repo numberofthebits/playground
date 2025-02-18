@@ -29,23 +29,22 @@ void input_system_reset(struct InputSystem* system) {
 }
 
 void input_system_handle_keyboard_input(struct InputSystem* system, int key, int action) {
-    struct KeyState state = system->keys[key];
+    struct KeyState* state = &system->keys[key];
     TimeT now = time_now();
     
     if (action == 0) {
-        state.flags = KeyFlag_Released;
-        time_append(&state.elapsed, time_elapsed(now, state.time_start));
-        memset(&state.time_start, 0x0, sizeof(TimeT));
+        state->flags = KeyFlag_Released;
+        time_append(&state->elapsed, time_elapsed(state->time_start, now));
+        memset(&state->time_start, 0x0, sizeof(TimeT));
     } else {
-        state.flags = KeyFlag_Pressed;
-        state.time_start = now;
+        state->flags = KeyFlag_Pressed;
+        state->time_start = now;
     }
-    
-    system->keys[key] = state;
 }
 
 void input_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr) {
-  (void)registry; (void)frame_nr;
+    (void)registry;
+    (void)frame_nr;
     BeginScopedTimer(input_system_update);
     
     struct EventBus* bus = sys->services->event_bus;

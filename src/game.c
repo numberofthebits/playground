@@ -193,13 +193,15 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     case GLFW_KEY_ESCAPE:
         game->state &= ~GAME_RUNNING;
         return;
-    case GLFW_KEY_F5:
+    case GLFW_KEY_F4:
     {
-        if(game->state & GAME_DEBUG_ENABLED) {
-	    game->state &= ~GAME_DEBUG_ENABLED;
-        } else {
-	    game->state |= GAME_DEBUG_ENABLED;
-        }
+	if(action == GLFW_RELEASE) {
+	    if(game->state & GAME_DEBUG_ENABLED) {
+		game->state &= ~GAME_DEBUG_ENABLED;
+	    } else {
+		game->state |= GAME_DEBUG_ENABLED;
+	    }
+	}
     }
     default:
         break;
@@ -234,7 +236,8 @@ Game* game_create() {
     arena_init(&allocator, STATIC_ARENA_SIZE);
     arena_init(&frame_allocator, FRAME_ARENA_SIZE);
     Game* game = ArenaAlloc(&allocator, 1, Game);
-    
+
+    game->state = 0;
     game->frame_counter = 0;
     
     if(!glfwInit()) {
@@ -405,8 +408,8 @@ static void load_units(Registry* registry, struct Assets* assets) {
         tc.pos.x = 0.5;
         tc.pos.y = 0.5;
         tc.pos.z = 0.1f;
-        tc.scale.x = 1.0f;
-        tc.scale.y = 1.0f;
+        tc.scale.x = 5.0f;
+        tc.scale.y = 5.0f;
         tc.rotation = 0.f;
 
         RenderComponent rc;
@@ -422,10 +425,17 @@ static void load_units(Registry* registry, struct Assets* assets) {
         pc.velocity.x = 0.01f;
         pc.velocity.y = -0.01f;
 
+	CollisionComponent cc;
+	cc.aabr.pos.x = 0.f;
+	cc.aabr.pos.y = 0.f;
+	cc.aabr.width = 1.f;
+	cc.aabr.height = 1.f;
+
         
         registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+	registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
 
         registry_add_entity(registry, truck);
     }
@@ -437,8 +447,8 @@ static void load_units(Registry* registry, struct Assets* assets) {
         tc.pos.x = 0.0f;
         tc.pos.y = 0.0f;
         tc.pos.z = 0.0f;
-        tc.scale.x = 10.f;
-        tc.scale.y = 10.f;
+        tc.scale.x = 5.f;
+        tc.scale.y = 5.f;
         tc.rotation = 0.f;
 
         RenderComponent rc;
@@ -463,12 +473,19 @@ static void load_units(Registry* registry, struct Assets* assets) {
         ac.last_offset = 0.f;
 
         InputComponent ic = {0};
-        
+
+	CollisionComponent cc;
+	cc.aabr.pos.x = 0.f;
+	cc.aabr.pos.y = 0.f;
+	cc.aabr.width = 1.f;
+	cc.aabr.height = 1.f;
+
         registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
         registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
         registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
+        registry_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
 
         registry_add_entity(registry, chopper);
     }
@@ -527,20 +544,20 @@ void game_run(Game* game) {
 
         glfwPollEvents();
 
-        BeginScopedTimer(update_time);
+	//        BeginScopedTimer(update_time);
         game_update(game);
-        AppendScopedTimer(update_time);
-        PrintScopedTimer(update_time);
+	//        AppendScopedTimer(update_time);
+	//        PrintScopedTimer(update_time);
 
 	if (game->state & GAME_DEBUG_ENABLED) {
 	    RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
 	    render_system_debug(render_system, &game->registry);
 	}
 
-        BeginScopedTimer(swap_buffers_time);
+	//        BeginScopedTimer(swap_buffers_time);
         glfwSwapBuffers(game->window);
-        AppendScopedTimer(swap_buffers_time);
-        PrintScopedTimer(swap_buffers_time);
+	//        AppendScopedTimer(swap_buffers_time);
+	//        PrintScopedTimer(swap_buffers_time);
         
         game->frame_counter++;
         
@@ -549,12 +566,14 @@ void game_run(Game* game) {
     }
 }
 
+
 void game_destroy(Game* game) {
     if(game->window) {
         glfwDestroyWindow(game->window);
     }
     glfwTerminate();
 }
+
 
 void game_frame_buffer_size_changed(Game* game, int width, int height) {
     LOG_INFO("Framebuffer size changed: (%d, %d)", width, height);
@@ -566,7 +585,9 @@ void game_frame_buffer_size_changed(Game* game, int width, int height) {
     render_system_frame_buffer_size_changed(render_system, width, height);
 }
 
+
 void game_window_size_changed(Game* game, int width, int height) {
   (void)game;
     LOG_INFO("Window size changed: (%d, %d)", width, height);    
 }
+

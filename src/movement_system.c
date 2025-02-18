@@ -32,7 +32,11 @@ struct MovementSystem* movement_system_create(struct Services* services) {
     struct MovementSystem* system =
         ArenaAlloc(&allocator, 1, struct MovementSystem);
     
-    system_base_init((struct SystemBase*)system, MOVEMENT_SYSTEM_BIT, &movement_update, TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, services);
+    system_base_init((struct SystemBase*)system,
+		     MOVEMENT_SYSTEM_BIT,
+		     &movement_update,
+		     TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT,
+		     services);
     
     return system;
 }

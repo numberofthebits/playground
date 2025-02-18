@@ -49,7 +49,7 @@ TimeT time_elapsed(TimeT start, TimeT end) {
 
 TimeT time_elapsed_now(TimeT from) {
   TimeT now = time_now();
-  return time_elapsed(now, from);
+  return time_elapsed( from, now);
 }
 
 void time_append(TimeT* a, TimeT b) {

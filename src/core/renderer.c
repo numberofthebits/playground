@@ -82,10 +82,9 @@ void renderer_init(struct Renderer *renderer,
     renderer->num_vertex_buffers = params->num_buffer_descriptors;
 
     // TODO: Clean this up. We can ask for all the buffer objects in one call,
-    // then then
-    //       put them into named variables for syntactical separation of vertex
-    //       buffer objects and other types of buffer objects.
-    glCreateBuffers(2, renderer->shader_storage_buffer_objects);
+    // then put them into named variables for syntactical separation of vertex
+    // buffer objects and other types of buffer objects.
+    glCreateBuffers(2, renderer->shader_storage_buffer_objects.buffer_object);
     glCreateBuffers(1, &renderer->multi_draw_indirect_buffer);
     glCreateBuffers(1, &renderer->element_array_buffer);
 
@@ -100,8 +99,7 @@ void renderer_init(struct Renderer *renderer,
 		buffer_desc.binding_descriptors[j];
 	    unsigned int num_attribs = binding_point_desc.num_attrib_descriptors;
 
-	    glVertexArrayVertexBuffer(
-				      renderer->vertex_array_object, binding_point_desc.binding_point_index,
+	    glVertexArrayVertexBuffer(renderer->vertex_array_object, binding_point_desc.binding_point_index,
 				      renderer->vertex_buffer_objects[i], binding_point_desc.offset,
 				      binding_point_desc.stride);
 
@@ -162,6 +160,19 @@ void renderer_init(struct Renderer *renderer,
     CHECK_GL_ERROR();
 }
 
+void renderer_use(struct Renderer* renderer) {
+    glBindVertexArray(renderer->vertex_array_object);
+
+    for(int i = 0; i < SSBO_MAX; ++i) {
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+			 renderer->shader_storage_buffer_objects.binding_point_index[i],
+			 renderer->shader_storage_buffer_objects.buffer_object[i]);
+    }
+
+    // Note: There's probably other relevant state that isn't implicitly bound via
+    // vertex array object.
+}
+
 void renderer_write_element_array_buffer(struct Renderer *renderer,
 				    size_t offset,
                                     size_t size,
@@ -171,29 +182,28 @@ void renderer_write_element_array_buffer(struct Renderer *renderer,
 }
 
 void renderer_ssbo_create(struct Renderer *renderer,
-					int index,
-					int binding_point,
-                                        GLsizeiptr buffer_size) {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-		     binding_point,
-		     renderer->shader_storage_buffer_objects[index]);
+			  int index,
+			  int binding_point,
+			  GLsizeiptr buffer_size) {
+    renderer->shader_storage_buffer_objects.binding_point_index[index] = binding_point;
 
-    glNamedBufferStorage(renderer->shader_storage_buffer_objects[index],
-			 buffer_size, NULL,
+    glNamedBufferStorage(renderer->shader_storage_buffer_objects.buffer_object[index],
+			 buffer_size,
+			 NULL,
 			 GL_DYNAMIC_STORAGE_BIT);
     CHECK_GL_ERROR();
 }
 
 void renderer_ssbo_write(struct Renderer *renderer,
-				       int index,
-                                       GLintptr offset,
-				       void *data,
-                                       size_t size) {
-    if (index >= SSBO_MAX || renderer->shader_storage_buffer_objects[0]) {
+			 int index,
+			 GLintptr offset,
+			 void *data,
+			 size_t size) {
+    if (index >= SSBO_MAX) {
 	LOG_EXIT("SSBO index exceeds max SSBOs {d}", SSBO_MAX);
     }
 
-    glNamedBufferSubData(renderer->shader_storage_buffer_objects[index], offset,
+    glNamedBufferSubData(renderer->shader_storage_buffer_objects.buffer_object[index], offset,
 			 size, data);
     CHECK_GL_ERROR();
 }

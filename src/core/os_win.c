@@ -4,6 +4,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_LEAN_AND_MEAN
 #define TICK_TO_MICROSECS 1000000
+#define TICK_TO_NANOSECS  1000000000
 #define MICROSECS_TO_TICKS 1 / 1000000
 #define TICKS_PER_SECOND 1000
 #define SECS_TO_TICKS    1000000000
@@ -82,10 +83,10 @@ void file_system_list(const char* directory, const char* filter, IterCallback ca
 }
 
 
-
 void time_init() {
     QueryPerformanceFrequency(&performance_counter_frequency);
 }
+
 
 TimeT time_now() {
     LARGE_INTEGER now;             
@@ -94,12 +95,14 @@ TimeT time_now() {
     return now;
 }
 
+
 TimeT time_elapsed(TimeT start, TimeT end) {
     TimeT result = { 0 };
     result.QuadPart = end.QuadPart - start.QuadPart;
 
     return result;
 }
+
 
 void time_append(TimeT* a, TimeT b) {
     a->QuadPart += b.QuadPart;
@@ -113,6 +116,7 @@ TimeT time_elapsed_now(TimeT from) {
     return elapsed;
 }
 
+
 int time_expired(TimeT expires_at) {
     TimeT now = time_now();
     if (now.QuadPart >= expires_at.QuadPart) {
@@ -122,10 +126,12 @@ int time_expired(TimeT expires_at) {
     return 0;
 }
 
+
 TimeT time_to_secs(TimeT timepoint) {
     timepoint.QuadPart =  (LONGLONG)((float)timepoint.QuadPart * TICKS_TO_SECS);
     return timepoint;
 }
+
 
 TimeT time_from_secs(int seconds) {
     TimeT result = { 0 };
@@ -134,22 +140,20 @@ TimeT time_from_secs(int seconds) {
     return result;
 }
 
+
 uint64_t time_to_microsecs(TimeT timepoint) {
-    // If timepoint is in nanoseconds, microsecs should be div 1000
-    return timepoint.QuadPart / 1000;
+    return timepoint.QuadPart * TICK_TO_MICROSECS / performance_counter_frequency.QuadPart;
 }
 
+
 uint64_t time_to_nanosecs(TimeT timepoint) {
-    return timepoint.QuadPart;
+    return timepoint.QuadPart * TICK_TO_NANOSECS / performance_counter_frequency.QuadPart;
 }
+
 
 TimeT time_add(TimeT a, TimeT b) {
     TimeT result = { 0 };
     result.QuadPart = a.QuadPart + b.QuadPart;
     return result;
 }
-
-
-
-
 

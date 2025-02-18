@@ -1,6 +1,7 @@
 #ifndef DEBUG_RENDERER_H
 #define DEBUG_RENDERER_H
 
+#include <core/renderer.h>
 #include <core/log.h>
 #include <core/math.h>
 
@@ -208,6 +209,11 @@ struct VertexAttributeDescriptor {
     GLuint relative_offset; // I have no clue when this is useful
 };
 
+struct BufferObjectBindings {
+    GLuint binding_point_index[SSBO_MAX];
+    GLuint buffer_object[SSBO_MAX];
+};
+
 struct BindingPointDescriptor {
     GLuint binding_point_index;
     GLuint stride;
@@ -239,7 +245,7 @@ struct Renderer {
     GLuint vertex_buffer_objects[VBO_MAX];
 
     GLuint multi_draw_indirect_buffer;
-    GLuint shader_storage_buffer_objects[SSBO_MAX];
+    struct BufferObjectBindings shader_storage_buffer_objects;
 };
 
 
@@ -257,6 +263,10 @@ GLuint calc_stride(struct VertexAttributeDescriptor *descriptors, int count);
 
 void renderer_init(struct Renderer *renderer,
                    struct RendererParameters *params);
+
+// Try to gather up all the state changes needed to use the renderer in one
+// place
+void renderer_use(struct Renderer* renderer);
 
 void renderer_write_element_array_buffer(struct Renderer *renderer,
                                          size_t offset, size_t size,

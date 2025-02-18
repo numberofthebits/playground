@@ -20,7 +20,7 @@ struct CollisionDetectedEvent {
 };
 
 struct DebugEventStateChangedEvent {
-    int enabled;
+    int debug_enabled;
 };
 
 

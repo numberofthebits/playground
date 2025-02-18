@@ -103,6 +103,7 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
    target_compile_options(game
      PRIVATE
      $<$<PLATFORM_ID:Windows>:-D_CRT_SECURE_NO_WARNINGS>
+     $<$<PLATFORM_ID:Windows>:-DENABLE_DEBUG_TIMERS>
    )
 
 endif()

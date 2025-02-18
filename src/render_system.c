@@ -180,7 +180,11 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
         return;
     }
 
-    glBindVertexArray(system->tile_renderer->vertex_array_object);
+    renderer_use(system->tile_renderer);
+    /* glBindVertexArray(system->tile_renderer->vertex_array_object); */
+    /* // glVertexArrayElementBuffer(system->tile_renderer->vertex_array_object, system->tile_renderer->element_array_buffer); */
+    
+    
     GLint loc_view;
     GLint loc_proj;
 
@@ -266,13 +270,13 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
                          system->draw_commands_elements);
     CHECK_GL_ERROR();
 
-    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects[0],
+    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects.buffer_object[0],
                          0,
                          sizeof(DrawCommandDataTiled) * count_in_batch,
                          system->draw_command_data);
     CHECK_GL_ERROR();
 
-    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects[1],
+    glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects.buffer_object[1],
                          0,
                          sizeof(Material) * system->materials.size,
                          VEC_ITER_BEGIN_T(&system->materials, Material));
@@ -282,10 +286,6 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
     // Dispatch the final batch
     render_batch(system, count_in_batch);
 }
-
-/* static void render_debug_entities(RenderSystem* system) { */
-/*     (void)system; */
-/* } */
 
 
 static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
@@ -431,10 +431,10 @@ static struct Renderer* create_tile_renderer() {
     renderer_init(tile_renderer, &tile_params);
 
     float pos_data[] = {
-        -0.48f, -0.48f, 0.0f, // lower left
-        0.48f, -0.48f, 0.0f, // lower right
-        0.48f, 0.48f, 0.0f, // upper right
-        -0.48f, 0.48f, 0.0f, // upper left
+         0.f, 0.f,  0.0f, // lower left
+         1.f, 0.f,  0.0f, // lower right
+         1.f, 1.f,  0.0f, // upper right
+         0.f, 1.f, 0.0f, // upper left
     };
 
     float uv_data[] = {
@@ -493,18 +493,12 @@ struct Renderer* create_debug_renderer() {
     attrib_desc[0].normalize  = GL_FALSE;
     attrib_desc[0].relative_offset = 0;
    
-    attrib_desc[1].vertex_attribute = 1;
-    attrib_desc[1].element_count = 2;
-    attrib_desc[1].element_type = GL_FLOAT;
-    attrib_desc[1].normalize  = GL_FALSE;
-    attrib_desc[1].relative_offset = sizeof(float) * 3;
-
     struct BindingPointDescriptor bp_desc[1];
     bp_desc[0].attrib_descriptors = &attrib_desc[0];
-    bp_desc[0].num_attrib_descriptors = 2;
+    bp_desc[0].num_attrib_descriptors = 1;
     bp_desc[0].binding_point_index = 0;
     bp_desc[0].offset = 0;
-    bp_desc[0].stride = sizeof(float) * 5;
+    bp_desc[0].stride = sizeof(float) * 3;
 
     struct VertexBufferDescriptor vb_desc;
     vb_desc.binding_descriptors = bp_desc;
@@ -517,12 +511,6 @@ struct Renderer* create_debug_renderer() {
     params.buffer_descriptors = &vb_desc;
 
     renderer_init(debug_renderer, &params);
-
-    // Draw command aux data
-    renderer_ssbo_create(debug_renderer,
-			 0,
-			 BO_INDEX_DRAW_COMMAND_DATA,
-			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(DrawCommandDataTiled));
 
     CHECK_GL_ERROR();
 
@@ -555,7 +543,7 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     system->tile_renderer = create_tile_renderer();
     CHECK_GL_ERROR();
     
-    //system->debug_renderer = create_debug_renderer();
+    system->debug_renderer = create_debug_renderer();
     CHECK_GL_ERROR();
     
     LOG_INFO("Created render system implementation");
@@ -687,7 +675,7 @@ void render_system_frame_buffer_size_changed(RenderSystem* render_system , int w
 void render_system_debug(struct RenderSystem* system, Registry* registry) {
     CHECK_GL_ERROR();
 
-    glBindVertexArray(system->tile_renderer->vertex_array_object);
+    renderer_use(system->debug_renderer);
     CHECK_GL_ERROR();
 
     GLuint program_handle = get_program_handle_by_name(system, "collision_debug");
@@ -708,8 +696,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
     Mat4x4 proj_mat = ortho(0.01f, 100.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
     glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
     CHECK_GL_ERROR();
-    
-     
+         
     struct Pool* collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
     struct Pool* transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
 
@@ -718,7 +705,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 
 	// Skip anything that doesn't have at least a collision component
 	if (registry_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
-	    CollisionComponent* cc = PoolGetComponent(collision_pool, CollisionComponent, i);
+	    CollisionComponent* cc = PoolGetComponent(collision_pool, CollisionComponent, e.id);
 	    Vec3f pos[4] = {0};
 
 	    float width = cc->aabr.width;
@@ -727,7 +714,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 	    // If it does have a transform component, we build that into the vertex data
 	    // and just issue the draw call for the hardcoded vertex data
 	    if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
-		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, i);
+		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.id);
 		for (int j = 0; j < 4; ++j) {
 		    pos[j].x += tc->pos.x;
 		    pos[j].y += tc->pos.y;
@@ -735,19 +722,16 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 
 		    width *= tc->scale.x;
 		    height *= tc->scale.y;
-
-		    pos[j].x *= tc->scale.x;
-		    pos[j].y *= tc->scale.y;
 		}
 	    }
 
 	    pos[0].x += cc->aabr.pos.x;
 	    pos[0].y += cc->aabr.pos.y;
-	    pos[0].z = 0.f;
+	    pos[0].z += 0.f;
 
 	    pos[1].x += cc->aabr.pos.x + width;
 	    pos[1].y += cc->aabr.pos.y;
-	    pos[1].z = 0.f;
+	    pos[1].z += 0.f;
 
 	    pos[2].x += cc->aabr.pos.x + width;
 	    pos[2].y += cc->aabr.pos.y + height;
@@ -757,9 +741,10 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 	    pos[3].y += cc->aabr.pos.y + height;
 	    pos[3].z += 0.f;
 
-
 	    glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
-				 0, 4, pos);
+				 0,
+				 sizeof(pos),
+				 pos);
 	    
 	    glDrawArrays(GL_LINE_LOOP, 0, 4);
 	}
