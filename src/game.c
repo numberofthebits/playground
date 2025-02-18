@@ -50,7 +50,7 @@ typedef struct Map_t Map;
 
 enum GameState {
     GAME_RUNNING = 0x1,
-    DEBUG_DRAW_ENABLED = 0x2,
+    GAME_DEBUG_ENABLED = 0x2,
 };
 
 struct Game_t {
@@ -195,17 +195,11 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         return;
     case GLFW_KEY_F5:
     {
-        struct Event e;
-        e.id = DebugEvent_StateChanged;
-        struct DebugEventStateChangedEvent data;
-        // Toggle debug draw state
-        if(game->state & DEBUG_DRAW_ENABLED) {
-            data.enabled = 0;
+        if(game->state & GAME_DEBUG_ENABLED) {
+	    game->state &= ~GAME_DEBUG_ENABLED;
         } else {
-            data.enabled = 1;
+	    game->state |= GAME_DEBUG_ENABLED;
         }
-        e.event_data = &data;
-        event_bus_emit(&game->event_bus, &e);
     }
     default:
         break;
@@ -326,7 +320,6 @@ Game* game_create() {
         mode->height);
     
     registry_add_system(&game->registry, (struct SystemBase*)movement_system);
-    /* registry_add_system(registry, physics_system); */
     registry_add_system(&game->registry, (struct SystemBase*)animation_system);
     registry_add_system(&game->registry, (struct SystemBase*)collision_system);
     registry_add_system(&game->registry, (struct SystemBase*)input_system);
@@ -400,8 +393,8 @@ static void map_load(Map* map, Registry* registry, struct Assets* assets) {
 }
 
 static void load_units(Registry* registry, struct Assets* assets) {
-  (void)assets;
-//    const char* unit_shader_name = "unit";
+    (void)assets;
+
     const char* unit_shader_name = "tilemap";
     AssetId unit_shader_id = assets_make_id(unit_shader_name, strlen(unit_shader_name));
 
@@ -496,6 +489,7 @@ void game_setup(Game* game) {
     prep.material_ids = vec_create();
     VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap"));
     VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("unit"));
+    VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("collision_debug"));
 
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("truck-blue-mat"));
     VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
@@ -537,6 +531,11 @@ void game_run(Game* game) {
         game_update(game);
         AppendScopedTimer(update_time);
         PrintScopedTimer(update_time);
+
+	if (game->state & GAME_DEBUG_ENABLED) {
+	    RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
+	    render_system_debug(render_system, &game->registry);
+	}
 
         BeginScopedTimer(swap_buffers_time);
         glfwSwapBuffers(game->window);
