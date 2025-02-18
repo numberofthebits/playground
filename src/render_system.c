@@ -3,6 +3,8 @@
 #include "components.h"
 #include "systems.h"
 
+#include <core/assetstore.h>
+#include <core/vec.h>
 #include <core/renderer.h>
 #include <core/log.h>
 #include <core/math.h>
@@ -114,6 +116,21 @@ static GLuint create_program(GLuint* shaders, int count) {
 }
 
 
+static GLuint get_program_handle_by_asset_id(RenderSystem* system, AssetId id) {
+    GLuint* program = 0;
+    if (!hash_map_get(&system->programs, &id, sizeof(AssetId), (void**)&program)) {
+	LOG_EXIT("Failed to find shader program");
+    }
+    return (GLuint)(uintptr_t)program;
+}
+
+
+static GLuint get_program_handle_by_name(RenderSystem* system, const char* name) {
+    AssetId asset_id = assets_make_id_str(name);
+    return get_program_handle_by_asset_id(system, asset_id);
+}
+
+
 static int render_data_order_comp(const void* lhs, const void* rhs) {
     const RenderData* a = lhs;
     const RenderData* b = rhs;
@@ -130,10 +147,6 @@ static void render_batch(RenderSystem* system, unsigned int batch_size) {
 	return;
     }
 
-    float* vbo_data = malloc(80);   
-    glGetNamedBufferSubData(system->tile_renderer->vertex_buffer_objects[0], 0, 80, vbo_data);
-    free(vbo_data);
-    
     (void)system;
     glMultiDrawElementsIndirect(GL_TRIANGLES,
                                 GL_UNSIGNED_SHORT,
@@ -156,7 +169,7 @@ static GLint get_uniform_location_checked(GLuint program, const char* name) {
     return loc;
 }
 
-static void render_system_update(RenderSystem* system, RenderData* data, size_t render_data_size ) {
+static void render_entities(RenderSystem* system, RenderData* data, size_t render_data_size ) {
     CHECK_GL_ERROR();
 
     glClearColor(0.2f, 0.2f, 0.2f, 255.f);
@@ -179,7 +192,6 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
     
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->tile_renderer->multi_draw_indirect_buffer);
-    //    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, system->tile_renderer->element_array_buffer);
     CHECK_GL_ERROR();
 
     sort_render_data(data, render_data_size);
@@ -197,11 +209,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
             render_batch(system, count_in_batch);
             count_in_batch = 0;
             
-            GLuint* program = 0;
-            if (!hash_map_get(&system->programs, &render_data->program_id, sizeof(render_data->program_id), (void**)&program)) {
-                LOG_EXIT("Failed to find shader program");
-            }
-            GLuint program_handle = (GLuint)(uintptr_t)program;
+            GLuint program_handle = get_program_handle_by_asset_id(system, render_data->program_id);
             glUseProgram(program_handle);
             CHECK_GL_ERROR();
 
@@ -225,7 +233,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
             CHECK_GL_ERROR();
         }
        
-        DrawElementsIndirectCommand* command = &system->draw_commands[count_in_batch];
+        DrawElementsIndirectCommand* command = &system->draw_commands_elements[count_in_batch];
         command->count = 6;
         command->instance_count = 1;
         command->first_index = 0;
@@ -255,7 +263,7 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     glNamedBufferSubData(system->tile_renderer->multi_draw_indirect_buffer,
                          0,
                          sizeof(DrawElementsIndirectCommand) * count_in_batch,
-                         system->draw_commands);
+                         system->draw_commands_elements);
     CHECK_GL_ERROR();
 
     glNamedBufferSubData(system->tile_renderer->shader_storage_buffer_objects[0],
@@ -275,9 +283,13 @@ static void render_system_update(RenderSystem* system, RenderData* data, size_t 
     render_batch(system, count_in_batch);
 }
 
+/* static void render_debug_entities(RenderSystem* system) { */
+/*     (void)system; */
+/* } */
+
 
 static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr) {
-  (void)frame_nr;
+    (void)frame_nr;
     BeginScopedTimer(render_time);
 
     RenderSystem* render_sys = (RenderSystem*)sys;
@@ -319,7 +331,6 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
         scale_mat4(&matrix_scale, &scale);
         translate(&matrix_translate, &pos);
 
-
         Mat4x4 m = identity();
         m = mul(&m, &matrix_rotate);
         m = mul(&m, &matrix_scale);
@@ -330,17 +341,16 @@ static void render_update(Registry* reg, struct SystemBase* sys, size_t frame_nr
         rd->program_id = rc->pipeline_id;
     }
 
-    render_system_update(render_sys, render_data, sys->entities.size);
-
+    render_entities(render_sys, render_data, sys->entities.size);
+    
     AppendScopedTimer(render_time);
     PrintScopedTimer(render_time);
 }
 
-
 void render_system_create_program(RenderSystem* system, AssetId program_id) {
     AssetShaderProgram* program_asset = assets_get_program(system->assets, program_id);
     if(!program_asset) {
-        LOG_EXIT("Failed to create program with id '%d'", program_id);
+        LOG_EXIT("Failed to create program with id '%d': Program asset not found", program_id);
     }
     
     int num_shaders_in_program = 0;
@@ -380,30 +390,8 @@ void render_system_global_init() {
     glEnable(GL_DEBUG_OUTPUT);
 }
 
-RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
-    LOG_INFO("Create render system implementation...");
-
-    // TODO: This is per renderer data. Should be set up when invoking each individual renderer
-    glClearColor(0.f, 0.0f, 0.0f, 255.f);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
-    system_base_init((struct SystemBase*)system,
-		     RENDER_SYSTEM_BIT,
-		     &render_update,
-		     RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
-
-    system->assets = services->assets;
-    system->materials = vec_create();
-    system->main_framebuffer.width = initial_width;
-    system->main_framebuffer.height = initial_height;
-
-    hash_map_init(&system->programs, 100);
-    hash_map_init(&system->textures, 1000);
-    hash_map_init(&system->material_asset_index_mapping, 1000);
-
-    system->tile_renderer = (struct Renderer*)ArenaAlloc(&allocator, 1, struct Renderer);
+static struct Renderer* create_tile_renderer() {
+    struct Renderer* tile_renderer = (struct Renderer*)ArenaAlloc(&allocator, 1, struct Renderer);
    
     struct VertexAttributeDescriptor attrib_desc[2];
     attrib_desc[0].vertex_attribute = 0;
@@ -440,7 +428,7 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     tile_params.num_buffer_descriptors = 1;
     tile_params.buffer_descriptors = &vb_desc;
 
-    renderer_init(system->tile_renderer, &tile_params);
+    renderer_init(tile_renderer, &tile_params);
 
     float pos_data[] = {
         -0.48f, -0.48f, 0.0f, // lower left
@@ -473,37 +461,78 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
 
     interleave_attributes(&args);
 
-    glNamedBufferSubData(system->tile_renderer->vertex_buffer_objects[0], 0, sizeof(interleaved), interleaved);
+    glNamedBufferSubData(tile_renderer->vertex_buffer_objects[0], 0, sizeof(interleaved), interleaved);
 
     // Draw command aux data
-    renderer_ssbo_create(system->tile_renderer,
+    renderer_ssbo_create(tile_renderer,
 			 0,
 			 BO_INDEX_DRAW_COMMAND_DATA,
 			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(DrawCommandDataTiled));
 
     // Materials
-    renderer_ssbo_create(system->tile_renderer,
+    renderer_ssbo_create(tile_renderer,
 			 1,
 			 BO_INDEX_MATERIALS,
 			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(Material));
 
 
 
-    renderer_write_element_array_buffer(system->tile_renderer, 0, sizeof(index_data), index_data);
+    renderer_write_element_array_buffer(tile_renderer, 0, sizeof(index_data), index_data);
     CHECK_GL_ERROR();
-    
-    LOG_INFO("Created render system implementation");
 
-    return system;
+    return tile_renderer;
 }
 
-/*
+struct Renderer* create_debug_renderer() {
+    struct Renderer* debug_renderer = (struct Renderer*)ArenaAlloc(&allocator, 1, struct Renderer);
+   
+    struct VertexAttributeDescriptor attrib_desc[2];
+    attrib_desc[0].vertex_attribute = 0;
+    attrib_desc[0].element_count = 3;
+    attrib_desc[0].element_type = GL_FLOAT;
+    attrib_desc[0].normalize  = GL_FALSE;
+    attrib_desc[0].relative_offset = 0;
+   
+    attrib_desc[1].vertex_attribute = 1;
+    attrib_desc[1].element_count = 2;
+    attrib_desc[1].element_type = GL_FLOAT;
+    attrib_desc[1].normalize  = GL_FALSE;
+    attrib_desc[1].relative_offset = sizeof(float) * 3;
+
+    struct BindingPointDescriptor bp_desc[1];
+    bp_desc[0].attrib_descriptors = &attrib_desc[0];
+    bp_desc[0].num_attrib_descriptors = 2;
+    bp_desc[0].binding_point_index = 0;
+    bp_desc[0].offset = 0;
+    bp_desc[0].stride = sizeof(float) * 5;
+
+    struct VertexBufferDescriptor vb_desc;
+    vb_desc.binding_descriptors = bp_desc;
+    vb_desc.binding_point_count = 1;
+
+    struct RendererParameters params;
+    params.index_buffer_size = 0;
+    params.num_vertices = 65535;
+    params.num_buffer_descriptors = 1;
+    params.buffer_descriptors = &vb_desc;
+
+    renderer_init(debug_renderer, &params);
+
+    // Draw command aux data
+    renderer_ssbo_create(debug_renderer,
+			 0,
+			 BO_INDEX_DRAW_COMMAND_DATA,
+			 MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(DrawCommandDataTiled));
+
+    CHECK_GL_ERROR();
+
+    return debug_renderer;    
+}
+
 RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
     LOG_INFO("Create render system implementation...");
-    // init function pointer loader 
 
-    glEnable(GL_DEBUG_OUTPUT);
-
+    // TODO: This is per renderer data. Should be set up when invoking each individual renderer
     glClearColor(0.f, 0.0f, 0.0f, 255.f);
     glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -522,94 +551,18 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
     hash_map_init(&system->programs, 100);
     hash_map_init(&system->textures, 1000);
     hash_map_init(&system->material_asset_index_mapping, 1000);
-    
-    memset(&system->draw_commands, 0x0, sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
-    memset(&system->draw_command_data, 0x0, sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS);
 
-//    glEnable(GL_BLEND);
-    glCreateVertexArrays(1, &system->vao);
-    glCreateBuffers(BO_INDEX_MAX, system->buffer_objects);
-
+    system->tile_renderer = create_tile_renderer();
     CHECK_GL_ERROR();
     
-    glEnableVertexArrayAttrib(system->vao, 0);
-    glEnableVertexArrayAttrib(system->vao, 1);
-    glEnableVertexArrayAttrib(system->vao, 2);
-    
-    glVertexArrayAttribBinding(system->vao, 0, 0);
-    glVertexArrayAttribBinding(system->vao, 1, 1);
-    glVertexArrayAttribBinding(system->vao, 2, 2);
-
-    glVertexArrayVertexBuffer(system->vao, 0, system->buffer_objects[BO_INDEX_POSITION], 0, sizeof(float) * 3);
-    glVertexArrayVertexBuffer(system->vao, 1, system->buffer_objects[BO_INDEX_COLOR], 0, sizeof(uint8_t)* 3);
-    glVertexArrayVertexBuffer(system->vao, 2, system->buffer_objects[BO_INDEX_UV], 0, sizeof(float)* 2);
-    
-    glVertexArrayAttribFormat(system->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribIFormat(system->vao, 1, 3, GL_UNSIGNED_BYTE, 0);
-    glVertexArrayAttribFormat(system->vao, 2, 2, GL_FLOAT, GL_FALSE, 0);
-    
-    float pos_data[] = {
-        -0.48f, -0.48f, 0.0f, // lower left
-        0.48f, -0.48f, 0.0f, // lower right
-        0.48f, 0.48f, 0.0f, // upper right
-        -0.48f, 0.48f, 0.0f, // upper left
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_POSITION], sizeof(pos_data), &pos_data, GL_STATIC_DRAW);
-    
-    uint8_t color_data[] = {
-        255,   0,   0,
-        0, 255,   0,
-        0,   0, 255,
-        255, 255, 255
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_COLOR], sizeof(color_data), &color_data, GL_STATIC_DRAW);
-    
-    float uv_data[] = {
-        0.0f, 0.0f, // lower left,
-        1.0f, 0.0f, // lower right,
-        1.0f, 1.0f, // upper right,
-        0.0f, 1.0f, // upper left
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_UV], sizeof(uv_data), &uv_data, GL_STATIC_DRAW);
-
-    uint16_t index_data[] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-    glNamedBufferData(system->buffer_objects[BO_INDEX_ELEMENT_ARRAY],
-                      sizeof(index_data),
-                      index_data,
-                      GL_STATIC_DRAW);
-
-    glVertexArrayElementBuffer(system->vao, system->buffer_objects[BO_INDEX_ELEMENT_ARRAY]);
-
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->buffer_objects[BO_INDEX_DRAW_INDIRECT]);
-    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_INDIRECT],
-                      sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
-                      0,
-                      GL_DYNAMIC_DRAW);
-
-    glBindBufferBase( GL_SHADER_STORAGE_BUFFER,
-                      BO_INDEX_DRAW_COMMAND_DATA,
-                      system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA] );
-    glNamedBufferData(system->buffer_objects[BO_INDEX_DRAW_COMMAND_DATA],
-                      sizeof(DrawCommandDataTiled) * MAX_DRAW_INDIRECT_DRAW_COMMANDS,
-                      0,
-                      GL_DYNAMIC_DRAW);
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                     BO_INDEX_MATERIALS,
-                     system->buffer_objects[BO_INDEX_MATERIALS]);
-    glNamedBufferData(system->buffer_objects[BO_INDEX_MATERIALS],
-                      sizeof(Material) * MAX_MATERIALS,
-                      0,
-                      GL_DYNAMIC_DRAW);
+    //system->debug_renderer = create_debug_renderer();
+    CHECK_GL_ERROR();
     
     LOG_INFO("Created render system implementation");
 
     return system;
 }
-*/
+
 static void render_system_create_material(RenderSystem* system, AssetId material_id) {
     Material new_material;
     AssetMaterial* mat = assets_get_material(system->assets, material_id);
@@ -723,8 +676,94 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
     return bindless_handle;
 }
 
+
 void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height) {
     render_system->main_framebuffer.width = width;
     render_system->main_framebuffer.height = height;
     glViewport(0, 0, width, height);
+}
+
+
+void render_system_debug(struct RenderSystem* system, Registry* registry) {
+    CHECK_GL_ERROR();
+
+    glBindVertexArray(system->tile_renderer->vertex_array_object);
+    CHECK_GL_ERROR();
+
+    GLuint program_handle = get_program_handle_by_name(system, "collision_debug");
+    glUseProgram(program_handle);
+    CHECK_GL_ERROR();
+
+    GLint loc_view = get_uniform_location_checked(program_handle, "View");
+    
+    Vec3f cam_pos = { 10.f, 10.0f, 40.f };
+    Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
+    Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
+    Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
+    glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
+
+    GLint loc_proj = get_uniform_location_checked(program_handle, "Proj");
+    float scale = 1.0f;
+    float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
+    Mat4x4 proj_mat = ortho(0.01f, 100.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
+    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
+    CHECK_GL_ERROR();
+    
+     
+    struct Pool* collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
+    struct Pool* transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+
+    for (int i = 0; i < system->base.entities.size; ++i) {
+	Entity e = VEC_GET_T(&system->base.entities, Entity, i);
+
+	// Skip anything that doesn't have at least a collision component
+	if (registry_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
+	    CollisionComponent* cc = PoolGetComponent(collision_pool, CollisionComponent, i);
+	    Vec3f pos[4] = {0};
+
+	    float width = cc->aabr.width;
+	    float height = cc->aabr.height;
+
+	    // If it does have a transform component, we build that into the vertex data
+	    // and just issue the draw call for the hardcoded vertex data
+	    if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
+		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, i);
+		for (int j = 0; j < 4; ++j) {
+		    pos[j].x += tc->pos.x;
+		    pos[j].y += tc->pos.y;
+		    pos[j].z += tc->pos.z;
+
+		    width *= tc->scale.x;
+		    height *= tc->scale.y;
+
+		    pos[j].x *= tc->scale.x;
+		    pos[j].y *= tc->scale.y;
+		}
+	    }
+
+	    pos[0].x += cc->aabr.pos.x;
+	    pos[0].y += cc->aabr.pos.y;
+	    pos[0].z = 0.f;
+
+	    pos[1].x += cc->aabr.pos.x + width;
+	    pos[1].y += cc->aabr.pos.y;
+	    pos[1].z = 0.f;
+
+	    pos[2].x += cc->aabr.pos.x + width;
+	    pos[2].y += cc->aabr.pos.y + height;
+	    pos[2].z += 0.f;
+
+	    pos[3].x += cc->aabr.pos.x;
+	    pos[3].y += cc->aabr.pos.y + height;
+	    pos[3].z += 0.f;
+
+
+	    glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
+				 0, 4, pos);
+	    
+	    glDrawArrays(GL_LINE_LOOP, 0, 4);
+	}
+    }
+
+    CHECK_GL_ERROR();
 }

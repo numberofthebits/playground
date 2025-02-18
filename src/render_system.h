@@ -22,7 +22,8 @@ typedef struct {
 
 struct RenderSystem {
     struct SystemBase base;
-    DrawElementsIndirectCommand draw_commands[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    DrawElementsIndirectCommand draw_commands_elements[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
+    DrawArraysIndirectCommand draw_commands_arrays;
     DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
     HashMap material_asset_index_mapping;
     HashMap textures;
@@ -36,8 +37,9 @@ struct RenderSystem {
     GLuint tilemap;
     GLuint vao;
     struct Framebuffer main_framebuffer;
-
+    
     struct Renderer* tile_renderer;
+    struct Renderer* debug_renderer;
 };
 typedef struct RenderSystem RenderSystem;
 
@@ -51,6 +53,8 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
 void render_system_frame_buffer_size_changed(RenderSystem *render_system,
                                              int width, int height);
+
+void render_system_debug(struct RenderSystem* system, Registry* registry);
 
 
 #endif
