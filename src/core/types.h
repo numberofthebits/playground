@@ -18,7 +18,11 @@ typedef int EntityId;
 typedef size_t EntityIndex;
 
 struct Entity_t {
+    // The index of the entity data
     EntityIndex index;
+
+    // The id of the entity, so we can tell entities that reuse indices
+    // apart
     EntityId id;
 };
 typedef struct Entity_t Entity;
