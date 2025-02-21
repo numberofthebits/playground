@@ -5,8 +5,8 @@ void interleave_attributes(struct Interleave* interleave) {
     ptrdiff_t write_offset = 0;
     for (size_t i = 0; i < interleave->element_count; ++i) {
 	for (size_t j = 0; j < interleave->num_attribs; ++j) {
-	    memcpy(interleave->dst + write_offset,
-		   interleave->attribs[j].src + i * interleave->attribs[j].vertex_size_bytes,
+	    memcpy((char*)interleave->dst + write_offset,
+		   (char*)interleave->attribs[j].src + i * interleave->attribs[j].vertex_size_bytes,
 		   interleave->attribs[j].vertex_size_bytes);
 
 	    write_offset += interleave->attribs[j].vertex_size_bytes;
