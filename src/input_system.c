@@ -26,6 +26,7 @@ struct InputSystem* input_system_create(struct Services* services) {
 
 void input_system_reset(struct InputSystem* system) {
     memset(system->keys, 0x0, sizeof(system->keys));
+    memset(system->events, 0x0, sizeof(system->events));
 }
 
 void input_system_handle_keyboard_input(struct InputSystem* system, int key, int action) {
