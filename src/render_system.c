@@ -181,9 +181,6 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
     }
 
     renderer_use(system->tile_renderer);
-    /* glBindVertexArray(system->tile_renderer->vertex_array_object); */
-    /* // glVertexArrayElementBuffer(system->tile_renderer->vertex_array_object, system->tile_renderer->element_array_buffer); */
-    
     
     GLint loc_view;
     GLint loc_proj;
