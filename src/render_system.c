@@ -187,10 +187,11 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
 
     CHECK_GL_ERROR();
 
-    Vec3f cam_pos = { 10.f, 10.0f, 40.f };
-    Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
-    Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
-    Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
+    /* Vec3f cam_pos = { 0.f, 0.0f, 150.f }; */
+    /* Vec3f cam_target = { 0.0f, 0.0f, 0.0f}; */
+    /* Vec3f cam_up = { 0.0f, 1.0f, 0.0 }; */
+    /* Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up); */
+    Mat4x4 view_mat = identity();
     
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->tile_renderer->multi_draw_indirect_buffer);
     CHECK_GL_ERROR();
@@ -222,14 +223,10 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
             glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
             CHECK_GL_ERROR();
 
-            /* Mat4x4 proj_mat = perspective(0.1f, */
-            /*                               10.0f, */
-            /*                               65.f, */
-            /*                               (float)system->main_framebuffer.width / */
-            /*                               (float)system->main_framebuffer.height); */
-            float scale = 1.0f;
+            float scale = 25.f;
             float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
-            Mat4x4 proj_mat = ortho(0.01f, 100.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
+            Mat4x4 proj_mat = ortho(0.01f, 10.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
+
             glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
             CHECK_GL_ERROR();
         }
