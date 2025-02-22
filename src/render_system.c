@@ -641,8 +641,8 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
     // Hack set up a texture unit
 
-    glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, tex_handle);
