@@ -511,13 +511,19 @@ struct Renderer* create_debug_renderer() {
     return debug_renderer;    
 }
 
-RenderSystem* render_system_create(struct Services* services, int initial_width, int initial_height ) {
+RenderSystem* render_system_create(struct Services* services,
+				   int window_w,
+				   int window_h,
+				   int screen_w,
+				   int screen_h) {
     LOG_INFO("Create render system implementation...");
+    (void)screen_w; (void)screen_h;
 
     // TODO: This is per renderer data. Should be set up when invoking each individual renderer
     glClearColor(0.f, 0.0f, 0.0f, 255.f);
     glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0,0, window_w, window_h);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
     system_base_init((struct SystemBase*)system,
@@ -527,8 +533,8 @@ RenderSystem* render_system_create(struct Services* services, int initial_width,
 
     system->assets = services->assets;
     system->materials = vec_create();
-    system->main_framebuffer.width = initial_width;
-    system->main_framebuffer.height = initial_height;
+    system->main_framebuffer.width = window_w;
+    system->main_framebuffer.height = window_h;
 
     hash_map_init(&system->programs, 100);
     hash_map_init(&system->textures, 1000);

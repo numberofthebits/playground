@@ -315,10 +315,14 @@ Game* game_create() {
              mode->blueBits,
              mode->refreshRate);
 
+    int window_width, window_height;
+    glfwGetWindowSize(game->window, &window_width, &window_height);
+   
     render_system_global_init();
     
     struct RenderSystem* render_system = render_system_create(
         &game->services,
+	window_width, window_height,
         mode->width,
         mode->height);
     

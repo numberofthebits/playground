@@ -45,7 +45,11 @@ typedef struct RenderSystem RenderSystem;
 
 void render_system_global_init();
 
-RenderSystem* render_system_create(struct Services* services, int intitial_width, int initial_height);
+RenderSystem* render_system_create(struct Services* services,
+				   int window_w,
+				   int window_h,
+				   int screen_w,
+				   int screen_h);
 
 void render_system_prepare_resources(RenderSystem* system, PreparedResources* resources);
 
