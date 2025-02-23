@@ -106,10 +106,10 @@ Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up) {
     };
         
     Mat4x4 m = { {
-        r.x,  u.x,  d.x, 0.0,
-        r.y,  u.y,  d.y, 0.0,
-        r.z,  u.z,  d.z, 0.0,
-        -t.x, -t.y, -t.z, 1.0
+            r.x,  u.x,  d.x, 0.0,
+            r.y,  u.y,  d.y, 0.0,
+            r.z,  u.z,  d.z, 0.0,
+            -t.x, -t.y, -t.z, 1.0
         } };
     return m;
 }
@@ -171,7 +171,6 @@ Mat4x4 ortho(float near, float far, float right, float left, float top, float bo
     m.data[13] = -(top + bottom) / (top - bottom);
     m.data[14] = -(far + near)  / (far - near);
     m.data[15] = 1.f;
-
 
     transpose(&m);
     return m;

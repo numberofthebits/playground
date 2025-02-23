@@ -251,7 +251,7 @@ Game* game_create() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "1,2,3 techno", 0, 0);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "1,2,3 techno", 0, 0);
 
     if (!window) {
       const char* error = 0;
@@ -349,30 +349,20 @@ static void map_init(Map* map) {
 
 static void map_load(Map* map, Registry* registry, struct Assets* assets) {
   (void)assets;
-    const float fcols = (float)map->map_size.x;
-    const float frows = (float)map->map_size.y;
     const float atlas_cols_f = (float)map->atlas_size.x;
     const float atlas_rows_f = (float)map->atlas_size.y;
-    const float half_cols = fcols / 2.f;
-    const float half_rows = frows / 2.f;
     
     for (int row = 0; row < map->map_size.y; ++row) {
         for (int col = 0; col < map->map_size.x; ++col) {
             Entity e = registry_create_entity(registry);
 
             TransformComponent tc = {0};
-            /* tc.pos.x = (float)(col - 24.f / 2.f); */
-            /* tc.pos.y = (float)(row - 19.f / 2.f); */
-            tc.scale.x = 4.f;  // * 9.f/16.f;
-            tc.scale.y = 4.f; // * 16.f/9.f;
+            tc.scale.x = 1.f;
+            tc.scale.y = 1.f;
 
-            // Kind-of center the map tile positions around 0,0.
-            tc.pos.x = (float)(col - half_cols) * tc.scale.x;
-            tc.pos.y = (float)(row - half_rows) * tc.scale.y;
+            tc.pos.x = col * tc.scale.x;
+            tc.pos.y = row * tc.scale.y;
             tc.pos.z = 0.0f;
-
-            /* tc.scale.x_= 1.0f / 50.0f; */
-            /* tc.scale.y = 1.0f / 40.0f; */
             tc.rotation = 0.0f;
             
             registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
@@ -412,8 +402,8 @@ static void load_units(Registry* registry, struct Assets* assets) {
         tc.pos.x = 0.5;
         tc.pos.y = 0.5;
         tc.pos.z = 0.1f;
-        tc.scale.x = 5.0f;
-        tc.scale.y = 5.0f;
+        tc.scale.x = 1.0f;
+        tc.scale.y = 1.0f;
         tc.rotation = 0.f;
 
         RenderComponent rc;
@@ -435,7 +425,6 @@ static void load_units(Registry* registry, struct Assets* assets) {
 	cc.aabr.width = 1.f;
 	cc.aabr.height = 1.f;
 
-        
         registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
@@ -451,8 +440,8 @@ static void load_units(Registry* registry, struct Assets* assets) {
         tc.pos.x = 0.0f;
         tc.pos.y = 0.0f;
         tc.pos.z = 0.0f;
-        tc.scale.x = 5.f;
-        tc.scale.y = 5.f;
+        tc.scale.x = 1.f;
+        tc.scale.y = 1.f;
         tc.rotation = 0.f;
 
         RenderComponent rc;

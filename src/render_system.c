@@ -34,8 +34,8 @@ void CALLING_CONVENTION gl_debug_callback(GLenum source,
 					  GLsizei length,
 					  const GLchar* message,
 					  const void* userParam) {
-  (void)source; (void)type; (void)id; (void)length; (void)userParam;
-  switch (severity) {
+    (void)source; (void)type; (void)id; (void)length; (void)userParam;
+    switch (severity) {
     case GL_DEBUG_SEVERITY_HIGH:
         LOG_GL_HIGH(message);
         break;
@@ -185,13 +185,6 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
     GLint loc_view;
     GLint loc_proj;
 
-    CHECK_GL_ERROR();
-
-    /* Vec3f cam_pos = { 0.f, 0.0f, 150.f }; */
-    /* Vec3f cam_target = { 0.0f, 0.0f, 0.0f}; */
-    /* Vec3f cam_up = { 0.0f, 1.0f, 0.0 }; */
-    /* Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up); */
-    Mat4x4 view_mat = identity();
     
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->tile_renderer->multi_draw_indirect_buffer);
     CHECK_GL_ERROR();
@@ -220,15 +213,8 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
             loc_view = get_uniform_location_checked(program_handle, "View");
             loc_proj = get_uniform_location_checked(program_handle, "Proj");
 
-            glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
-            CHECK_GL_ERROR();
-
-            float scale = 25.f;
-            float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
-            Mat4x4 proj_mat = ortho(0.01f, 10.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
-
-            glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
-            CHECK_GL_ERROR();
+	    glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
+	    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.ortho_proj.data);
         }
        
         DrawElementsIndirectCommand* command = &system->draw_commands_elements[count_in_batch];
@@ -425,17 +411,17 @@ static struct Renderer* create_tile_renderer() {
     renderer_init(tile_renderer, &tile_params);
 
     float pos_data[] = {
-         0.f, 0.f,  0.0f, // lower left
-         1.f, 0.f,  0.0f, // lower right
-         1.f, 1.f,  0.0f, // upper right
-         0.f, 1.f, 0.0f, // upper left
+        0.f, 0.f,  0.0f, // lower left
+        1.f, 0.f,  0.0f, // lower right
+        1.f, 1.f,  0.0f, // upper right
+        0.f, 1.f, 0.0f, // upper left
     };
 
     float uv_data[] = {
-	    0.0f, 0.0f, // lower left,
-	    1.0f, 0.0f, // lower right,
-	    1.0f, 1.0f, // upper right,
-	    0.0f, 1.0f, // upper left
+        0.0f, 0.0f, // lower left,
+        1.0f, 0.0f, // lower right,
+        1.0f, 1.0f, // upper right,
+        0.0f, 1.0f, // upper left
     };
 
     char interleaved[sizeof(pos_data) + sizeof(uv_data)];
@@ -508,7 +494,25 @@ struct Renderer* create_debug_renderer() {
 
     CHECK_GL_ERROR();
 
-    return debug_renderer;    
+    return debug_renderer;
+}
+
+// TODO: Make it work without a position/center argument first.
+// I haven't tested if a straight translation is actually the right thing 
+static void recalc_camera(struct OrthoCamera* camera, int width, int height, float scale, Vec3f* center) {
+    (void)center;
+    (void)scale;
+    float aspect_ratio = (float)width / (float)height;
+    camera->aspect_ratio = aspect_ratio;
+    camera->ortho_proj = ortho(0.01f,
+			       10.f,
+			       4.f,
+			       -4.f, //-aspect_ratio * scale,
+			       4.f,
+			       -4.f);//-1.f * scale);
+
+    camera->view = identity();
+    translate(&camera->view, center);
 }
 
 RenderSystem* render_system_create(struct Services* services,
@@ -520,10 +524,6 @@ RenderSystem* render_system_create(struct Services* services,
     (void)screen_w; (void)screen_h;
 
     // TODO: This is per renderer data. Should be set up when invoking each individual renderer
-    glClearColor(0.f, 0.0f, 0.0f, 255.f);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glViewport(0,0, window_w, window_h);
 
     RenderSystem* system = ArenaAlloc(&allocator, 1, RenderSystem);
     system_base_init((struct SystemBase*)system,
@@ -545,7 +545,17 @@ RenderSystem* render_system_create(struct Services* services,
     
     system->debug_renderer = create_debug_renderer();
     CHECK_GL_ERROR();
-    
+
+    Vec3f center = {-4.f, -4.f, 0.f};
+    recalc_camera(&system->camera,
+		  system->main_framebuffer.width,
+		  system->main_framebuffer.height,
+		  25.f,
+		  &center);
+		  
+
+    render_system_frame_buffer_size_changed(system, window_w, window_h);
+
     LOG_INFO("Created render system implementation");
 
     return system;
@@ -612,7 +622,7 @@ void render_system_prepare_resources(RenderSystem* system, PreparedResources* re
 
 
 uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMeta* meta) {
-  (void)system;
+    (void)system;
     GLuint tex_handle;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex_handle);
     CHECK_GL_ERROR();
@@ -666,9 +676,28 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
 
 void render_system_frame_buffer_size_changed(RenderSystem* render_system , int width, int height) {
+    glClearColor(0.f, 0.0f, 0.0f, 255.f);
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     render_system->main_framebuffer.width = width;
     render_system->main_framebuffer.height = height;
-    glViewport(0, 0, width, height);
+    
+    int w = width;
+    int h = height;
+
+    if (width >= height) {
+	// height is the limiting factor
+	w = height;
+    } else {
+	// width is the limiting factor
+	h = width;
+    }
+
+    int offset_x = (int)(((float)width - (float)w) / 2.f);
+    int offset_y = (int)(((float)height - (float)h) / 2.f);
+    
+    glViewport(offset_x, offset_y, w, h);
 }
 
 
@@ -683,18 +712,10 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
     CHECK_GL_ERROR();
 
     GLint loc_view = get_uniform_location_checked(program_handle, "View");
-    
-    Vec3f cam_pos = { 10.f, 10.0f, 40.f };
-    Vec3f cam_target = { 10.0f, 10.0f, 0.0f};
-    Vec3f cam_up = { 0.0f, 1.0f, 0.0 };
-    Mat4x4 view_mat = look_at(&cam_pos, &cam_target, &cam_up);
-    glUniformMatrix4fv(loc_view, 1, GL_FALSE, view_mat.data);
-
     GLint loc_proj = get_uniform_location_checked(program_handle, "Proj");
-    float scale = 1.0f;
-    float aspect_ratio = (float)system->main_framebuffer.width / (float)system->main_framebuffer.height;
-    Mat4x4 proj_mat = ortho(0.01f, 100.f, aspect_ratio * scale, -aspect_ratio * scale, 1.f * scale, -1.f * scale);
-    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, proj_mat.data);
+    
+    glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
+    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.ortho_proj.data);
     CHECK_GL_ERROR();
          
     struct Pool* collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
@@ -740,6 +761,24 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 	    pos[3].x += cc->aabr.pos.x;
 	    pos[3].y += cc->aabr.pos.y + height;
 	    pos[3].z += 0.f;
+
+
+	    pos[0].x = -0.5f;
+	    pos[0].y = -0.5f;
+	    pos[0].z = 0.f;
+
+	    pos[1].x = 0.5f;
+	    pos[1].y = -0.5f;
+	    pos[1].z = 0.f;
+
+	    pos[2].x = 0.5f;
+	    pos[2].y = 0.5f;
+	    pos[2].z = 0.f;
+
+	    pos[3].x = -0.5f;
+	    pos[3].y = 0.5f;
+	    pos[3].z = 0.f;
+
 
 	    glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
 				 0,

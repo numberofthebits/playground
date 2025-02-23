@@ -20,6 +20,13 @@ typedef struct {
     Vec material_ids;
 } PreparedResources;
 
+struct OrthoCamera {
+    Mat4x4 ortho_proj;
+    Mat4x4 view;
+    float aspect_ratio;
+    float scale;
+};
+
 struct RenderSystem {
     struct SystemBase base;
     DrawElementsIndirectCommand draw_commands_elements[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
@@ -37,9 +44,9 @@ struct RenderSystem {
     GLuint tilemap;
     GLuint vao;
     struct Framebuffer main_framebuffer;
-    
     struct Renderer* tile_renderer;
     struct Renderer* debug_renderer;
+    struct OrthoCamera camera;
 };
 typedef struct RenderSystem RenderSystem;
 
