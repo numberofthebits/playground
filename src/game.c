@@ -9,6 +9,7 @@
 #include "input_system.h"
 #include "time_system.h"
 #include "player_system.h"
+#include "camera_movement_system.h"
 #include "events.h"
 
 #include <core/arena.h>
@@ -305,6 +306,9 @@ Game* game_create() {
 
     struct TimeSystem* time_system = time_system_create(&game->services);
 
+    Vec2f camera_area = { 8.f, 8.f };
+    CameraMovementSystem* camera_movement_system = camera_movement_system_create(&game->services, &camera_area, game->map.atlas_size);
+
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, greenbits=%d, bluebits=%d,refresh rate=%d",
@@ -333,6 +337,7 @@ Game* game_create() {
     registry_add_system(&game->registry, (struct SystemBase*)time_system);
     registry_add_system(&game->registry, (struct SystemBase*)render_system);
     registry_add_system(&game->registry, (struct SystemBase*)player_system);
+    registry_add_system(&game->registry, (struct SystemBase*)camera_movement_system);
 
     return game;
 }
@@ -455,7 +460,7 @@ static void load_units(Registry* registry, struct Assets* assets) {
 
         PhysicsComponent pc;
         pc.velocity.x = 0.01f;
-        pc.velocity.y = 0.00f;
+        pc.velocity.y = 0.01f;
 
         AnimationComponent ac = {0};
         ac.frames_per_animation_frame = 5;
@@ -473,12 +478,15 @@ static void load_units(Registry* registry, struct Assets* assets) {
 	cc.aabr.width = 1.f;
 	cc.aabr.height = 1.f;
 
+        CameraMovementComponent cmc;
+
         registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
         registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
         registry_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
         registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
         registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
         registry_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
+        registry_add_component(registry, chopper, CAMERA_MOVEMENT_COMPONENT_BIT, &cmc);
 
         registry_add_entity(registry, chopper);
     }
@@ -517,10 +525,13 @@ void game_update(Game* game) {
     arena_dealloc_all(&frame_allocator);
     struct SystemBase* player_system_base = registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
     struct SystemBase* collision_system_base = registry_get_system(&game->registry, COLLISION_SYSTEM_BIT);
+    struct SystemBase* render_system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
 
     event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);
     
     event_bus_subscribe(&game->event_bus, collision_system_base, DebugEvent_StateChanged, &collision_system_handle_event);
+
+    event_bus_subscribe(&game->event_bus, render_system, CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
 
     registry_update(&game->registry, game->frame_counter);
     

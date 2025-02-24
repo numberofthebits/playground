@@ -41,6 +41,7 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/util.h
   ${PROJECT_SOURCE_DIR}/src/core/vec.c
   ${PROJECT_SOURCE_DIR}/src/core/vec.h
+  ${PROJECT_SOURCE_DIR}/src/camera_movement_system.h  
   ${PROJECT_SOURCE_DIR}/src/events.h
   ${PROJECT_SOURCE_DIR}/src/game.c
   ${PROJECT_SOURCE_DIR}/src/game.h

@@ -1,6 +1,8 @@
 #include "render_system.h"
 
+#include "camera_movement_system.h"
 #include "components.h"
+#include "core/math.h"
 #include "systems.h"
 
 #include <core/assetstore.h>
@@ -172,9 +174,9 @@ static GLint get_uniform_location_checked(GLuint program, const char* name) {
 static void render_entities(RenderSystem* system, RenderData* data, size_t render_data_size ) {
     CHECK_GL_ERROR();
 
-    glClearColor(0.2f, 0.2f, 0.2f, 255.f);
+    glClearColor(0.0f, 0.0f, 0.0f, 255.f);
     glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     if (render_data_size == 0) {
         return;
@@ -185,7 +187,6 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
     GLint loc_view;
     GLint loc_proj;
 
-    
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->tile_renderer->multi_draw_indirect_buffer);
     CHECK_GL_ERROR();
 
@@ -214,7 +215,7 @@ static void render_entities(RenderSystem* system, RenderData* data, size_t rende
             loc_proj = get_uniform_location_checked(program_handle, "Proj");
 
 	    glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
-	    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.ortho_proj.data);
+	    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
         }
        
         DrawElementsIndirectCommand* command = &system->draw_commands_elements[count_in_batch];
@@ -504,12 +505,14 @@ static void recalc_camera(struct OrthoCamera* camera, int width, int height, flo
     (void)scale;
     float aspect_ratio = (float)width / (float)height;
     camera->aspect_ratio = aspect_ratio;
-    camera->ortho_proj = ortho(0.01f,
-			       10.f,
-			       4.f,
-			       -4.f, //-aspect_ratio * scale,
-			       4.f,
-			       -4.f);//-1.f * scale);
+
+    camera->projection = ortho(0.01f,
+        		       10.f,
+        		       camera->rect.pos.x + camera->rect.width,
+        		       camera->rect.pos.x,
+        		       camera->rect.pos.y + camera->rect.height,
+        		       camera->rect.pos.y);
+
 
     camera->view = identity();
     translate(&camera->view, center);
@@ -547,6 +550,11 @@ RenderSystem* render_system_create(struct Services* services,
     CHECK_GL_ERROR();
 
     Vec3f center = {-4.f, -4.f, 0.f};
+    system->camera.rect.pos.x = -4.f;
+    system->camera.rect.pos.y = -4.f;
+    system->camera.rect.width = 8.f;
+    system->camera.rect.height = 8.f;
+
     recalc_camera(&system->camera,
 		  system->main_framebuffer.width,
 		  system->main_framebuffer.height,
@@ -700,6 +708,25 @@ void render_system_frame_buffer_size_changed(RenderSystem* render_system , int w
     glViewport(offset_x, offset_y, w, h);
 }
 
+void render_system_handle_camera_position_changed(struct SystemBase *system,
+                                                  struct Event e) {
+    (void)system;
+    (void)e;
+    struct RenderSystem* render_sys = (struct RenderSystem*)system;
+    CameraUpdated* pos_changed_event = e.event_data;
+    Mat4x4 t = identity();
+    Vec3f neg_pos = {
+        -pos_changed_event->pos.x,
+        -pos_changed_event->pos.y,
+        -pos_changed_event->pos.z
+    };
+
+    translate(&t, &neg_pos);
+    float x = pos_changed_event->size.x / 2.f;
+    float y = pos_changed_event->size.y / 2.f;
+    render_sys->camera.projection = ortho(0.1f, 10.f, x, -x, y, -y);
+    render_sys->camera.view = t;
+}
 
 void render_system_debug(struct RenderSystem* system, Registry* registry) {
     CHECK_GL_ERROR();
@@ -715,7 +742,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
     GLint loc_proj = get_uniform_location_checked(program_handle, "Proj");
     
     glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
-    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.ortho_proj.data);
+    glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
     CHECK_GL_ERROR();
          
     struct Pool* collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);

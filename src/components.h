@@ -8,8 +8,6 @@
 
 #include <stdalign.h>
 
-
-
 enum ComponentBit {
     TRANSFORM_COMPONENT_BIT = (1U << 0),
     RENDER_COMPONENT_BIT = (1U << 1),
@@ -18,6 +16,7 @@ enum ComponentBit {
     COLLISION_COMPONENT_BIT = (1U << 4),
     INPUT_COMPONENT_BIT = (1U << 5),
     TIME_COMPONENT_BIT = (1U << 6),
+    CAMERA_MOVEMENT_COMPONENT_BIT = (1U << 7),
 };
 typedef enum ComponentBit ComponentBit;
 
@@ -88,6 +87,10 @@ struct TimeComponent_t {
 };
 typedef struct TimeComponent_t TimeComponent;
 
+typedef struct  {
+    
+} CameraMovementComponent;
+
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way
 // to differentiate components, and to know the size and
@@ -133,6 +136,12 @@ static const struct Component component_table[] = {
         .size = sizeof(TimeComponent),
         .alignment = alignof(TimeComponent),
         .name = "TimeComponent"
+    },
+    {
+        .flag = CAMERA_MOVEMENT_COMPONENT_BIT,
+        .size=sizeof(CameraMovementComponent),
+        .alignment = alignof(CameraMovementComponent),
+        .name = "CameraMovementComponent"
     }
 };
 

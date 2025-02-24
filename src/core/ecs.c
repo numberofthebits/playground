@@ -268,12 +268,12 @@ void registry_add_component(Registry* reg, Entity e, int component_bit, void* da
     *entity_signature |= component_bit;
 }
 
-void registry_add_system(Registry* reg, struct SystemBase* sys) {
-    if (reg->num_systems >= SYSTEMS_MAX) {
-        LOG_EXIT("%zu would SYSTEMS_MAX %zu", reg->num_systems, SYSTEMS_MAX);
+void registry_add_system(Registry* registry, struct SystemBase* systembase) {
+    if (registry->num_systems >= SYSTEMS_MAX) {
+        LOG_EXIT("%zu would SYSTEMS_MAX %zu", registry->num_systems, SYSTEMS_MAX);
     }
-    LOG_INFO("Add system ID %d", sys->id);
-    reg->systems[reg->num_systems++] = sys;
+    LOG_INFO("Add system ID %d", systembase->id);
+    registry->systems[registry->num_systems++] = systembase;
 }
 
 struct SystemBase* registry_get_system(Registry* reg, int system_id) {

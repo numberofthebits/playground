@@ -178,7 +178,7 @@ Mat4x4 ortho(float near, float far, float right, float left, float top, float bo
 
 void translate(Mat4x4* mat, Vec3f* v) {
     mat->data[12] += v->x;
-    mat->data[13] += v->y;
+    mat->data[13] += v->y; 
     mat->data[14] += v->z;
 }
 

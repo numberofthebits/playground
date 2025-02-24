@@ -1,6 +1,7 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
+#include "core/math.h"
 #include <core/renderer.h>
 #include <core/ecs.h>
 #include <core/types.h>
@@ -21,8 +22,9 @@ typedef struct {
 } PreparedResources;
 
 struct OrthoCamera {
-    Mat4x4 ortho_proj;
+    Mat4x4 projection;
     Mat4x4 view;
+    Rectf rect;
     float aspect_ratio;
     float scale;
 };
@@ -41,8 +43,6 @@ struct RenderSystem {
     Vec materials;
     GLuint buffer_objects[32];
     struct Assets* assets;
-    GLuint tilemap;
-    GLuint vao;
     struct Framebuffer main_framebuffer;
     struct Renderer* tile_renderer;
     struct Renderer* debug_renderer;
@@ -64,6 +64,9 @@ uint64_t render_system_create_texture(RenderSystem* system, void* data, ImageMet
 
 void render_system_frame_buffer_size_changed(RenderSystem *render_system,
                                              int width, int height);
+
+void render_system_handle_camera_position_changed(struct SystemBase *system,
+                                                  struct Event e);
 
 void render_system_debug(struct RenderSystem* system, Registry* registry);
 
