@@ -33,7 +33,7 @@ static inline Vec3f clamp_camera_pos(Vec3f* object_position, Vec2u8 world_size, 
 
     if (object_position->y < area_h_half) {
         camera_pos.y = area_h_half;
-    } else if (object_position->y >= world_size.y - area_h_half) {
+    } else if (object_position->y >= (world_size.y - area_h_half)) {
         camera_pos.y = world_size.y - area_h_half;
     }
 
@@ -67,7 +67,7 @@ static inline void camera_movement_system_update(Registry* reg, struct SystemBas
     }
 }
 
-static inline CameraMovementSystem *camera_movement_system_create(struct Services *services, Vec2f* camera_area, Vec2u8 world_size) {
+static inline CameraMovementSystem *camera_movement_system_create(struct Services *services, Vec2f* camera_area) {
     CameraMovementSystem* sys = ArenaAlloc(&allocator, 1 , CameraMovementSystem);
 
     system_base_init((struct SystemBase*)sys,
@@ -77,9 +77,13 @@ static inline CameraMovementSystem *camera_movement_system_create(struct Service
                      services);
 
     sys->camera_area = *camera_area;
-    sys->world_size = world_size;
+ 
     
     return sys;
+}
+
+static inline void camera_movement_system_set_world_size(CameraMovementSystem* self, Vec2u8 world_size) {
+    self->world_size = world_size;
 }
 
 

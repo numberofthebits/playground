@@ -307,7 +307,7 @@ Game* game_create() {
     struct TimeSystem* time_system = time_system_create(&game->services);
 
     Vec2f camera_area = { 8.f, 8.f };
-    CameraMovementSystem* camera_movement_system = camera_movement_system_create(&game->services, &camera_area, game->map.atlas_size);
+    CameraMovementSystem* camera_movement_system = camera_movement_system_create(&game->services, &camera_area);
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -516,6 +516,9 @@ void game_setup(Game* game) {
 
     RenderSystem* render_system = (RenderSystem*)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
     render_system_prepare_resources(render_system, &prep);
+
+    CameraMovementSystem* camera_movement_system = (CameraMovementSystem*)registry_get_system(&game->registry, CAMERA_MOVEMENT_SYSTEM_BIT);
+    camera_movement_system_set_world_size(camera_movement_system, game->map.map_size);
 
     // Push our initial entities before entering main loop
     registry_commit_entities(&game->registry);
