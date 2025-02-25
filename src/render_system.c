@@ -710,8 +710,6 @@ void render_system_frame_buffer_size_changed(RenderSystem* render_system , int w
 
 void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e) {
-    (void)system;
-    (void)e;
     struct RenderSystem* render_sys = (struct RenderSystem*)system;
     CameraUpdated* pos_changed_event = e.event_data;
     Mat4x4 t = identity();
@@ -741,7 +739,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
     GLint loc_view = get_uniform_location_checked(program_handle, "View");
     GLint loc_proj = get_uniform_location_checked(program_handle, "Proj");
     GLint loc_model = get_uniform_location_checked(program_handle, "Model");
-    
+
     glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
     glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
     CHECK_GL_ERROR();
@@ -776,52 +774,22 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 	    pos[3].y = cc->aabr.pos.y + height;
 	    pos[3].z = 0.f;
 
+	    // If it does have a transform component, we build that into the vertex data
+	    // and just issue the draw call for the hardcoded vertex data
+            Mat4x4 model;
+	    if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
+		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.id);
+                translate(&model, &tc->pos);
+	    } else {
+                model = identity();
+            }
+
             glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
                                  0,
                                  sizeof(pos),
                                  pos);
 
-
-	    // If it does have a transform component, we build that into the vertex data
-	    // and just issue the draw call for the hardcoded vertex data
-            Mat4x4 model = identity();
-	    if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
-//&&		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.id);
-                for (int j = 0; j < 4; ++j) {
-                    /* Vec3f pos = { -tc->pos.x, -tc->pos.y, -tc->pos.z }; */
-                    //    translate(&model, &tc->pos);
-		    /* pos[j].x += tc->pos.x; */
-		    /* pos[j].y += tc->pos.y; */
-		    /* pos[j].z += tc->pos.z; */
-
-		    /* width *= tc->scale.x; */
-		    /* height *= tc->scale.y; */
-		}
-	    }
-
-
-
-	    /* pos[0].x = -0.5f; */
-	    /* pos[0].y = -0.5f; */
-	    /* pos[0].z = 0.f; */
-
-	    /* pos[1].x = 0.5f; */
-	    /* pos[1].y = -0.5f; */
-	    /* pos[1].z = 0.f; */
-
-	    /* pos[2].x = 0.5f; */
-	    /* pos[2].y = 0.5f; */
-	    /* pos[2].z = 0.f; */
-
-	    /* pos[3].x = -0.5f; */
-	    /* pos[3].y = 0.5f; */
-	    /* pos[3].z = 0.f; */
-
-
             glUniformMatrix4fv(loc_model, 1, GL_FALSE, model.data);
-
-
-
 	    
 	    glDrawArrays(GL_LINE_LOOP, 0, 4);
 	}
@@ -829,3 +797,4 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 
     CHECK_GL_ERROR();
 }
+
