@@ -88,7 +88,7 @@ struct TimeComponent_t {
 typedef struct TimeComponent_t TimeComponent;
 
 typedef struct  {
-    
+    uint8_t dummy;
 } CameraMovementComponent;
 
 // Our "user defined" component table. We feed this
