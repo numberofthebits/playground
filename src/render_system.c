@@ -740,6 +740,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 
     GLint loc_view = get_uniform_location_checked(program_handle, "View");
     GLint loc_proj = get_uniform_location_checked(program_handle, "Proj");
+    GLint loc_model = get_uniform_location_checked(program_handle, "Model");
     
     glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
     glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
@@ -747,6 +748,7 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
          
     struct Pool* collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
     struct Pool* transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+    (void)transform_pool;
 
     for (int i = 0; i < system->base.entities.size; ++i) {
 	Entity e = VEC_GET_T(&system->base.entities, Entity, i);
@@ -755,62 +757,71 @@ void render_system_debug(struct RenderSystem* system, Registry* registry) {
 	if (registry_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
 	    CollisionComponent* cc = PoolGetComponent(collision_pool, CollisionComponent, e.id);
 	    Vec3f pos[4] = {0};
-
 	    float width = cc->aabr.width;
 	    float height = cc->aabr.height;
 
+            pos[0].x = cc->aabr.pos.x;
+	    pos[0].y = cc->aabr.pos.y;
+	    pos[0].z = 0.f;
+
+	    pos[1].x = cc->aabr.pos.x + width;
+	    pos[1].y = cc->aabr.pos.y;
+	    pos[1].z = 0.f;
+
+	    pos[2].x = cc->aabr.pos.x + width;
+	    pos[2].y = cc->aabr.pos.y + height;
+	    pos[2].z = 0.f;
+
+	    pos[3].x = cc->aabr.pos.x;
+	    pos[3].y = cc->aabr.pos.y + height;
+	    pos[3].z = 0.f;
+
+            glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
+                                 0,
+                                 sizeof(pos),
+                                 pos);
+
+
 	    // If it does have a transform component, we build that into the vertex data
 	    // and just issue the draw call for the hardcoded vertex data
+            Mat4x4 model = identity();
 	    if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
-		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.id);
-		for (int j = 0; j < 4; ++j) {
-		    pos[j].x += tc->pos.x;
-		    pos[j].y += tc->pos.y;
-		    pos[j].z += tc->pos.z;
+//&&		TransformComponent* tc = PoolGetComponent(transform_pool, TransformComponent, e.id);
+                for (int j = 0; j < 4; ++j) {
+                    /* Vec3f pos = { -tc->pos.x, -tc->pos.y, -tc->pos.z }; */
+                    //    translate(&model, &tc->pos);
+		    /* pos[j].x += tc->pos.x; */
+		    /* pos[j].y += tc->pos.y; */
+		    /* pos[j].z += tc->pos.z; */
 
-		    width *= tc->scale.x;
-		    height *= tc->scale.y;
+		    /* width *= tc->scale.x; */
+		    /* height *= tc->scale.y; */
 		}
 	    }
 
-	    pos[0].x += cc->aabr.pos.x;
-	    pos[0].y += cc->aabr.pos.y;
-	    pos[0].z += 0.f;
-
-	    pos[1].x += cc->aabr.pos.x + width;
-	    pos[1].y += cc->aabr.pos.y;
-	    pos[1].z += 0.f;
-
-	    pos[2].x += cc->aabr.pos.x + width;
-	    pos[2].y += cc->aabr.pos.y + height;
-	    pos[2].z += 0.f;
-
-	    pos[3].x += cc->aabr.pos.x;
-	    pos[3].y += cc->aabr.pos.y + height;
-	    pos[3].z += 0.f;
 
 
-	    pos[0].x = -0.5f;
-	    pos[0].y = -0.5f;
-	    pos[0].z = 0.f;
+	    /* pos[0].x = -0.5f; */
+	    /* pos[0].y = -0.5f; */
+	    /* pos[0].z = 0.f; */
 
-	    pos[1].x = 0.5f;
-	    pos[1].y = -0.5f;
-	    pos[1].z = 0.f;
+	    /* pos[1].x = 0.5f; */
+	    /* pos[1].y = -0.5f; */
+	    /* pos[1].z = 0.f; */
 
-	    pos[2].x = 0.5f;
-	    pos[2].y = 0.5f;
-	    pos[2].z = 0.f;
+	    /* pos[2].x = 0.5f; */
+	    /* pos[2].y = 0.5f; */
+	    /* pos[2].z = 0.f; */
 
-	    pos[3].x = -0.5f;
-	    pos[3].y = 0.5f;
-	    pos[3].z = 0.f;
+	    /* pos[3].x = -0.5f; */
+	    /* pos[3].y = 0.5f; */
+	    /* pos[3].z = 0.f; */
 
 
-	    glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0],
-				 0,
-				 sizeof(pos),
-				 pos);
+            glUniformMatrix4fv(loc_model, 1, GL_FALSE, model.data);
+
+
+
 	    
 	    glDrawArrays(GL_LINE_LOOP, 0, 4);
 	}
