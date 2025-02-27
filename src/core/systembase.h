@@ -6,6 +6,7 @@
 #include <core/types.h>
 #include <core/vec.h>
 
+struct SystemBase;
 typedef struct Registry_t Registry;
 typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
 
