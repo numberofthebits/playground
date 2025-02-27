@@ -10,7 +10,7 @@
 #include <memory.h>
 
 struct InputSystem *input_system_create(struct Services *services) {
-  struct InputSystem *system = ArenaAlloc(&allocator, 1, struct InputSystem);
+  struct InputSystem *system = ArenaAlloc(&global_static_allocator, 1, struct InputSystem);
 
   // This system isn't interested in any components.
   // It only consumes input from OS and produces

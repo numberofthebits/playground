@@ -21,7 +21,7 @@ void player_system_reset(struct PlayerSystem *system) {
 }
 
 struct PlayerSystem *player_system_create(struct Services *services) {
-  struct PlayerSystem *system = ArenaAlloc(&allocator, 1, struct PlayerSystem);
+  struct PlayerSystem *system = ArenaAlloc(&global_static_allocator, 1, struct PlayerSystem);
 
   int component_flags =
       INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;

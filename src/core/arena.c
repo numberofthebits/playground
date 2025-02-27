@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-struct ArenaAllocator allocator;
+struct ArenaAllocator global_static_allocator;
 
 struct ArenaAllocator frame_allocator;
 

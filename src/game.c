@@ -237,9 +237,9 @@ static void window_size_callback(GLFWwindow *window, int width, int height) {
 }
 
 Game *game_create() {
-  arena_init(&allocator, STATIC_ARENA_SIZE);
+  arena_init(&global_static_allocator, STATIC_ARENA_SIZE);
   arena_init(&frame_allocator, FRAME_ARENA_SIZE);
-  Game *game = ArenaAlloc(&allocator, 1, Game);
+  Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
 
   game->state = 0;
   game->frame_counter = 0;
@@ -345,7 +345,7 @@ static void map_init(Map *map) {
   map->atlas_size.x = 10;
   map->atlas_size.y = 3;
   map->tiles =
-      ArenaAlloc(&allocator, map->map_size.x * map->map_size.y, MapTile);
+      ArenaAlloc(&global_static_allocator, map->map_size.x * map->map_size.y, MapTile);
 }
 
 static void map_load(Map *map, Registry *registry, struct Assets *assets) {

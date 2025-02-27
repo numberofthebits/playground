@@ -382,7 +382,7 @@ void render_system_global_init() {
 
 static struct Renderer *create_tile_renderer() {
   struct Renderer *tile_renderer =
-      (struct Renderer *)ArenaAlloc(&allocator, 1, struct Renderer);
+      (struct Renderer *)ArenaAlloc(&global_static_allocator, 1, struct Renderer);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -470,7 +470,7 @@ static struct Renderer *create_tile_renderer() {
 
 struct Renderer *create_debug_renderer() {
   struct Renderer *debug_renderer =
-      (struct Renderer *)ArenaAlloc(&allocator, 1, struct Renderer);
+      (struct Renderer *)ArenaAlloc(&global_static_allocator, 1, struct Renderer);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -529,7 +529,7 @@ RenderSystem *render_system_create(struct Services *services, int window_w,
   // TODO: This is per renderer data. Should be set up when invoking each
   // individual renderer
 
-  RenderSystem *system = ArenaAlloc(&allocator, 1, RenderSystem);
+  RenderSystem *system = ArenaAlloc(&global_static_allocator, 1, RenderSystem);
   system_base_init((struct SystemBase *)system, RENDER_SYSTEM_BIT,
                    &render_update,
                    RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);

@@ -24,7 +24,7 @@ void arena_dealloc_all(struct ArenaAllocator *allocator);
 
 // Static life time allocations only 'cause that's
 // really all we support right now :)
-extern struct ArenaAllocator allocator;
+extern struct ArenaAllocator global_static_allocator;
 
 // Things put things here that have "frame" lifetime
 // i.e. can die each frame

@@ -70,7 +70,7 @@ static inline void camera_movement_system_update(Registry *reg,
 
 static inline CameraMovementSystem *
 camera_movement_system_create(struct Services *services, Vec2f *camera_area) {
-  CameraMovementSystem *sys = ArenaAlloc(&allocator, 1, CameraMovementSystem);
+  CameraMovementSystem *sys = ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
 
   system_base_init((struct SystemBase *)sys, CAMERA_MOVEMENT_SYSTEM_BIT,
                    camera_movement_system_update,

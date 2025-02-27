@@ -7,7 +7,7 @@ void event_bus_init(struct EventBus *bus) {
   LOG_INFO("Initializing event bus with max subscribers %d", MAX_SUBSCRIBERS);
 
   bus->num_subscribers = 0;
-  bus->subscribers = ArenaAlloc(&allocator, MAX_SUBSCRIBERS, Subscriber);
+  bus->subscribers = ArenaAlloc(&global_static_allocator, MAX_SUBSCRIBERS, Subscriber);
 }
 
 void event_bus_reset(struct EventBus *bus) { bus->num_subscribers = 0; }

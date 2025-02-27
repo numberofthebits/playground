@@ -58,7 +58,7 @@ static void entity_id_pool_init(struct EntityIdPool *entity_ids,
 
   LOG_INFO("Create entity ID pool size %zu", max_entity_count);
 
-  entity_ids->pool = ArenaAlloc(&allocator, max_entity_count, EntityIndex);
+  entity_ids->pool = ArenaAlloc(&global_static_allocator, max_entity_count, EntityIndex);
   entity_ids->size = max_entity_count;
   entity_ids->used = 0;
 
@@ -149,21 +149,21 @@ void registry_init(Registry *reg, size_t max_entity_count,
     struct Pool pool;
     pool.descriptor = component;
     pool.count = max_entity_count;
-    pool.data = arena_alloc(&allocator, component->size, max_entity_count,
+    pool.data = arena_alloc(&global_static_allocator, component->size, max_entity_count,
                             component->alignment);
     reg->pools[i] = pool;
   }
 
   zero_system_pointers(&reg->systems[0], SYSTEMS_MAX);
 
-  reg->to_add = ArenaAlloc(&allocator, max_entity_count, Entity);
+  reg->to_add = ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
   reg->count_to_add = 0;
 
-  reg->to_remove = ArenaAlloc(&allocator, max_entity_count, Entity);
+  reg->to_remove = ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
   reg->count_to_remove = 0;
 
   reg->entity_component_signatures =
-      ArenaAlloc(&allocator, max_entity_count, SignatureT);
+      ArenaAlloc(&global_static_allocator, max_entity_count, SignatureT);
 
   reg->num_systems = 0;
 
