@@ -49,7 +49,12 @@ static void collision_update(Registry* reg, struct SystemBase* sys, size_t frame
                 struct Event e;
                 e.id = CollisionSystem_Detected;
                 e.event_data = &event;
-                
+
+                // Queue both entities for removal
+                registry_remove_entity(reg, self);
+                registry_remove_entity(reg, other);
+
+                // And notify anybodyt interested in the event
                 event_bus_emit(event_bus, &e);
             }
         }

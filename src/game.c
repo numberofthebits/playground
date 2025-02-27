@@ -306,7 +306,7 @@ Game* game_create() {
 
     struct TimeSystem* time_system = time_system_create(&game->services);
 
-    Vec2f camera_area = { 8.f, 8.f };
+    Vec2f camera_area = { 16.f, 16.f };
     CameraMovementSystem* camera_movement_system = camera_movement_system_create(&game->services, &camera_area);
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -405,7 +405,7 @@ static void load_units(Registry* registry, struct Assets* assets) {
 
         TransformComponent tc = {0};
         tc.pos.x = 0.5;
-        tc.pos.y = 0.5;
+        tc.pos.y = 2.0;
         tc.pos.z = 0.1f;
         tc.scale.x = 1.0f;
         tc.scale.y = 1.0f;
@@ -422,7 +422,7 @@ static void load_units(Registry* registry, struct Assets* assets) {
 
         PhysicsComponent pc;
         pc.velocity.x = 0.01f;
-        pc.velocity.y = -0.01f;
+        pc.velocity.y = 0.f;
 
 	CollisionComponent cc;
 	cc.aabr.pos.x = 0.f;
@@ -436,6 +436,18 @@ static void load_units(Registry* registry, struct Assets* assets) {
 	registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
 
         registry_add_entity(registry, truck);
+
+        // Add a second truck for collision tests
+        truck = registry_create_entity(registry);
+        tc.pos.x = 10.f;
+        pc.velocity.x = -0.01f;
+        registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
+        registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
+        registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+	registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
+
+
+        registry_add_entity(registry, truck);
     }
 
     {
@@ -443,7 +455,7 @@ static void load_units(Registry* registry, struct Assets* assets) {
 
         TransformComponent tc = {0};
         tc.pos.x = 0.0f;
-        tc.pos.y = 0.0f;
+        tc.pos.y = 4.0f;
         tc.pos.z = 0.0f;
         tc.scale.x = 1.f;
         tc.scale.y = 1.f;
@@ -527,13 +539,11 @@ void game_setup(Game* game) {
 void game_update(Game* game) {
     arena_dealloc_all(&frame_allocator);
     struct SystemBase* player_system_base = registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
-    struct SystemBase* collision_system_base = registry_get_system(&game->registry, COLLISION_SYSTEM_BIT);
+    // struct SystemBase* collision_system_base = registry_get_system(&game->registry, COLLISION_SYSTEM_BIT);
     struct SystemBase* render_system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
 
     event_bus_subscribe(&game->event_bus, player_system_base, KeyboardInput_Update, &player_system_handle_event);
-    
-    event_bus_subscribe(&game->event_bus, collision_system_base, DebugEvent_StateChanged, &collision_system_handle_event);
-
+   
     event_bus_subscribe(&game->event_bus, render_system, CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
 
     registry_update(&game->registry, game->frame_counter);
