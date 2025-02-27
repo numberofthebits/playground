@@ -21,13 +21,12 @@ struct CollisionDetectedEvent {
 };
 
 struct DebugEventStateChangedEvent {
-    int debug_enabled;
+  int debug_enabled;
 };
 
 typedef struct {
-    Vec3f pos;
-    Vec2f size;
-}CameraUpdated;
-
+  Vec3f pos;
+  Vec2f size;
+} CameraUpdated;
 
 #endif

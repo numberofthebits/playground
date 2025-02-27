@@ -4,9 +4,9 @@
 #include <core/systembase.h>
 
 struct TimeSystem {
-    struct SystemBase base;
+  struct SystemBase base;
 };
 
-struct TimeSystem* time_system_create(struct Services* services);
+struct TimeSystem *time_system_create(struct Services *services);
 
 #endif

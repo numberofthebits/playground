@@ -2,13 +2,13 @@
 #define SERVICES_H
 
 #include <core/assetstore.h>
-#include <core/eventbus.h>
 #include <core/ecs.h>
+#include <core/eventbus.h>
 
 struct Services {
-    struct Assets* assets;
-    struct EventBus* event_bus;
-    struct Registry_t* registry;
+  struct Assets *assets;
+  struct EventBus *event_bus;
+  struct Registry_t *registry;
 };
 
 // Assets* service_get_assets(Services* services);

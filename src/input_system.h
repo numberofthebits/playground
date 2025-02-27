@@ -1,50 +1,49 @@
 #ifndef INPUT_SYSTEM_H
 #define INPUT_SYSTEM_H
 
-#include <core/util.h>
 #include <core/systembase.h>
+#include <core/util.h>
 
 #include <stdint.h>
 
 #define INPUT_SYSTEM_MAX_KEY_STATES 512
 
-enum KeyFlag {
-    KeyFlag_Released = 0x1,
-    KeyFlag_Pressed = 0x2
-};
+enum KeyFlag { KeyFlag_Released = 0x1, KeyFlag_Pressed = 0x2 };
 
 struct KeyState {
-    TimeT time_start;
-    TimeT elapsed;
-    int flags;
+  TimeT time_start;
+  TimeT elapsed;
+  int flags;
 };
 
 struct KeyStateEventData {
-    TimeT elapsed;
-    int key;
+  TimeT elapsed;
+  int key;
 };
 
 struct AggregatedKeyboardEvents {
-    size_t num_events;
-    struct KeyStateEventData* events;
+  size_t num_events;
+  struct KeyStateEventData *events;
 };
 
 struct InputSystem {
-    struct SystemBase base;
+  struct SystemBase base;
 
-    // Working data structure for callbacks from OS
-    struct KeyState keys[INPUT_SYSTEM_MAX_KEY_STATES];
+  // Working data structure for callbacks from OS
+  struct KeyState keys[INPUT_SYSTEM_MAX_KEY_STATES];
 
-    // Processed list of keystrokes for event_bus
-    struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
+  // Processed list of keystrokes for event_bus
+  struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
 };
 
-struct InputSystem* input_system_create(struct Services* services);
+struct InputSystem *input_system_create(struct Services *services);
 
-void input_system_handle_keyboard_input(struct InputSystem* input_system, int key, int action);
+void input_system_handle_keyboard_input(struct InputSystem *input_system,
+                                        int key, int action);
 
-void input_system_update(Registry* registry, struct SystemBase* sys, size_t frame_nr);
+void input_system_update(Registry *registry, struct SystemBase *sys,
+                         size_t frame_nr);
 
-void input_system_reset(struct InputSystem* input_system);
+void input_system_reset(struct InputSystem *input_system);
 
 #endif

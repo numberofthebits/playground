@@ -4,10 +4,9 @@
 #include <core/systembase.h>
 
 struct CollisionSystem {
-    struct SystemBase base;
+  struct SystemBase base;
 };
 
-struct CollisionSystem* collision_system_create(struct Services* services);
-
+struct CollisionSystem *collision_system_create(struct Services *services);
 
 #endif // COLLISION_SYSTEM_H

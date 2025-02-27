@@ -1,9 +1,9 @@
 #ifndef DEBUG_RENDERER_H
 #define DEBUG_RENDERER_H
 
-#include <core/renderer.h>
 #include <core/log.h>
 #include <core/math.h>
+#include <core/renderer.h>
 
 #include <glad/glad.h>
 
@@ -28,59 +28,57 @@
 #define VBO_MAX 16
 #define SSBO_MAX 2
 
-#define CHECK_GL_ERROR()					\
-    if (glGetError() != GL_NO_ERROR) {				\
-	LOG_ERROR("GL error: %s:%d", __FUNCTION__, __LINE__);	\
-	exit(1);						\
-    }
+#define CHECK_GL_ERROR()                                                       \
+  if (glGetError() != GL_NO_ERROR) {                                           \
+    LOG_ERROR("GL error: %s:%d", __FUNCTION__, __LINE__);                      \
+    exit(1);                                                                   \
+  }
 
 typedef struct {
-    unsigned int count;
-    unsigned int instance_count;
-    unsigned int first;
-    unsigned int base_instance;
+  unsigned int count;
+  unsigned int instance_count;
+  unsigned int first;
+  unsigned int base_instance;
 } DrawArraysIndirectCommand;
 
 typedef struct {
-    unsigned int count;
-    unsigned int instance_count;
-    unsigned int first_index;
-    int base_vertex;
-    unsigned int base_instance;
+  unsigned int count;
+  unsigned int instance_count;
+  unsigned int first_index;
+  int base_vertex;
+  unsigned int base_instance;
 } DrawElementsIndirectCommand;
 
 typedef struct {
-    GLuint64 handle;
-    Vec4u8 color;
+  GLuint64 handle;
+  Vec4u8 color;
 } Material;
 
 typedef struct {
-    Mat4x4 model;                // 64 bytes
-    Vec2f tex_coord_offset;      // 8 bytes
-    Vec2f tex_coord_scale;       // 8 bytes
-    unsigned int material_index; // 4 bytes
-    char padding[12];
+  Mat4x4 model;                // 64 bytes
+  Vec2f tex_coord_offset;      // 8 bytes
+  Vec2f tex_coord_scale;       // 8 bytes
+  unsigned int material_index; // 4 bytes
+  char padding[12];
 } DrawCommandDataTiled;
 
 struct Framebuffer {
-    int width;
-    int height;
+  int width;
+  int height;
 };
 
 struct VertexDataSource {
-    void* src;
-    size_t vertex_size_bytes;
+  void *src;
+  size_t vertex_size_bytes;
 };
 
 struct Interleave {
-    unsigned int num_attribs;
-    struct VertexDataSource* attribs;
-    
-    void* dst;
-    size_t element_count;
+  unsigned int num_attribs;
+  struct VertexDataSource *attribs;
+
+  void *dst;
+  size_t element_count;
 };
-
-
 
 // Read this: Sepecifically the section 'Separate attribute format'
 // https://www.khronos.org/opengl/wiki/Vertex_Specification
@@ -156,9 +154,11 @@ struct Interleave {
   |--------------------------------------------------------------------------------------
   | VertexAttribute | Binding Point | VertexBuffer | VAO      | stride | offset
   |----------------------------------------------------------------|--------------------------
-  | 0 |      0      |       0       |     0        | vao_name | sizeof(Attrib0) | 0
-  | 1 |      1      |       1       |     0        | vao_name | sizeof(Attrib1) | NumVertex * sizeof(Attrib0)
-  | 2 |      2      |       2       |     0        | vao_name | sizeof(Attrib2) | NumVertex * sizeof(Attrib0) + NumVertex*sizeof(attrib1)
+  | 0 |      0      |       0       |     0        | vao_name | sizeof(Attrib0)
+  | 0 | 1 |      1      |       1       |     0        | vao_name |
+  sizeof(Attrib1) | NumVertex * sizeof(Attrib0) | 2 |      2      |       2 | 0
+  | vao_name | sizeof(Attrib2) | NumVertex * sizeof(Attrib0) +
+  NumVertex*sizeof(attrib1)
   |----------------------------------------------------------------------------------
 
   // Implementation example
@@ -202,52 +202,51 @@ struct Interleave {
 */
 
 struct VertexAttributeDescriptor {
-    GLuint vertex_attribute;
-    uint8_t element_count;
-    GLenum element_type;
-    GLboolean normalize;
-    GLuint relative_offset; // I have no clue when this is useful
+  GLuint vertex_attribute;
+  uint8_t element_count;
+  GLenum element_type;
+  GLboolean normalize;
+  GLuint relative_offset; // I have no clue when this is useful
 };
 
 struct BufferObjectBindings {
-    GLuint binding_point_index[SSBO_MAX];
-    GLuint buffer_object[SSBO_MAX];
+  GLuint binding_point_index[SSBO_MAX];
+  GLuint buffer_object[SSBO_MAX];
 };
 
 struct BindingPointDescriptor {
-    GLuint binding_point_index;
-    GLuint stride;
-    GLintptr offset;
-    unsigned int num_attrib_descriptors;
-    struct VertexAttributeDescriptor *attrib_descriptors;
+  GLuint binding_point_index;
+  GLuint stride;
+  GLintptr offset;
+  unsigned int num_attrib_descriptors;
+  struct VertexAttributeDescriptor *attrib_descriptors;
 };
 
 struct VertexBufferDescriptor {
-    struct BindingPointDescriptor *binding_descriptors;
-    unsigned int binding_point_count;
+  struct BindingPointDescriptor *binding_descriptors;
+  unsigned int binding_point_count;
 };
 
 struct RendererParameters {
-    unsigned int num_vertices;
-    int index_buffer_size;
+  unsigned int num_vertices;
+  int index_buffer_size;
 
-    unsigned int num_buffer_descriptors;
-    struct VertexBufferDescriptor *buffer_descriptors;
+  unsigned int num_buffer_descriptors;
+  struct VertexBufferDescriptor *buffer_descriptors;
 };
 
 struct Renderer {
-    GLuint vertex_array_object;
+  GLuint vertex_array_object;
 
-    // This is optional, but indexed rendering is currently untested
-    GLuint element_array_buffer;
+  // This is optional, but indexed rendering is currently untested
+  GLuint element_array_buffer;
 
-    unsigned int num_vertex_buffers;
-    GLuint vertex_buffer_objects[VBO_MAX];
+  unsigned int num_vertex_buffers;
+  GLuint vertex_buffer_objects[VBO_MAX];
 
-    GLuint multi_draw_indirect_buffer;
-    struct BufferObjectBindings shader_storage_buffer_objects;
+  GLuint multi_draw_indirect_buffer;
+  struct BufferObjectBindings shader_storage_buffer_objects;
 };
-
 
 // Utility function. Interleave N disparate vertex attributes into single buffer
 void interleave_attributes(struct Interleave *interleave);
@@ -266,7 +265,7 @@ void renderer_init(struct Renderer *renderer,
 
 // Try to gather up all the state changes needed to use the renderer in one
 // place
-void renderer_use(struct Renderer* renderer);
+void renderer_use(struct Renderer *renderer);
 
 void renderer_write_element_array_buffer(struct Renderer *renderer,
                                          size_t offset, size_t size,
@@ -275,10 +274,7 @@ void renderer_write_element_array_buffer(struct Renderer *renderer,
 void renderer_ssbo_create(struct Renderer *renderer, int index,
                           int binding_point, GLsizeiptr buffer_size);
 
-void renderer_ssbo_write(struct Renderer *renderer,
-			 int index,
-			 GLintptr offset,
-			 void *data,
-			 size_t size);
+void renderer_ssbo_write(struct Renderer *renderer, int index, GLintptr offset,
+                         void *data, size_t size);
 
 #endif

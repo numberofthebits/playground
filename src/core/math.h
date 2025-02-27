@@ -2,8 +2,8 @@
 #define MATH_H
 
 #include <math.h>
-#include <stdint.h>
 #include <memory.h>
+#include <stdint.h>
 
 #define PI 3.1415927f
 #define PI_MUL_2 2.f * PI
@@ -12,89 +12,88 @@
 #define PI_DIV_4 PI / 4.f
 #define PI_7_DIV_4 7.f / 4.f * PI
 
-
 typedef struct {
-    float x;
-    float y;
+  float x;
+  float y;
 } Vec2f;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
+  float x;
+  float y;
+  float z;
 } Vec3f;
 
 typedef struct {
-    uint8_t x;
-    uint8_t y;
+  uint8_t x;
+  uint8_t y;
 } Vec2u8;
 
 typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
 } Vec3u8;
 
 typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint8_t a;
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint8_t a;
 } Vec4u8;
 
 typedef struct {
-    uint32_t r;
-    uint32_t g;
-    uint32_t b;
-    uint32_t a;
+  uint32_t r;
+  uint32_t g;
+  uint32_t b;
+  uint32_t a;
 } Vec4u32;
 
 typedef struct {
-    float data[16];
+  float data[16];
 } Mat4x4;
 
 typedef struct {
-    Vec2f pos; // lower left
-    float width;
-    float height;
+  Vec2f pos; // lower left
+  float width;
+  float height;
 } Rectf;
 
-float dot_vec2f(Vec2f* a, Vec2f* b);
-float dot_vec3f(Vec3f* a, Vec3f* b);
+float dot_vec2f(Vec2f *a, Vec2f *b);
+float dot_vec3f(Vec3f *a, Vec3f *b);
 
-Vec3f cross(Vec3f* a, Vec3f* b);
-Vec3f scale(Vec3f* v, float scalar);
+Vec3f cross(Vec3f *a, Vec3f *b);
+Vec3f scale(Vec3f *v, float scalar);
 
-float magnitude_squared_vec2f(Vec2f* v);
-float magnitude_squared_vec3f(Vec3f* v);
+float magnitude_squared_vec2f(Vec2f *v);
+float magnitude_squared_vec3f(Vec3f *v);
 
-float length_vec2f(Vec2f* v);
-float length_vec3f(Vec3f* v);
+float length_vec2f(Vec2f *v);
+float length_vec3f(Vec3f *v);
 
-Vec2f normalize_vec2f(Vec2f* v);
-Vec3f normalize_vec3f(Vec3f* v);
+Vec2f normalize_vec2f(Vec2f *v);
+Vec3f normalize_vec3f(Vec3f *v);
 
-Vec2f normalize_with_len_vec2f(Vec2f* v, float len);
-Vec3f normalize_with_len_vec3f(Vec3f* v, float len);
-
+Vec2f normalize_with_len_vec2f(Vec2f *v, float len);
+Vec3f normalize_with_len_vec3f(Vec3f *v, float len);
 
 // Subtract "b" from "a"
-Vec3f sub(Vec3f* a, Vec3f* b);
-Mat4x4 look_at(Vec3f* pos, Vec3f* target, Vec3f* up);    
+Vec3f sub(Vec3f *a, Vec3f *b);
+Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up);
 Mat4x4 zero(void);
-    
+
 Mat4x4 identity(void);
 Mat4x4 perspective(float near, float far, float fov, float aspect);
-Mat4x4 ortho(float near, float far, float right, float left, float top, float bottom);
+Mat4x4 ortho(float near, float far, float right, float left, float top,
+             float bottom);
 
-void translate(Mat4x4* mat, Vec3f* v);
-void scale_mat4(Mat4x4* mat, Vec3f* v);
-void transpose(Mat4x4* mat);
-// 'axis' should be normalized 
-void mat4_rotate(Mat4x4* mat, Vec3f* axis, float radians);
-Mat4x4 mul(Mat4x4* a, Mat4x4* b);
+void translate(Mat4x4 *mat, Vec3f *v);
+void scale_mat4(Mat4x4 *mat, Vec3f *v);
+void transpose(Mat4x4 *mat);
+// 'axis' should be normalized
+void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
+Mat4x4 mul(Mat4x4 *a, Mat4x4 *b);
 
-int intersect_rectf(Rectf* a, Rectf* b);
+int intersect_rectf(Rectf *a, Rectf *b);
 
 // #[derive(Default)]
 //  struct SphericalCoord {
@@ -116,7 +115,8 @@ int intersect_rectf(Rectf* a, Rectf* b);
 
 // impl Display for SphericalCoord {
 //      fmt(&self, f: &mut Formatter<'_>) -> Result {
-//         write!(f, "r={}, \u{03C6}={}, \u{03B8}={}", self.radius, self.theta, self.phi)
+//         write!(f, "r={}, \u{03C6}={}, \u{03B8}={}", self.radius, self.theta,
+//         self.phi)
 //     }
 // }
 
@@ -127,7 +127,8 @@ int intersect_rectf(Rectf* a, Rectf* b);
 
 // impl Quaternion {
 //     // Math taken from here:
-//     // https://www.sciencedirect.com/topics/computer-science/quaternion-multiplication
+//     //
+//     https://www.sciencedirect.com/topics/computer-science/quaternion-multiplication
 
 //       mul(&self, other: &Self) -> Quaternion {
 //         let s1 = self.scalar;
@@ -148,9 +149,9 @@ int intersect_rectf(Rectf* a, Rectf* b);
 //             z: -self.vec.z,
 //         };
 
-//         let q = float::sqrt(self.scalar * self.scalar + vec_neg.magnitude_squared());
-//         let inv_q = 1.0 / q;
-//         let inv_q_squared = inv_q * inv_q;
+//         let q = float::sqrt(self.scalar * self.scalar +
+//         vec_neg.magnitude_squared()); let inv_q = 1.0 / q; let inv_q_squared
+//         = inv_q * inv_q;
 
 //         Quaternion {
 //             scalar: inv_q_squared * self.scalar,
@@ -186,7 +187,7 @@ int intersect_rectf(Rectf* a, Rectf* b);
 //     }
 
 //       to_mat4(&self) -> Mat4x4 {
-//         let qr = self.scalar; 
+//         let qr = self.scalar;
 //         let qi = self.vec.x;
 //         let qj = self.vec.y;
 //         let qk = self.vec.z;
@@ -195,13 +196,13 @@ int intersect_rectf(Rectf* a, Rectf* b);
 //         let qi_squared = qi * qi;
 //         let qj_squared = qj * qj;
 //         let qk_squared = qk * qk;
-        
+
 //         let mut m = Mat4x4::identity();
 
 //         m.data[0] = 2.0 * (qr_squared + qi_squared) - 1.0;
 //         m.data[1] = 2.0 * (qi * qj + qr * qk);
 //         m.data[2] = 2.0 * (qi * qk - qr * qj);
-        
+
 //         m.data[4] = 2.0 * (qi * qj - qr * qk);
 //         m.data[5] = 2.0 * (qr_squared + qj_squared) - 1.0;
 //         m.data[6] = 2.0 * (qj * qk + qr * qi);

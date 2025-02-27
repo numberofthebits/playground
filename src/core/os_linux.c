@@ -2,8 +2,8 @@
 
 #include "log.h"
 
-#include <time.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define SECS_TO_NANO 1000000000
 #define SECS_TO_MICRO 1000000
@@ -11,14 +11,15 @@
 
 #include <dirent.h>
 
-static TimeT* clock_resolution;
+static TimeT *clock_resolution;
 
-void file_system_list(const char* directory, const char* filter, IterCallback callback, void* context) {
-    (void)directory;
-    (void)filter;
-    (void)callback;
-    (void)context;
-    // TODO: Implement function
+void file_system_list(const char *directory, const char *filter,
+                      IterCallback callback, void *context) {
+  (void)directory;
+  (void)filter;
+  (void)callback;
+  (void)context;
+  // TODO: Implement function
 }
 
 void time_init(void) {
@@ -41,18 +42,18 @@ TimeT time_now(void) {
 TimeT time_elapsed(TimeT start, TimeT end) {
   TimeT result;
 
-  result.tv_sec=  end.tv_sec - start.tv_sec;
+  result.tv_sec = end.tv_sec - start.tv_sec;
   result.tv_nsec = end.tv_nsec - start.tv_nsec;
-  
+
   return result;
 }
 
 TimeT time_elapsed_now(TimeT from) {
   TimeT now = time_now();
-  return time_elapsed( from, now);
+  return time_elapsed(from, now);
 }
 
-void time_append(TimeT* a, TimeT b) {
+void time_append(TimeT *a, TimeT b) {
   a->tv_sec += b.tv_sec;
   a->tv_nsec += b.tv_nsec;
 }
@@ -60,13 +61,13 @@ void time_append(TimeT* a, TimeT b) {
 int time_expired(TimeT expires_at) {
   TimeT now = time_now();
 
-  if (now.tv_sec < expires_at.tv_sec) return 0;
-  else if (now.tv_sec == expires_at.tv_sec &&
-	   now.tv_nsec <= expires_at.tv_nsec) return 0;
-  
+  if (now.tv_sec < expires_at.tv_sec)
+    return 0;
+  else if (now.tv_sec == expires_at.tv_sec && now.tv_nsec <= expires_at.tv_nsec)
+    return 0;
+
   return 1;
 }
-
 
 uint64_t time_to_nanosecs(TimeT timepoint) {
   return timepoint.tv_sec * SECS_TO_NANO + timepoint.tv_nsec;

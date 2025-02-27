@@ -4,10 +4,9 @@
 #include <core/systembase.h>
 
 struct MovementSystem {
-    struct SystemBase base;
+  struct SystemBase base;
 };
 
-struct MovementSystem* movement_system_create(struct Services* services);
-
+struct MovementSystem *movement_system_create(struct Services *services);
 
 #endif
