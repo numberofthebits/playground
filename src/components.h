@@ -17,6 +17,7 @@ enum ComponentBit {
   INPUT_COMPONENT_BIT = (1U << 5),
   TIME_COMPONENT_BIT = (1U << 6),
   CAMERA_MOVEMENT_COMPONENT_BIT = (1U << 7),
+  PROJECTILE_EMITTER_COMPONENT_BIT = (1U << 8),
 };
 typedef enum ComponentBit ComponentBit;
 
@@ -92,6 +93,11 @@ typedef struct TimeComponent_t TimeComponent;
 typedef struct {
   uint8_t dummy;
 } CameraMovementComponent;
+
+typedef struct {
+  TimeT last_emitted;
+  TimeT emission_frequency;
+} ProjectilEmitterComponent;
 
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way

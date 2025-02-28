@@ -1,7 +1,7 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
-#include "core/math.h"
+#include <core/math.h>
 #include <core/assetstore.h>
 #include <core/ecs.h>
 #include <core/renderer.h>

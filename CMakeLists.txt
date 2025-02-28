@@ -52,6 +52,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/movement_system.h
   ${PROJECT_SOURCE_DIR}/src/player_system.c
   ${PROJECT_SOURCE_DIR}/src/player_system.h
+  ${PROJECT_SOURCE_DIR}/src/projectile_emitter_system.c  
+  ${PROJECT_SOURCE_DIR}/src/projectile_emitter_system.h
   ${PROJECT_SOURCE_DIR}/src/render_system.c
   ${PROJECT_SOURCE_DIR}/src/render_system.h
   ${PROJECT_SOURCE_DIR}/src/systems.c

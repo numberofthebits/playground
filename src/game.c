@@ -309,6 +309,9 @@ Game *game_create() {
   CameraMovementSystem *camera_movement_system =
       camera_movement_system_create(&game->services, &camera_area);
 
+  ProjectileEmitterSystem *projectile_emitter_system =
+      projectile_emitter_system_create(&game->services);
+
   GLFWmonitor *monitor = glfwGetPrimaryMonitor();
   const GLFWvidmode *mode = glfwGetVideoMode(monitor);
   LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, "
@@ -333,6 +336,7 @@ Game *game_create() {
   registry_add_system(&game->registry, (struct SystemBase *)player_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)camera_movement_system);
+  registry_add_system(&game->registry, (struct SystemBase*)projectile_emitter_system);
 
   return game;
 }
@@ -344,8 +348,8 @@ static void map_init(Map *map) {
   map->map_size.y = 20;
   map->atlas_size.x = 10;
   map->atlas_size.y = 3;
-  map->tiles =
-      ArenaAlloc(&global_static_allocator, map->map_size.x * map->map_size.y, MapTile);
+  map->tiles = ArenaAlloc(&global_static_allocator,
+                          map->map_size.x * map->map_size.y, MapTile);
 }
 
 static void map_load(Map *map, Registry *registry, struct Assets *assets) {

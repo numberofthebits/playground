@@ -2,7 +2,7 @@
 
 #include "camera_movement_system.h"
 #include "components.h"
-#include "core/math.h"
+
 #include "systems.h"
 
 #include <core/arena.h>
