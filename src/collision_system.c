@@ -12,7 +12,6 @@
 static void collision_update(Registry *reg, struct SystemBase *sys,
                              size_t frame_nr) {
   (void)frame_nr;
-  BeginScopedTimer(collision_time);
 
   struct Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
   struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
@@ -64,9 +63,6 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
       }
     }
   }
-
-  AppendScopedTimer(collision_time);
-  PrintScopedTimer(collision_time);
 }
 
 struct CollisionSystem *collision_system_create(struct Services *services) {
@@ -75,7 +71,8 @@ struct CollisionSystem *collision_system_create(struct Services *services) {
 
   system_base_init((struct SystemBase *)system, COLLISION_SYSTEM_BIT,
                    &collision_update,
-                   COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
+                   COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services,
+                   "CollisionSystem");
 
   return system;
 }

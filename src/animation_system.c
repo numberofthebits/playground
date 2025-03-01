@@ -14,9 +14,7 @@ static void animation_update(Registry *reg, struct SystemBase *system,
                              size_t frame_nr) {
   (void)frame_nr;
   (void)system;
-  BeginScopedTimer(animation_time);
 
-  // struct AnimationSystem* animation_system = (struct AnimationSystem*)system;
   struct Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
   struct Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
   struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
@@ -71,9 +69,6 @@ static void animation_update(Registry *reg, struct SystemBase *system,
         ((float)ac->num_frames_height - 1.f - ac->last_offset) /
         (float)ac->num_frames_height;
   }
-
-  AppendScopedTimer(animation_time);
-  PrintScopedTimer(animation_time);
 }
 
 struct AnimationSystem *animation_system_create(struct Services *services) {
@@ -83,7 +78,7 @@ struct AnimationSystem *animation_system_create(struct Services *services) {
   system_base_init(
       (struct SystemBase *)system, ANIMATION_SYSTEM_BIT, &animation_update,
       ANIMATION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | RENDER_COMPONENT_BIT,
-      services);
+      services, "AnimationSystem");
 
   return system;
 }

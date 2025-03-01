@@ -21,12 +21,14 @@ void player_system_reset(struct PlayerSystem *system) {
 }
 
 struct PlayerSystem *player_system_create(struct Services *services) {
-  struct PlayerSystem *system = ArenaAlloc(&global_static_allocator, 1, struct PlayerSystem);
+  struct PlayerSystem *system =
+      ArenaAlloc(&global_static_allocator, 1, struct PlayerSystem);
 
   int component_flags =
       INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;
   system_base_init((struct SystemBase *)system, PLAYER_SYSTEM_BIT,
-                   &player_system_update, component_flags, services);
+                   &player_system_update, component_flags, services,
+                   "PlayerSystem");
 
   player_system_reset(system);
   return system;
@@ -74,7 +76,6 @@ static void player_system_spawn_bullet(Registry *registry, Vec3f player_pos,
 
 void player_system_update(Registry *registry, struct SystemBase *sys,
                           size_t frame_nr) {
-  BeginScopedTimer(player_system_update);
   (void)frame_nr;
   struct PlayerSystem *player_system = (struct PlayerSystem *)sys;
   struct Pool *physics_pool =
@@ -106,9 +107,6 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
   }
 
   player_system_reset(player_system);
-
-  AppendScopedTimer(player_system_update);
-  PrintScopedTimer(player_system_update);
 }
 
 static void player_system_handle_keyboard_update(

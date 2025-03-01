@@ -58,7 +58,8 @@ static void entity_id_pool_init(struct EntityIdPool *entity_ids,
 
   LOG_INFO("Create entity ID pool size %zu", max_entity_count);
 
-  entity_ids->pool = ArenaAlloc(&global_static_allocator, max_entity_count, EntityIndex);
+  entity_ids->pool =
+      ArenaAlloc(&global_static_allocator, max_entity_count, EntityIndex);
   entity_ids->size = max_entity_count;
   entity_ids->used = 0;
 
@@ -149,8 +150,8 @@ void registry_init(Registry *reg, size_t max_entity_count,
     struct Pool pool;
     pool.descriptor = component;
     pool.count = max_entity_count;
-    pool.data = arena_alloc(&global_static_allocator, component->size, max_entity_count,
-                            component->alignment);
+    pool.data = arena_alloc(&global_static_allocator, component->size,
+                            max_entity_count, component->alignment);
     reg->pools[i] = pool;
   }
 
@@ -159,7 +160,8 @@ void registry_init(Registry *reg, size_t max_entity_count,
   reg->to_add = ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
   reg->count_to_add = 0;
 
-  reg->to_remove = ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
+  reg->to_remove =
+      ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
   reg->count_to_remove = 0;
 
   reg->entity_component_signatures =
@@ -196,8 +198,11 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
       continue;
     }
 
-    int system_signature = system->signature;
+    SignatureT system_signature = system->signature;
     if ((entity_signature & system_signature) == system_signature) {
+
+      LOG_INFO("Add entity %d (index %d) to system %s", entity.id, entity.index,
+               system->name);
       system_add_entity(system, entity);
     }
   }
@@ -215,7 +220,7 @@ static void registry_remove_entity_from_systems(Registry *registry,
       continue;
     }
 
-    int system_signature = system->signature;
+    SignatureT system_signature = system->signature;
     if ((entity_signature & system_signature) == system_signature) {
       system_remove_entity(system, entity);
     }
@@ -272,15 +277,16 @@ void registry_add_component(Registry *reg, Entity e, int component_bit,
 
 void registry_add_system(Registry *registry, struct SystemBase *systembase) {
   if (registry->num_systems >= SYSTEMS_MAX) {
-    LOG_EXIT("%zu would SYSTEMS_MAX %zu", registry->num_systems, SYSTEMS_MAX);
+    LOG_EXIT("%zu would exceed SYSTEMS_MAX %zu", registry->num_systems,
+             SYSTEMS_MAX);
   }
-  LOG_INFO("Add system ID %d", systembase->id);
+  LOG_INFO("Add system %s ID %d", systembase->name, systembase->flag);
   registry->systems[registry->num_systems++] = systembase;
 }
 
-struct SystemBase *registry_get_system(Registry *reg, int system_id) {
+struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
   for (size_t i = 0; i < reg->num_systems; ++i) {
-    if (reg->systems[i]->id == system_id) {
+    if (reg->systems[i]->flag == system_flag) {
       return reg->systems[i];
     }
   }
@@ -291,7 +297,15 @@ void registry_update(Registry *reg, size_t frame_index) {
   for (size_t i = 0; i < reg->num_systems; ++i) {
     struct SystemBase *system = reg->systems[i];
     if (system) {
+#ifdef ENABLE_DEBUG_TIMERS
+      TimeT t0 = time_now();
+#endif
       system->update_fn(reg, system, frame_index);
+#ifdef ENABLE_DEBUG_TIMERS
+      TimeT elapsed = time_elapsed_now(t0);
+      LOG_INFO("System '%s' update time: %lu microsecs", system->name,
+               time_to_microsecs(elapsed));
+#endif
     }
   }
 

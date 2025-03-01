@@ -8,19 +8,22 @@
 
 struct SystemBase;
 typedef struct Registry_t Registry;
+
 typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
 
 struct SystemBase {
-  int id;
+  int flag; /*SystemBit*/
+  int evaluation_order;
   SignatureT signature;
   Vec entities;
   pfnSystemUpdate update_fn;
   struct Services *services;
+  const char *name;
 };
 
 void system_base_init(struct SystemBase *system, int system_id,
                       pfnSystemUpdate update_fn, int required_component_flags,
-                      struct Services *services);
+                      struct Services *services, const char *name);
 
 void system_add_entity(struct SystemBase *system, Entity entity);
 

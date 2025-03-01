@@ -97,7 +97,7 @@ typedef struct {
 typedef struct {
   TimeT last_emitted;
   TimeT emission_frequency;
-} ProjectilEmitterComponent;
+} ProjectileEmitterComponent;
 
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way
@@ -135,6 +135,10 @@ static const struct Component component_table[] = {
     {.flag = CAMERA_MOVEMENT_COMPONENT_BIT,
      .size = sizeof(CameraMovementComponent),
      .alignment = alignof(CameraMovementComponent),
-     .name = "CameraMovementComponent"}};
+     .name = "CameraMovementComponent"},
+    {.flag = PROJECTILE_EMITTER_COMPONENT_BIT,
+     .size = sizeof(ProjectileEmitterComponent),
+     .alignment = alignof(ProjectileEmitterComponent),
+     .name = "ProjectileEmitterComponent"}};
 
 #endif // COMPONENTS_H

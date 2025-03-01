@@ -43,6 +43,7 @@ static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u8 world_size,
 static inline void camera_movement_system_update(Registry *reg,
                                                  struct SystemBase *base,
                                                  size_t frame_nr) {
+
   (void)reg;
   (void)base;
   (void)frame_nr;
@@ -70,12 +71,13 @@ static inline void camera_movement_system_update(Registry *reg,
 
 static inline CameraMovementSystem *
 camera_movement_system_create(struct Services *services, Vec2f *camera_area) {
-  CameraMovementSystem *sys = ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
+  CameraMovementSystem *sys =
+      ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
 
   system_base_init((struct SystemBase *)sys, CAMERA_MOVEMENT_SYSTEM_BIT,
                    camera_movement_system_update,
                    TRANSFORM_COMPONENT_BIT | CAMERA_MOVEMENT_COMPONENT_BIT,
-                   services);
+                   services, "CameraMovementSystem");
 
   sys->camera_area = *camera_area;
 

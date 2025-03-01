@@ -10,13 +10,14 @@
 #include <memory.h>
 
 struct InputSystem *input_system_create(struct Services *services) {
-  struct InputSystem *system = ArenaAlloc(&global_static_allocator, 1, struct InputSystem);
+  struct InputSystem *system =
+      ArenaAlloc(&global_static_allocator, 1, struct InputSystem);
 
   // This system isn't interested in any components.
   // It only consumes input from OS and produces
   // events.
   system_base_init((struct SystemBase *)system, INPUT_SYSTEM_BIT,
-                   &input_system_update, 0, services);
+                   &input_system_update, 0, services, "InputSystem");
 
   input_system_reset(system);
 
@@ -47,7 +48,6 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
                          size_t frame_nr) {
   (void)registry;
   (void)frame_nr;
-  BeginScopedTimer(input_system_update);
 
   struct EventBus *bus = sys->services->event_bus;
   struct InputSystem *system = (struct InputSystem *)sys;
@@ -72,7 +72,4 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
   event_bus_emit(bus, &events);
 
   input_system_reset(system);
-
-  AppendScopedTimer(input_system_update);
-  PrintScopedTimer(input_system_update);
 }

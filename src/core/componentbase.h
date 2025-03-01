@@ -2,8 +2,7 @@
 #define COMPONENT_BASE_H
 
 // TODO: Capping components at 30 could be silly. It should be however many we
-// need.
-//       Let's cross that bridge if we get there.
+// need. Let's cross that bridge if we get there.
 // This needs to be defined regardless of user provided component flags. It's
 // part of the general API
 #define INVALID_COMPONENT_BIT (1U << 30)
@@ -15,6 +14,8 @@ struct Component {
   const char *name;
 };
 
+// Is this struct really necessary?
+// Registry init doesn't take this thing
 struct Components {
   size_t num_components;
   const struct Component *components;

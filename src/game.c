@@ -1,13 +1,15 @@
 #include "game.h"
 
+#include "components.h"
+#include "events.h"
+
 #include "animation_system.h"
 #include "camera_movement_system.h"
 #include "collision_system.h"
-#include "components.h"
-#include "events.h"
 #include "input_system.h"
 #include "movement_system.h"
 #include "player_system.h"
+#include "projectile_emitter_system.h"
 #include "render_system.h"
 #include "systems.h"
 #include "time_system.h"
@@ -22,7 +24,7 @@
 #include <core/util.h>
 
 #include <GLFW/glfw3.h>
-#include <glad/glad.h>
+// #include <glad/glad.h>
 #include <stdio.h>
 
 #define MAX_ENTITIES 1024
@@ -63,6 +65,18 @@ struct Game_t {
   int state;
   size_t frame_counter;
   struct Services services;
+
+  // Systems live here, but we register them in the
+  // registry to wire them up to entity related things
+  struct InputSystem *input_system;
+  struct PlayerSystem *player_system;
+  struct MovementSystem *movement_system;
+  struct CollisionSystem *collision_system;
+  struct AnimationSystem *animation_system;
+  struct TimeSystem *time_system;
+  CameraMovementSystem *camera_movement_system;
+  ProjectileEmitterSystem *projectile_emitter_system;
+  struct RenderSystem *render_system;
 };
 
 enum ReadlineResult {
@@ -255,7 +269,7 @@ Game *game_create() {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
-  GLFWwindow *window = glfwCreateWindow(800, 600, "1,2,3 techno", 0, 0);
+  GLFWwindow *window = glfwCreateWindow(1280, 720, "1,2,3 techno", 0, 0);
 
   if (!window) {
     const char *error = 0;
@@ -265,6 +279,9 @@ Game *game_create() {
   }
 
   glfwMakeContextCurrent(window);
+
+  render_system_global_init();
+
   glfwSwapInterval(1);
   glfwSetKeyCallback(window, &key_callback);
   glfwSetFramebufferSizeCallback(window, &framebuffer_size_callback);
@@ -283,34 +300,11 @@ Game *game_create() {
                 sizeof(component_table) / sizeof(component_table[0]));
   assets_init(&game->assets);
   event_bus_init(&game->event_bus);
+  time_init();
 
   game->services.assets = &game->assets;
   game->services.registry = &game->registry;
   game->services.event_bus = &game->event_bus;
-
-  time_init();
-
-  struct InputSystem *input_system = input_system_create(&game->services);
-
-  struct PlayerSystem *player_system = player_system_create(&game->services);
-
-  struct MovementSystem *movement_system =
-      movement_system_create(&game->services);
-
-  struct CollisionSystem *collision_system =
-      collision_system_create(&game->services);
-
-  struct AnimationSystem *animation_system =
-      animation_system_create(&game->services);
-
-  struct TimeSystem *time_system = time_system_create(&game->services);
-
-  Vec2f camera_area = {16.f, 16.f};
-  CameraMovementSystem *camera_movement_system =
-      camera_movement_system_create(&game->services, &camera_area);
-
-  ProjectileEmitterSystem *projectile_emitter_system =
-      projectile_emitter_system_create(&game->services);
 
   GLFWmonitor *monitor = glfwGetPrimaryMonitor();
   const GLFWvidmode *mode = glfwGetVideoMode(monitor);
@@ -322,21 +316,36 @@ Game *game_create() {
   int window_width, window_height;
   glfwGetWindowSize(game->window, &window_width, &window_height);
 
-  render_system_global_init();
-
-  struct RenderSystem *render_system = render_system_create(
+  game->input_system = input_system_create(&game->services);
+  game->player_system = player_system_create(&game->services);
+  game->movement_system = movement_system_create(&game->services);
+  game->collision_system = collision_system_create(&game->services);
+  game->animation_system = animation_system_create(&game->services);
+  game->time_system = time_system_create(&game->services);
+  Vec2f camera_area = {16.f, 16.f};
+  game->camera_movement_system =
+      camera_movement_system_create(&game->services, &camera_area);
+  game->projectile_emitter_system =
+      projectile_emitter_system_create(&game->services);
+  game->render_system = render_system_create(
       &game->services, window_width, window_height, mode->width, mode->height);
 
-  registry_add_system(&game->registry, (struct SystemBase *)movement_system);
-  registry_add_system(&game->registry, (struct SystemBase *)animation_system);
-  registry_add_system(&game->registry, (struct SystemBase *)collision_system);
-  registry_add_system(&game->registry, (struct SystemBase *)input_system);
-  registry_add_system(&game->registry, (struct SystemBase *)time_system);
-  registry_add_system(&game->registry, (struct SystemBase *)render_system);
-  registry_add_system(&game->registry, (struct SystemBase *)player_system);
   registry_add_system(&game->registry,
-                      (struct SystemBase *)camera_movement_system);
-  registry_add_system(&game->registry, (struct SystemBase*)projectile_emitter_system);
+                      (struct SystemBase *)game->movement_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->animation_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->collision_system);
+  registry_add_system(&game->registry, (struct SystemBase *)game->input_system);
+  registry_add_system(&game->registry, (struct SystemBase *)game->time_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->render_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->player_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->camera_movement_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->projectile_emitter_system);
 
   return game;
 }
@@ -407,8 +416,8 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
     TransformComponent tc = {0};
     tc.pos.x = 0.5;
-    tc.pos.y = 2.0;
-    tc.pos.z = 0.1f;
+    tc.pos.y = 4.0;
+    tc.pos.z = 0.0f;
     tc.scale.x = 1.0f;
     tc.scale.y = 1.0f;
     tc.rotation = 0.f;
@@ -432,10 +441,16 @@ static void load_units(Registry *registry, struct Assets *assets) {
     cc.aabr.width = 1.f;
     cc.aabr.height = 1.f;
 
+    ProjectileEmitterComponent pec;
+    pec.emission_frequency = time_from_secs(1);
+    pec.last_emitted = time_now();
+
     registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
     registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
     registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
     registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
+    registry_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
+                           &pec);
 
     registry_add_entity(registry, truck);
 
@@ -447,7 +462,8 @@ static void load_units(Registry *registry, struct Assets *assets) {
     registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
     registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
     registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
-
+    registry_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
+                           &pec);
     registry_add_entity(registry, truck);
   }
 
@@ -456,14 +472,14 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
     TransformComponent tc = {0};
     tc.pos.x = 0.0f;
-    tc.pos.y = 4.0f;
-    tc.pos.z = 0.0f;
+    tc.pos.y = 5.0f;
+    tc.pos.z = 0.1f;
     tc.scale.x = 1.f;
     tc.scale.y = 1.f;
     tc.rotation = 0.f;
 
     RenderComponent rc;
-    rc.render_layer = 1;
+    rc.render_layer = 10;
     rc.tex_coord_offset.x = 0.f;
     rc.tex_coord_offset.y = 0.f;
     rc.tex_coord_scale.x = 1.f;

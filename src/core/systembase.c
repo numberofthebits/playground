@@ -17,14 +17,15 @@ static int find_entity_index(Vec *entities, Entity e) {
   return ENTITY_INVALID_INDEX;
 }
 
-void system_base_init(struct SystemBase *system, int system_id,
+void system_base_init(struct SystemBase *system, int system_flag,
                       pfnSystemUpdate update_fn, int required_component_flags,
-                      struct Services *services) {
-  system->id = system_id;
+                      struct Services *services, const char *name) {
+  system->flag = system_flag;
   system->signature = required_component_flags;
   system->update_fn = update_fn;
   system->entities = vec_create();
   system->services = services;
+  system->name = name;
 
   VEC_RESERVE_T(&system->entities, Entity, SYSTEM_ENTITIES_DEFAULT_CAPACITY);
 }
@@ -32,7 +33,7 @@ void system_base_init(struct SystemBase *system, int system_id,
 void system_add_entity(struct SystemBase *system, Entity e) {
   int index = find_entity_index(&system->entities, e);
   if (index != ENTITY_INVALID_INDEX) {
-    LOG_WARN("Entity %d already in System %d", e.id, system->id);
+    LOG_WARN("Entity %d already in System %s", e.id, system->name);
     return;
   }
 
@@ -42,12 +43,12 @@ void system_add_entity(struct SystemBase *system, Entity e) {
 void system_remove_entity(struct SystemBase *system, Entity e) {
   int index = find_entity_index(&system->entities, e);
   if (index == ENTITY_INVALID_INDEX) {
-    LOG_WARN("Entity %d not found in System %d", e.id, system->id);
+    LOG_WARN("Entity %d not found in System %s", e.id, system->name);
     return;
   }
 
-  LOG_INFO("Remove entity ID %d with index %d from system %d", e.id, e.index,
-           system->id);
+  LOG_INFO("Remove entity ID %d with index %d from system %s", e.id, e.index,
+           system->name);
   VEC_ERASE_T(&system->entities, Entity, index);
 }
 

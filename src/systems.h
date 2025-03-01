@@ -22,17 +22,38 @@ enum SystemBit {
 };
 typedef enum SystemBit SystemBit;
 
-struct System {
-  const char *name;
-  SystemBit flag;
-  int evaluation_order;
-};
-typedef struct System System;
-
-extern const System system_table[];
-
-size_t system_table_size(void);
-
-int system_get_index(SystemBit flag);
+// const System system_table[] = {
+//     {
+//         .name = "MovementSystem",
+//         .flag = MOVEMENT_SYSTEM_BIT,
+//         .evaluation_order = 0,
+//     },
+//     {
+//         .name = "RenderSystem",
+//         .flag = RENDER_SYSTEM_BIT,
+//         .evaluation_order = 0,
+//     },
+//     {
+//         .name = "RenderSystem",
+//         .flag = RENDER_SYSTEM_BIT,
+//         .evaluation_order = 0,
+//     },
+//     {.name = "AnimationSystem",
+//      .flag = ANIMATION_SYSTEM_BIT,
+//      .evaluation_order = 0},
+//     {
+//         .name = "InputSystem",
+//         .flag = INPUT_SYSTEM_BIT,
+//         .evaluation_order = 0,
+//     },
+//     {.name = "TimeSystem", .flag = TIME_SYSTEM_BIT, .evaluation_order = 0},
+//     {.name = "PlayerSystem", .flag = PLAYER_SYSTEM_BIT, .evaluation_order =
+//     0},
+//     {.name = "CameraMovementSystem",
+//      .flag = CAMERA_MOVEMENT_SYSTEM_BIT,
+//      .evaluation_order = 0},
+//     {.name = "ProjectileEmitterSystem",
+//      .flag = PROJECTILE_EMITTER_SYSTEM_BIT,
+//      .evaluation_order = 0}};
 
 #endif

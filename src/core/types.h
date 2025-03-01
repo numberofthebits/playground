@@ -13,7 +13,7 @@ typedef struct {
 } ImageMeta;
 
 typedef uint32_t AssetId;
-typedef uint8_t SignatureT;
+typedef uint32_t SignatureT;
 typedef int EntityId;
 typedef size_t EntityIndex;
 

@@ -9,8 +9,7 @@ typedef struct {
 
 } ProjectileEmitterSystem;
 
-ProjectileEmitterSystem *projectile_emitter_system_create();
-
-
+ProjectileEmitterSystem *
+projectile_emitter_system_create(struct Services *services);
 
 #endif

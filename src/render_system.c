@@ -272,7 +272,6 @@ static void render_entities(RenderSystem *system, RenderData *data,
 static void render_update(Registry *reg, struct SystemBase *sys,
                           size_t frame_nr) {
   (void)frame_nr;
-  BeginScopedTimer(render_time);
 
   RenderSystem *render_sys = (RenderSystem *)sys;
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
@@ -327,9 +326,6 @@ static void render_update(Registry *reg, struct SystemBase *sys,
   }
 
   render_entities(render_sys, render_data, sys->entities.size);
-
-  AppendScopedTimer(render_time);
-  PrintScopedTimer(render_time);
 }
 
 void render_system_create_program(RenderSystem *system, AssetId program_id) {
@@ -381,8 +377,8 @@ void render_system_global_init() {
 }
 
 static struct Renderer *create_tile_renderer() {
-  struct Renderer *tile_renderer =
-      (struct Renderer *)ArenaAlloc(&global_static_allocator, 1, struct Renderer);
+  struct Renderer *tile_renderer = (struct Renderer *)ArenaAlloc(
+      &global_static_allocator, 1, struct Renderer);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -469,8 +465,8 @@ static struct Renderer *create_tile_renderer() {
 }
 
 struct Renderer *create_debug_renderer() {
-  struct Renderer *debug_renderer =
-      (struct Renderer *)ArenaAlloc(&global_static_allocator, 1, struct Renderer);
+  struct Renderer *debug_renderer = (struct Renderer *)ArenaAlloc(
+      &global_static_allocator, 1, struct Renderer);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -530,9 +526,9 @@ RenderSystem *render_system_create(struct Services *services, int window_w,
   // individual renderer
 
   RenderSystem *system = ArenaAlloc(&global_static_allocator, 1, RenderSystem);
-  system_base_init((struct SystemBase *)system, RENDER_SYSTEM_BIT,
-                   &render_update,
-                   RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services);
+  system_base_init(
+      (struct SystemBase *)system, RENDER_SYSTEM_BIT, &render_update,
+      RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services, "RenderSystem");
 
   system->assets = services->assets;
   system->materials = vec_create();
