@@ -19,7 +19,10 @@ static Vec2f random_direction() {
   return ret;
 }
 
-void create_projectile(Registry *registry, Vec3f origin) {
+void create_projectile(ProjectileEmitterComponent* component,
+                       Registry *registry,
+                       Vec3f origin,
+                       TimeT spawn_time) {
   Vec2f dir = random_direction();
   dir.x *= PROJECTILE_VELOCITY_SCALE;
   dir.y *= PROJECTILE_VELOCITY_SCALE;
@@ -47,15 +50,24 @@ void create_projectile(Registry *registry, Vec3f origin) {
   rc.pipeline_id = assets_make_id_str("tilemap");
 
   TimeComponent ttc = {0};
-  ttc.created = time_now();
+  ttc.created = spawn_time;
+  ttc.expires = time_add(ttc.created, component->projectile_duration);
 
-  TimeT expires = time_from_secs(5);
-  ttc.expires = time_add(ttc.created, expires);
+  CollisionComponent cc;
+  cc.aabr.pos.x = tc.pos.x;
+  cc.aabr.pos.y = tc.pos.y;
+  cc.aabr.width = 0.1f;
+  cc.aabr.height = 0.1f;
+
+  ProjectileComponent projc;
+  projc.damage = component->damage;
+  projc.flags = component->flags;
 
   registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
   registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
   registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
   registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
 
   registry_add_entity(registry, e);
 }
@@ -73,7 +85,7 @@ void projectile_emitter_system_update(Registry *registry,
     Entity e = VEC_GET_T(&sys->entities, Entity, i);
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, e.id);
-    ProjectileEmitterComponent *pec =
+   ProjectileEmitterComponent *pec =
         PoolGetComponent(projectile_pool, ProjectileEmitterComponent, e.id);
 
     TimeT elapsed = time_elapsed_now(pec->last_emitted);
@@ -81,7 +93,7 @@ void projectile_emitter_system_update(Registry *registry,
     if (elapsed.QuadPart >= pec->emission_frequency.QuadPart) {
       pec->last_emitted = now;
       (void)tc;
-      create_projectile(registry, tc->pos);
+      create_projectile(pec, registry,  tc->pos, now);
     }
   }
 }
@@ -96,6 +108,5 @@ projectile_emitter_system_create(struct Services *services) {
   system_base_init((struct SystemBase *)sys, PROJECTILE_EMITTER_SYSTEM_BIT,
                    &projectile_emitter_system_update, component_flags, services,
                    "ProjectileEmitterSystem");
-
   return sys;
 }

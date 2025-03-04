@@ -8,6 +8,7 @@
 
 #include <stdalign.h>
 
+
 enum ComponentBit {
   TRANSFORM_COMPONENT_BIT = (1U << 0),
   RENDER_COMPONENT_BIT = (1U << 1),
@@ -18,6 +19,8 @@ enum ComponentBit {
   TIME_COMPONENT_BIT = (1U << 6),
   CAMERA_MOVEMENT_COMPONENT_BIT = (1U << 7),
   PROJECTILE_EMITTER_COMPONENT_BIT = (1U << 8),
+  PROJECTILE_COMPONENT_BIT = (1U << 9),
+  HEALTH_COMPONENT_BIT = (1U << 10)
 };
 typedef enum ComponentBit ComponentBit;
 
@@ -59,6 +62,8 @@ typedef struct {
 // }
 
 struct Physics_Component_t {
+  // TODO: Replace this with two scalars:
+  //       angle and velocity. 
   Vec2f velocity;
 };
 typedef struct Physics_Component_t PhysicsComponent;
@@ -94,10 +99,27 @@ typedef struct {
   uint8_t dummy;
 } CameraMovementComponent;
 
+typedef enum {
+  PROJECTILE_FLAG_FRIENDLY,
+  PROJECTILE_FLAG_ENEMY
+} ProjectileFlags;
+
 typedef struct {
   TimeT last_emitted;
   TimeT emission_frequency;
+  TimeT projectile_duration;
+  ProjectileFlags flags;
+  int32_t damage;
 } ProjectileEmitterComponent;
+
+typedef struct {
+  int32_t damage;
+  int flags;
+} ProjectileComponent;
+
+typedef struct {
+  int32_t health;
+} HealthComponent;
 
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way
@@ -108,37 +130,56 @@ static const struct Component component_table[] = {
      .size = sizeof(TransformComponent),
      .alignment = alignof(TransformComponent),
      .name = "TransformComponent"},
+
     {.flag = RENDER_COMPONENT_BIT,
      .size = sizeof(RenderComponent),
      .alignment = alignof(RenderComponent),
      .name = "RenderComponent"},
+
     {.flag = PHYSICS_COMPONENT_BIT,
      .size = sizeof(PhysicsComponent),
      .alignment = alignof(TransformComponent),
      .name = "PhysicsComponent"},
+
     {.flag = ANIMATION_COMPONENT_BIT,
      .size = sizeof(AnimationComponent),
      .alignment = alignof(AnimationComponent),
      .name = "AnimationComponent"},
+
     {.flag = COLLISION_COMPONENT_BIT,
      .size = sizeof(CollisionComponent),
      .alignment = alignof(CollisionComponent),
      .name = "CollisionComponent"},
+
     {.flag = INPUT_COMPONENT_BIT,
      .size = sizeof(InputComponent),
      .alignment = alignof(InputComponent),
      .name = "InputComponent"},
+
     {.flag = TIME_COMPONENT_BIT,
      .size = sizeof(TimeComponent),
      .alignment = alignof(TimeComponent),
      .name = "TimeComponent"},
+
     {.flag = CAMERA_MOVEMENT_COMPONENT_BIT,
      .size = sizeof(CameraMovementComponent),
      .alignment = alignof(CameraMovementComponent),
      .name = "CameraMovementComponent"},
+
     {.flag = PROJECTILE_EMITTER_COMPONENT_BIT,
      .size = sizeof(ProjectileEmitterComponent),
      .alignment = alignof(ProjectileEmitterComponent),
-     .name = "ProjectileEmitterComponent"}};
+     .name = "ProjectileEmitterComponent"},
+    
+    {.flag = PROJECTILE_COMPONENT_BIT,
+     .size = sizeof(ProjectileComponent),
+     .alignment = sizeof(ProjectileComponent),
+     .name = "ProjectileComponent"
+    },
+    {.flag = HEALTH_COMPONENT_BIT,
+     .size = sizeof(HealthComponent),
+     .alignment = sizeof(HealthComponent),
+     .name = "HealthComponent"}
+};
 
 #endif // COMPONENTS_H

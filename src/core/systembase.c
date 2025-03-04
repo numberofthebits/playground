@@ -1,6 +1,6 @@
-#include "systembase.h"
+#include <core/systembase.h>
 
-#include "types.h"
+#include <core/types.h>
 #include <core/arena.h>
 
 #include <stdlib.h>
@@ -52,6 +52,3 @@ void system_remove_entity(struct SystemBase *system, Entity e) {
   VEC_ERASE_T(&system->entities, Entity, index);
 }
 
-void system_require_component(struct SystemBase *sys, int bit) {
-  sys->signature |= bit;
-}

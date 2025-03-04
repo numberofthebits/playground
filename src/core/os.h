@@ -1,5 +1,5 @@
-#ifndef _OS_H
-#define _OS_H
+#ifndef OS_H
+#define OS_H
 
 #include <stdint.h>
 

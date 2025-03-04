@@ -6,6 +6,7 @@
 #include "animation_system.h"
 #include "camera_movement_system.h"
 #include "collision_system.h"
+#include "damage_system.h"
 #include "input_system.h"
 #include "movement_system.h"
 #include "player_system.h"
@@ -77,6 +78,7 @@ struct Game_t {
   CameraMovementSystem *camera_movement_system;
   ProjectileEmitterSystem *projectile_emitter_system;
   struct RenderSystem *render_system;
+  DamageSystem *damage_system;
 };
 
 enum ReadlineResult {
@@ -329,6 +331,7 @@ Game *game_create() {
       projectile_emitter_system_create(&game->services);
   game->render_system = render_system_create(
       &game->services, window_width, window_height, mode->width, mode->height);
+  game->damage_system = damage_system_create(&game->services);
 
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->movement_system);
@@ -346,6 +349,7 @@ Game *game_create() {
                       (struct SystemBase *)game->camera_movement_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->projectile_emitter_system);
+  registry_add_system(&game->registry, (struct SystemBase*)game->damage_system);
 
   return game;
 }
@@ -444,6 +448,9 @@ static void load_units(Registry *registry, struct Assets *assets) {
     ProjectileEmitterComponent pec;
     pec.emission_frequency = time_from_secs(1);
     pec.last_emitted = time_now();
+    pec.damage = 50;
+    pec.projectile_duration = time_from_secs(3);
+    pec.flags = PROJECTILE_FLAG_ENEMY;
 
     registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
     registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
@@ -508,6 +515,8 @@ static void load_units(Registry *registry, struct Assets *assets) {
     cc.aabr.height = 1.f;
 
     CameraMovementComponent cmc;
+    HealthComponent hc;
+    hc.health = 100;
 
     registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
     registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
@@ -517,6 +526,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
     registry_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
     registry_add_component(registry, chopper, CAMERA_MOVEMENT_COMPONENT_BIT,
                            &cmc);
+    registry_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
 
     registry_add_entity(registry, chopper);
   }
@@ -560,19 +570,19 @@ void game_setup(Game *game) {
 
 void game_update(Game *game) {
   arena_dealloc_all(&frame_allocator);
-  struct SystemBase *player_system_base =
-      registry_get_system(&game->registry, PLAYER_SYSTEM_BIT);
-  // struct SystemBase* collision_system_base =
-  // registry_get_system(&game->registry, COLLISION_SYSTEM_BIT);
-  struct SystemBase *render_system =
-      registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
 
-  event_bus_subscribe(&game->event_bus, player_system_base,
+  event_bus_subscribe(&game->event_bus,
+                      (struct SystemBase *)game->player_system,
                       KeyboardInput_Update, &player_system_handle_event);
 
-  event_bus_subscribe(&game->event_bus, render_system,
-                      CameraSystem_CameraChanged,
-                      render_system_handle_camera_position_changed);
+  event_bus_subscribe(&game->event_bus,
+                      (struct SystemBase *)game->damage_system,
+                      CollisionSystem_Detected,
+                      &damage_system_handle_event);
+
+  event_bus_subscribe(
+      &game->event_bus, (struct SystemBase *)game->render_system,
+      CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
 
   registry_update(&game->registry, game->frame_counter);
 
@@ -589,10 +599,7 @@ void game_run(Game *game) {
 
     glfwPollEvents();
 
-    //        BeginScopedTimer(update_time);
     game_update(game);
-    //        AppendScopedTimer(update_time);
-    //        PrintScopedTimer(update_time);
 
     if (game->state & GAME_DEBUG_ENABLED) {
       RenderSystem *render_system = (RenderSystem *)registry_get_system(
@@ -600,10 +607,7 @@ void game_run(Game *game) {
       render_system_debug(render_system, &game->registry);
     }
 
-    //        BeginScopedTimer(swap_buffers_time);
     glfwSwapBuffers(game->window);
-    //        AppendScopedTimer(swap_buffers_time);
-    //        PrintScopedTimer(swap_buffers_time);
 
     game->frame_counter++;
 

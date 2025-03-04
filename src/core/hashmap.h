@@ -1,7 +1,6 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
-// #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct {

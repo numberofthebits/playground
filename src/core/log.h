@@ -6,6 +6,7 @@
 int log_init(const char *file_path);
 
 void log_destroy(void);
+
 void log_msg(const char *level, const char *file, int line,
              const char *func_name, const char *format, ...);
 

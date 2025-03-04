@@ -13,7 +13,7 @@
 
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
-static Vec2f BULLET_MIN_VELOCITY = {0.1f, 0.1f};
+static Vec2f BULLET_MIN_VELOCITY = {0.001f, 0.001f};
 
 void player_system_reset(struct PlayerSystem *system) {
   memset(system->movement, 0x0, sizeof(system->movement));
@@ -34,8 +34,8 @@ struct PlayerSystem *player_system_create(struct Services *services) {
   return system;
 }
 
-static void player_system_spawn_bullet(Registry *registry, Vec3f player_pos,
-                                       Vec2f player_velocity) {
+static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
+                                           Vec2f player_velocity) {
   Entity e = registry_create_entity(registry);
 
   TransformComponent tc = {0};
@@ -95,7 +95,7 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 
     // NOTE: It would probably be fine to spawn 1 bullet per frame
     for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
-      player_system_spawn_bullet(registry, tc->pos, pc->velocity);
+      player_system_spawn_projectile(registry, tc->pos, pc->velocity);
     }
 
     pc->velocity.x +=
