@@ -29,6 +29,8 @@ void chunk_print_hex(Chunk *c);
 
 Vec vec_create(void);
 
+void vec_init(Vec* v);
+
 void vec_reserve(Vec *v, int s);
 
 void vec_resize(Vec *v, int s);

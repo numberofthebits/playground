@@ -1,8 +1,7 @@
-#include <core/vec.h>
+#include "vec.h"
 
-#include <core/log.h>
+#include "log.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -56,11 +55,15 @@ void chunk_dealloc(Chunk *c) {
   c->ptr = 0;
 }
 
+void vec_init(Vec* v) {
+  v->size = 0;
+  v->capacity = 0;
+  v->storage = chunk_create();  
+}
+
 Vec vec_create(void) {
   Vec v;
-  v.size = 0;
-  v.capacity = 0;
-  v.storage = chunk_create();
+  vec_init(&v);
   return v;
 }
 
