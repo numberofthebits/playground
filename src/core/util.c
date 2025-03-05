@@ -1,6 +1,6 @@
-#include <core/util.h>
+#include "util.h"
 
-#include <core/log.h>
+#include "log.h"
 
 #include <stdio.h>
 #include <stdlib.h>

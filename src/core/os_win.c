@@ -1,4 +1,4 @@
-#include <core/os.h>
+#include "os.h"
 
 #define NOMIXMAX
 #define WIN32_LEAN_AND_MEAN

@@ -1,14 +1,16 @@
 #ifndef ECS_H
 #define ECS_H
 
-#include <core/assetstore.h>
-#include <core/componentbase.h>
-#include <core/systembase.h>
-#include <core/types.h>
-#include <core/vec.h>
+#include "assetstore.h"
+#include "componentbase.h"
+#include "hashmap.h"
+#include "types.h"
+#include "vec.h"
 
 #define COMPONENT_POOLS_MAX 32
 #define SYSTEMS_MAX 32
+
+struct SystemBase;
 
 struct Pool {
   void *data;
@@ -23,6 +25,20 @@ struct EntityIdPool {
   size_t used;
   size_t *pool;
 };
+
+typedef struct {
+  // Entity to const char*
+  HashMap entity_tag_map;
+  // const char* to Entity
+  HashMap tag_entity_map;
+} EntityTags;
+
+typedef struct {
+  // Entity to const char*
+  HashMap entity_group_map;
+  // const char* to Vec of Entity
+  HashMap group_entity_map;
+} EntityGroups;
 
 struct Registry_t {
   struct Pool pools[COMPONENT_POOLS_MAX];
@@ -45,6 +61,9 @@ struct Registry_t {
   SignatureT *entity_component_signatures;
 
   struct Components components;
+
+  EntityTags entity_tags;
+  EntityGroups entity_groups;
 };
 typedef struct Registry_t Registry;
 
@@ -58,7 +77,7 @@ struct Pool *registry_get_pool(Registry *reg, int component_bit);
 
 #define PoolGetComponent(pool, type, index) ((type *)pool->data) + index;
 
-Entity registry_create_entity(Registry *reg);
+
 
 void registry_add_system(Registry *reg, struct SystemBase *s);
 
@@ -70,16 +89,16 @@ void registry_update(Registry *reg, size_t frame_index);
 /*
   Entity API
 */
-void registry_add_entity(Registry *reg, Entity entity);
+Entity registry_entity_create(Registry *reg);
+void registry_entity_add(Registry *reg, Entity entity);
+void registry_entity_remove(Registry *reg, Entity e);
+void registry_entity_commit_entities(Registry *reg);
+void registry_entity_add_component(Registry *reg, Entity e, int component_bit,
+                                   void *data);
+void registry_entity_tag(Registry *reg, Entity entity, const char *tag);
+void registry_entity_group(Registry *reg, Entity entity, const char *group);
 
-void registry_remove_entity(Registry *reg, Entity e);
-
-void registry_commit_entities(Registry *reg);
-
-void registry_add_component(Registry *reg, Entity e, int component_bit,
-                            void *data);
-
-int registry_has_component(Registry *reg, Entity e, int component_bit);
+int registry_entity_has_component(Registry *reg, Entity e, int component_bit);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
 
 #endif // ECS_H

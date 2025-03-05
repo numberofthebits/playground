@@ -1,10 +1,10 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
-#include <core/componentbase.h>
-#include <core/math.h>
-#include <core/os.h>
-#include <core/types.h>
+#include "core/componentbase.h"
+#include "core/math.h"
+#include "core/os.h"
+#include "core/types.h"
 
 #include <stdalign.h>
 

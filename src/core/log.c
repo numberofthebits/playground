@@ -1,8 +1,7 @@
-#include <core/log.h>
+#include "log.h"
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
 static char log_buffer[4096 * 4];

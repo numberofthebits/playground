@@ -4,7 +4,7 @@
 #include "core/os.h"
 #include "systems.h"
 
-#include <core/ecs.h>
+#include "core/ecs.h"
 #include <math.h>
 
 #define PROJECTILE_VELOCITY_SCALE 0.1f
@@ -27,7 +27,7 @@ void create_projectile(ProjectileEmitterComponent* component,
   dir.x *= PROJECTILE_VELOCITY_SCALE;
   dir.y *= PROJECTILE_VELOCITY_SCALE;
 
-  Entity e = registry_create_entity(registry);
+  Entity e = registry_entity_create(registry);
 
   TransformComponent tc = {0};
   tc.pos = origin;
@@ -63,13 +63,13 @@ void create_projectile(ProjectileEmitterComponent* component,
   projc.damage = component->damage;
   projc.flags = component->flags;
 
-  registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
-  registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-  registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-  registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-  registry_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
+  registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
+  registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+  registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+  registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
 
-  registry_add_entity(registry, e);
+  registry_entity_add(registry, e);
 }
 
 void projectile_emitter_system_update(Registry *registry,

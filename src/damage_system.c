@@ -1,7 +1,7 @@
 #include "damage_system.h"
 
-#include <core/log.h>
-#include <core/arena.h>
+#include "core/log.h"
+#include "core/arena.h"
 
 void damage_system_update(Registry *registry,
                           struct SystemBase *sys,
@@ -17,7 +17,7 @@ void damage_system_update(Registry *registry,
     HealthComponent* hc = PoolGetComponent(health_pool, HealthComponent, e.index);
     if (hc->health <= 0) {
       LOG_INFO("Removing Entity id %d index %d reached due to 0 health ", e.id, e.index);
-      registry_remove_entity(registry, e);
+      registry_entity_remove(registry, e);
     }
   }
 }

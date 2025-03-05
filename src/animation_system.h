@@ -1,7 +1,7 @@
 #ifndef ANIMATION_SYSTEM_H
 #define ANIMATION_SYSTEM_H
 
-#include <core/systembase.h>
+#include "core/systembase.h"
 
 struct AnimationSystem {
   struct SystemBase base;

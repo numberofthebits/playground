@@ -1,7 +1,7 @@
 #ifndef COLLISION_SYSTEM_H
 #define COLLISION_SYSTEM_H
 
-#include <core/systembase.h>
+#include "core/systembase.h"
 
 struct CollisionSystem {
   struct SystemBase base;

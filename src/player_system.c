@@ -5,9 +5,9 @@
 #include "input_system.h"
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/math.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/math.h"
+#include "core/systembase.h"
 
 #include <GLFW/glfw3.h>
 
@@ -36,7 +36,7 @@ struct PlayerSystem *player_system_create(struct Services *services) {
 
 static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
                                            Vec2f player_velocity) {
-  Entity e = registry_create_entity(registry);
+  Entity e = registry_entity_create(registry);
 
   TransformComponent tc = {0};
   tc.pos = player_pos;
@@ -66,12 +66,12 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   TimeT expires = time_from_secs(5);
   ttc.expires = time_add(ttc.created, expires);
 
-  registry_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
-  registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-  registry_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-  registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
+  registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+  registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+  registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
-  registry_add_entity(registry, e);
+  registry_entity_add(registry, e);
 }
 
 void player_system_update(Registry *registry, struct SystemBase *sys,

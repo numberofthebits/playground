@@ -1,12 +1,11 @@
 #include "assetstore.h"
 
-#include <core/log.h>
-#include <core/util.h>
+#include "log.h"
+#include "util.h"
 
 #include <stb_image.h>
 
 #include <memory.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

@@ -1,7 +1,7 @@
-#include <core/systembase.h>
+#include "systembase.h"
 
-#include <core/types.h>
-#include <core/arena.h>
+#include "types.h"
+#include "arena.h"
 
 #include <stdlib.h>
 

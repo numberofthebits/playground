@@ -27,7 +27,7 @@ typedef struct timespec TimeT;
 #error "What is TimeT on this platform?"
 #endif
 
-#include <core/log.h>
+#include "log.h"
 
 // Ask file system to list contents of 'directory'. Optionally filter by
 // wildcards

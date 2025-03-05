@@ -26,6 +26,7 @@ void hash_map_init(HashMap *map, unsigned int size);
 
 void hash_map_insert(HashMap *map, void *key, size_t key_len, void *value_ptr);
 
+// Abuse the pointer storage to store an actual value, avoiding a pointer chase
 void hash_map_insert_value(HashMap *map, void *key, size_t key_len,
                            void *value);
 

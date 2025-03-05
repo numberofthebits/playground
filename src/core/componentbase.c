@@ -1,6 +1,6 @@
-#include <core/componentbase.h>
+#include "componentbase.h"
 
-#include <core/log.h>
+#include "log.h"
 
 // TODO: This is dumb. Just read `Components::num_components` instead of jumping
 // around the code. But one thing at a time.

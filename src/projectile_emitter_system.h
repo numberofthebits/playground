@@ -3,8 +3,8 @@
 
 #include "components.h"
 
-#include <core/arena.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/systembase.h"
 
 typedef struct {
   struct SystemBase base;

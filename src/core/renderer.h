@@ -1,9 +1,8 @@
-#ifndef DEBUG_RENDERER_H
-#define DEBUG_RENDERER_H
+#ifndef RENDERER_H
+#define RENDERER_H
 
-#include <core/log.h>
-#include <core/math.h>
-#include <core/renderer.h>
+#include "log.h"
+#include "math.h"
 
 #include <glad/glad.h>
 

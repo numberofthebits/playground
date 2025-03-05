@@ -1,8 +1,8 @@
 #ifndef EVENTS_H
 #define EVENTS_H
 
-#include <core/math.h>
-#include <core/types.h>
+#include "core/math.h"
+#include "core/types.h"
 
 enum EventType {
   CollisionSystem_Detected,

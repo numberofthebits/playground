@@ -1,4 +1,4 @@
-#include <core/renderer.h>
+#include "renderer.h"
 
 void interleave_attributes(struct Interleave *interleave) {
   ptrdiff_t write_offset = 0;

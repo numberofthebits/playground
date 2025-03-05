@@ -4,10 +4,9 @@
 #include "events.h"
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/ecs.h>
-#include <core/os.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/ecs.h"
+#include "core/systembase.h"
 
 static void collision_update(Registry *reg, struct SystemBase *sys,
                              size_t frame_nr) {
@@ -55,8 +54,8 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
         e.event_data = &event;
 
         // Queue both entities for removal
-        registry_remove_entity(reg, self);
-        registry_remove_entity(reg, other);
+        registry_entity_remove(reg, self);
+        registry_entity_remove(reg, other);
 
         // And notify anybody interested in the event
         event_bus_emit(event_bus, &e);

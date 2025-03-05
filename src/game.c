@@ -15,14 +15,14 @@
 #include "systems.h"
 #include "time_system.h"
 
-#include <core/arena.h>
-#include <core/assetstore.h>
-#include <core/ecs.h>
-#include <core/log.h>
-#include <core/math.h>
-#include <core/os.h>
-#include <core/systembase.h>
-#include <core/util.h>
+#include "core/arena.h"
+#include "core/assetstore.h"
+#include "core/ecs.h"
+#include "core/log.h"
+#include "core/math.h"
+#include "core/os.h"
+#include "core/systembase.h"
+
 
 #include <GLFW/glfw3.h>
 // #include <glad/glad.h>
@@ -372,7 +372,7 @@ static void map_load(Map *map, Registry *registry, struct Assets *assets) {
 
   for (int row = 0; row < map->map_size.y; ++row) {
     for (int col = 0; col < map->map_size.x; ++col) {
-      Entity e = registry_create_entity(registry);
+      Entity e = registry_entity_create(registry);
 
       TransformComponent tc = {0};
       tc.scale.x = 1.f;
@@ -383,7 +383,7 @@ static void map_load(Map *map, Registry *registry, struct Assets *assets) {
       tc.pos.z = 0.0f;
       tc.rotation = 0.0f;
 
-      registry_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+      registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
       MapTile tile = map_get_tile(map, col, row);
 
@@ -401,9 +401,9 @@ static void map_load(Map *map, Registry *registry, struct Assets *assets) {
       rc.material_id = assets_make_id_str("jungle-mat");
       rc.pipeline_id = assets_make_id_str("tilemap");
 
-      registry_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+      registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
 
-      registry_add_entity(registry, e);
+      registry_entity_add(registry, e);
     }
   }
 }
@@ -416,7 +416,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
       assets_make_id(unit_shader_name, strlen(unit_shader_name));
 
   {
-    Entity truck = registry_create_entity(registry);
+    Entity truck = registry_entity_create(registry);
 
     TransformComponent tc = {0};
     tc.pos.x = 0.5;
@@ -452,30 +452,30 @@ static void load_units(Registry *registry, struct Assets *assets) {
     pec.projectile_duration = time_from_secs(3);
     pec.flags = PROJECTILE_FLAG_ENEMY;
 
-    registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
-    registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
-    registry_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
+    registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
+    registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
+    registry_entity_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
                            &pec);
 
-    registry_add_entity(registry, truck);
+    registry_entity_add(registry, truck);
 
     // Add a second truck for collision tests
-    truck = registry_create_entity(registry);
+    truck = registry_entity_create(registry);
     tc.pos.x = 10.f;
     pc.velocity.x = -0.01f;
-    registry_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
-    registry_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
-    registry_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
+    registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
+    registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
+    registry_entity_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
                            &pec);
-    registry_add_entity(registry, truck);
+    registry_entity_add(registry, truck);
   }
 
   {
-    Entity chopper = registry_create_entity(registry);
+    Entity chopper = registry_entity_create(registry);
 
     TransformComponent tc = {0};
     tc.pos.x = 0.0f;
@@ -518,17 +518,17 @@ static void load_units(Registry *registry, struct Assets *assets) {
     HealthComponent hc;
     hc.health = 100;
 
-    registry_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
-    registry_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
-    registry_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
-    registry_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
-    registry_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
-    registry_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
-    registry_add_component(registry, chopper, CAMERA_MOVEMENT_COMPONENT_BIT,
+    registry_entity_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
+    registry_entity_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
+    registry_entity_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
+    registry_entity_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
+    registry_entity_add_component(registry, chopper, CAMERA_MOVEMENT_COMPONENT_BIT,
                            &cmc);
-    registry_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
+    registry_entity_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
 
-    registry_add_entity(registry, chopper);
+    registry_entity_add(registry, chopper);
   }
 }
 
@@ -565,7 +565,7 @@ void game_setup(Game *game) {
                                         game->map.map_size);
 
   // Push our initial entities before entering main loop
-  registry_commit_entities(&game->registry);
+  registry_entity_commit_entities(&game->registry);
 }
 
 void game_update(Game *game) {

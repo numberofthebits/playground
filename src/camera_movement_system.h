@@ -6,12 +6,12 @@
 #include "events.h"
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/componentbase.h>
-#include <core/ecs.h>
-#include <core/log.h>
-#include <core/services.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/componentbase.h"
+#include "core/ecs.h"
+#include "core/log.h"
+#include "core/services.h"
+#include "core/systembase.h"
 
 typedef struct {
   struct SystemBase base;

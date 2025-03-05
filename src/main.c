@@ -1,7 +1,6 @@
 #include "game.h"
 
-#include <core/arena.h>
-#include <core/log.h>
+#include "core/log.h"
 
 #include <stdio.h>
 

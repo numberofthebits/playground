@@ -1,13 +1,13 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
-#include <core/math.h>
-#include <core/assetstore.h>
-#include <core/ecs.h>
-#include <core/renderer.h>
-#include <core/systembase.h>
-#include <core/types.h>
-#include <core/vec.h>
+#include "core/math.h"
+#include "core/assetstore.h"
+#include "core/ecs.h"
+#include "core/renderer.h"
+#include "core/systembase.h"
+#include "core/types.h"
+#include "core/vec.h"
 
 #include <glad/glad.h>
 

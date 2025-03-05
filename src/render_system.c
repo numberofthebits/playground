@@ -1,17 +1,17 @@
 #include "render_system.h"
 
-#include "camera_movement_system.h"
+#include "events.h"
 #include "components.h"
 
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/assetstore.h>
-#include <core/hashmap.h>
-#include <core/log.h>
-#include <core/math.h>
-#include <core/renderer.h>
-#include <core/vec.h>
+#include "core/arena.h"
+#include "core/assetstore.h"
+#include "core/hashmap.h"
+#include "core/log.h"
+#include "core/math.h"
+#include "core/renderer.h"
+#include "core/vec.h"
 
 #include <glad/glad.h>
 
@@ -748,7 +748,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
     Entity e = VEC_GET_T(&system->base.entities, Entity, i);
 
     // Skip anything that doesn't have at least a collision component
-    if (registry_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
+    if (registry_entity_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
       CollisionComponent *cc =
           PoolGetComponent(collision_pool, CollisionComponent, e.id);
       Vec3f pos[4] = {0};
@@ -774,7 +774,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
       // If it does have a transform component, we build that into the vertex
       // data and just issue the draw call for the hardcoded vertex data
       Mat4x4 model = identity();
-      if (registry_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
+      if (registry_entity_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
         TransformComponent *tc =
             PoolGetComponent(transform_pool, TransformComponent, e.id);
         translate(&model, &tc->pos);

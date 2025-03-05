@@ -1,10 +1,10 @@
 #ifndef SYSTEMBASE_H
 #define SYSTEMBASE_H
 
-#include <core/ecs.h>
-#include <core/services.h>
-#include <core/types.h>
-#include <core/vec.h>
+#include "ecs.h"
+#include "services.h"
+#include "types.h"
+#include "vec.h"
 
 struct SystemBase;
 typedef struct Registry_t Registry;

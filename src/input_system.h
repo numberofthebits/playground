@@ -1,8 +1,8 @@
 #ifndef INPUT_SYSTEM_H
 #define INPUT_SYSTEM_H
 
-#include <core/systembase.h>
-#include <core/util.h>
+#include "core/systembase.h"
+#include "core/util.h"
 
 #include <stdint.h>
 

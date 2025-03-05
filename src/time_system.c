@@ -3,10 +3,10 @@
 #include "components.h"
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/ecs.h>
-#include <core/os.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/ecs.h"
+#include "core/os.h"
+#include "core/systembase.h"
 
 static void time_update(Registry *reg, struct SystemBase *sys,
                         size_t frame_nr) {
@@ -23,7 +23,7 @@ static void time_update(Registry *reg, struct SystemBase *sys,
     if (time_expired(tc->expires)) {
       LOG_INFO("entity id %d %zu", e.id, e.index);
       LOG_INFO("What the fuck %llu %llu", tc->created, tc->expires);
-      registry_remove_entity(reg, e);
+      registry_entity_remove(reg, e);
     }
   }
 }

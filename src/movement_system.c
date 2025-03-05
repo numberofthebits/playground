@@ -3,9 +3,9 @@
 #include "components.h"
 #include "systems.h"
 
-#include <core/arena.h>
-#include <core/ecs.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/ecs.h"
+#include "core/systembase.h"
 
 static void movement_update(Registry *reg, struct SystemBase *system,
                             size_t frame_nr) {

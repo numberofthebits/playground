@@ -4,11 +4,11 @@
 #define ASSET_NAME_MAX_LEN 64
 #define ASSET_FILE_PATH_MAX 256
 
-#include <core/hashmap.h>
-#include <core/math.h>
-#include <core/types.h>
-#include <core/vec.h>
-#include <core/os.h>
+#include "hashmap.h"
+#include "math.h"
+#include "types.h"
+#include "vec.h"
+#include "os.h"
 
 #include <stdint.h>
 

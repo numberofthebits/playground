@@ -2,13 +2,9 @@
 
 #include "components.h"
 #include "systems.h"
-
-#include <core/arena.h>
-#include <core/assetstore.h>
-#include <core/componentbase.h>
-#include <core/math.h>
-#include <core/os.h>
-#include <core/systembase.h>
+#include "core/arena.h"
+#include "core/math.h"
+#include "core/systembase.h"
 
 static void animation_update(Registry *reg, struct SystemBase *system,
                              size_t frame_nr) {

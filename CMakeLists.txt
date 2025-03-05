@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.5)
 
 project(pikuma_2d_game_engine C)
 
+# This is apparently ignored for non make/ninja generators so
+# leave it on so i never have to specify this stupid flag again
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_executable(game)
 
 target_sources(game
@@ -66,6 +70,7 @@ target_sources(game
   $<$<PLATFORM_ID:Linux>:${PROJECT_SOURCE_DIR}/src/core/os_linux.c>
 )
 
+message("SRC DIR  ${PROJECT_SOURCE_DIR}/src/")
 # TODO: Fix for Windows
 target_include_directories(game
   PUBLIC

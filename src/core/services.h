@@ -1,9 +1,9 @@
 #ifndef SERVICES_H
 #define SERVICES_H
 
-#include <core/assetstore.h>
-#include <core/ecs.h>
-#include <core/eventbus.h>
+#include "assetstore.h"
+#include "ecs.h"
+#include "eventbus.h"
 
 struct Services {
   struct Assets *assets;
