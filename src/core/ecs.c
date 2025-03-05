@@ -324,3 +324,66 @@ void registry_update(Registry *reg, size_t frame_index) {
 int registry_entity_has_component(Registry *reg, Entity e, int component_bit) {
   return reg->entity_component_signatures[e.index] & component_bit;
 }
+
+void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
+  unsigned long long len = strlen(tag);
+  if (registry_entity_has_tag(reg, entity, tag)) {
+    LOG_WARN("Entity ID %d (index %d) already has tag %s", entity.id, entity.index, tag);
+    return;
+  }
+  
+  hash_map_insert_value(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity), tag);
+  hash_map_insert(&reg->entity_tags.entity_tag_map, tag, len, &entity);
+}
+
+void registry_entity_group(Registry *reg, Entity entity, char *group) {
+
+  if (registry_entity_in_group(reg, entity, group)) {
+    LOG_WARN("Entity ID %d (index %d) already in group %s", entity.id, entity.index, group);
+    return;
+  }
+  
+  unsigned long long len = strlen(group);
+  hash_map_insert_value(&reg->entity_groups.entity_group_map, &entity, sizeof(entity), group);
+
+  void* entity_vec_ptr;
+  // Check if we already have a group with this name
+  if (hash_map_get(&reg->entity_groups.group_entity_map, group, len, &entity_vec_ptr)) {
+    // If we do, get the vector and insert our value
+    
+    Vec* vec = (Vec*)entity_vec_ptr;
+    VEC_PUSH_T(vec, Entity, entity);
+  } else {
+    // Create a vector and stuff it in the map
+    Vec* v = malloc(sizeof(Vec));
+    vec_init(v);
+    VEC_PUSH_T(v, Entity, entity);
+    hash_map_insert(&reg->entity_groups.group_entity_map, group, len, v);
+  }
+}
+
+int registry_entity_has_tag(Registry *reg, Entity entity, char* tag) {
+  void* found_tag = 0;
+  if (!hash_map_get(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity), &found_tag)) {
+    return 0;
+  }
+
+  return strcmp((char*)found_tag, tag) == 0;
+}
+
+int registry_entity_in_group(Registry *reg, Entity entity, char* group) {
+  unsigned long long len = strlen(group);
+  void* ptr = 0;
+  if (!hash_map_get(&reg->entity_groups.group_entity_map, group, len, &ptr)) {
+    return 0;
+  }
+
+  Vec* v = (Vec*)ptr;
+  for (int i = 0; i < v->size; ++i) {
+    Entity e = VEC_GET_T(v, Entity, i);
+    if(e.id == entity.id) {
+      return 1;
+    }
+  }
+  return 0;
+}

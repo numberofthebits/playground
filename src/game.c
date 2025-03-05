@@ -529,6 +529,37 @@ static void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, chopper);
+
+    if(registry_entity_has_tag(registry,chopper, "player")) {
+      LOG_INFO("Player is tagged");
+    } else {
+      LOG_INFO("Player is not tagged");
+    }
+
+    registry_entity_tag(registry, chopper, "player");
+
+    if(registry_entity_has_tag(registry,chopper, "player")) {
+      LOG_INFO("Player is tagged");
+    } else {
+      LOG_INFO("Player is not tagged");
+    }
+
+    if (registry_entity_in_group(registry, chopper, "group")) {
+      LOG_INFO("in group");
+    } else {
+      LOG_INFO("NOT IN GROUP");
+    }
+
+    registry_entity_group(registry, chopper, "group");
+
+    if (registry_entity_in_group(registry, chopper, "group")) {
+      LOG_INFO("in group");
+    } else {
+      LOG_INFO("NOT IN GROUP");
+    }
+    
+    registry_entity_tag(registry, chopper, "player");
+    registry_entity_group(registry, chopper, "group");
   }
 }
 
@@ -590,6 +621,7 @@ void game_update(Game *game) {
 }
 
 void game_run(Game *game) {
+
   LOG_INFO("Main loop");
   game->state |= GAME_RUNNING;
 
