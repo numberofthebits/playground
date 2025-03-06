@@ -32,6 +32,8 @@ void hash_map_insert_value(HashMap *map, void *key, size_t key_len,
 
 int hash_map_get(HashMap *map, void *key, size_t key_len, void **value);
 
+void *hash_map_remove(HashMap *map, void *ptr, unsigned int len);
+
 void hash_map_print(HashMap *map);
 
 typedef void (*HashMapPrinterFunc)(void *key, size_t key_len, void *value);

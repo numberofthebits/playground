@@ -126,24 +126,25 @@ int hash_map_get(HashMap *map, void *key, size_t key_len, void **value) {
   return 0;
 }
 
-void hash_map_delete(HashMap *map, void *ptr, unsigned int len) {
+void *hash_map_remove(HashMap *map, void *ptr, unsigned int len) {
+  void *value = 0;
   unsigned int index = hash(ptr, len) % map->size;
   HashMapEntry *entry = map->entries[index];
   if (!entry) {
     LOG_WARN("Entry in hash map not found");
-    return;
+    return value;
   }
 
   HashMapEntry *iter = entry;
   HashMapEntry *previous = 0;
   for (;;) {
 
-    if (memcmp(ptr, iter->value, len) == 0) {
+    if (memcmp(ptr, iter->key, len) == 0) {
       if (previous) {
         // Unlink
         previous->next = iter->next;
       }
-      free(iter->value);
+      value = iter->value;
       free(iter);
       break;
     }
@@ -155,6 +156,8 @@ void hash_map_delete(HashMap *map, void *ptr, unsigned int len) {
     previous = iter;
     iter = iter->next;
   }
+
+  return value;
 }
 
 void hash_map_print(HashMap *map) {
