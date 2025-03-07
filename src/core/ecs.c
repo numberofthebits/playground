@@ -245,6 +245,8 @@ void registry_entity_commit_entities(Registry *reg) {
     Entity e = reg->to_remove[j];
     remove_entity_from_systems(reg, e);
     entity_id_pool_remove_entity(&reg->entity_id_pool, e);
+    registry_entity_untag(reg, e);
+    registry_entity_ungroup(reg, e);
   }
   reg->count_to_remove = 0;
 
