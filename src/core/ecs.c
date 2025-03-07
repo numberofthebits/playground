@@ -439,3 +439,10 @@ int registry_entity_in_group(Registry *reg, Entity entity, char *group) {
   }
   return 0;
 }
+
+Vec *registry_entity_group_get(Registry *reg, char *group) {
+  void *ptr = 0;
+  hash_map_get(&reg->entity_groups.group_entity_map, group, strlen(group),
+               &ptr);
+  return (Vec *)ptr;
+}

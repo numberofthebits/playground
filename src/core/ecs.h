@@ -99,6 +99,7 @@ void registry_entity_group(Registry *reg, Entity entity, char *group);
 void registry_entity_ungroup(Registry *reg, Entity entity);
 int registry_entity_has_tag(Registry *reg, Entity e, char *tag);
 int registry_entity_in_group(Registry *reg, Entity e, char *group);
+Vec *registry_entity_group_get(Registry *reg, char *group);
 
 int registry_entity_has_component(Registry *reg, Entity e, int component_bit);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity
