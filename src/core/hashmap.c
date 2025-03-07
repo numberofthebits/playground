@@ -129,18 +129,21 @@ int hash_map_get(HashMap *map, void *key, size_t key_len, void **value) {
 void *hash_map_remove(HashMap *map, void *ptr, unsigned int len) {
   void *value = 0;
   unsigned int index = hash(ptr, len) % map->size;
-  HashMapEntry *entry = map->entries[index];
-  if (!entry) {
+  HashMapEntry **head = &map->entries[index];
+  if (!head) {
     LOG_WARN("Entry in hash map not found");
     return value;
   }
 
-  HashMapEntry *iter = entry;
+  HashMapEntry *iter = *head;
   HashMapEntry *previous = 0;
   for (;;) {
-
     if (memcmp(ptr, iter->key, len) == 0) {
-      if (previous) {
+      if (!previous) {
+        // We removed the first head and need
+        // to update head
+        *head = iter->next;
+      } else {
         // Unlink
         previous->next = iter->next;
       }
