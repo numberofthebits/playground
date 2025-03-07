@@ -23,7 +23,6 @@
 #include "core/os.h"
 #include "core/systembase.h"
 
-
 #include <GLFW/glfw3.h>
 // #include <glad/glad.h>
 #include <stdio.h>
@@ -349,7 +348,8 @@ Game *game_create() {
                       (struct SystemBase *)game->camera_movement_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->projectile_emitter_system);
-  registry_add_system(&game->registry, (struct SystemBase*)game->damage_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->damage_system);
 
   return game;
 }
@@ -453,11 +453,13 @@ static void load_units(Registry *registry, struct Assets *assets) {
     pec.flags = PROJECTILE_FLAG_ENEMY;
 
     registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
+    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT,
+                                  &tc);
     registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
-    registry_entity_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
-                           &pec);
+    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT,
+                                  &cc);
+    registry_entity_add_component(registry, truck,
+                                  PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
 
     registry_entity_add(registry, truck);
 
@@ -466,11 +468,13 @@ static void load_units(Registry *registry, struct Assets *assets) {
     tc.pos.x = 10.f;
     pc.velocity.x = -0.01f;
     registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT, &tc);
+    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT,
+                                  &tc);
     registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT, &cc);
-    registry_entity_add_component(registry, truck, PROJECTILE_EMITTER_COMPONENT_BIT,
-                           &pec);
+    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT,
+                                  &cc);
+    registry_entity_add_component(registry, truck,
+                                  PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_add(registry, truck);
   }
 
@@ -519,18 +523,22 @@ static void load_units(Registry *registry, struct Assets *assets) {
     hc.health = 100;
 
     registry_entity_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT, &tc);
-    registry_entity_add_component(registry, chopper, PHYSICS_COMPONENT_BIT, &pc);
-    registry_entity_add_component(registry, chopper, ANIMATION_COMPONENT_BIT, &ac);
+    registry_entity_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT,
+                                  &tc);
+    registry_entity_add_component(registry, chopper, PHYSICS_COMPONENT_BIT,
+                                  &pc);
+    registry_entity_add_component(registry, chopper, ANIMATION_COMPONENT_BIT,
+                                  &ac);
     registry_entity_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
-    registry_entity_add_component(registry, chopper, COLLISION_COMPONENT_BIT, &cc);
-    registry_entity_add_component(registry, chopper, CAMERA_MOVEMENT_COMPONENT_BIT,
-                           &cmc);
+    registry_entity_add_component(registry, chopper, COLLISION_COMPONENT_BIT,
+                                  &cc);
+    registry_entity_add_component(registry, chopper,
+                                  CAMERA_MOVEMENT_COMPONENT_BIT, &cmc);
     registry_entity_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, chopper);
 
-    if(registry_entity_has_tag(registry,chopper, "player")) {
+    if (registry_entity_has_tag(registry, chopper, "player")) {
       LOG_INFO("Player is tagged");
     } else {
       LOG_INFO("Player is not tagged");
@@ -538,7 +546,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
     registry_entity_tag(registry, chopper, "player");
 
-    if(registry_entity_has_tag(registry,chopper, "player")) {
+    if (registry_entity_has_tag(registry, chopper, "player")) {
       LOG_INFO("Player is tagged");
     } else {
       LOG_INFO("Player is not tagged");
@@ -557,9 +565,24 @@ static void load_units(Registry *registry, struct Assets *assets) {
     } else {
       LOG_INFO("NOT IN GROUP");
     }
-    
+
     registry_entity_tag(registry, chopper, "player");
     registry_entity_group(registry, chopper, "group");
+
+    registry_entity_untag(registry, chopper);
+    registry_entity_ungroup(registry, chopper);
+
+    if (registry_entity_has_tag(registry, chopper, "player")) {
+      LOG_INFO("Player is tagged");
+    } else {
+      LOG_INFO("Player is not tagged");
+    }
+
+    if (registry_entity_in_group(registry, chopper, "group")) {
+      LOG_INFO("in group");
+    } else {
+      LOG_INFO("NOT IN GROUP");
+    }
   }
 }
 
@@ -608,8 +631,7 @@ void game_update(Game *game) {
 
   event_bus_subscribe(&game->event_bus,
                       (struct SystemBase *)game->damage_system,
-                      CollisionSystem_Detected,
-                      &damage_system_handle_event);
+                      CollisionSystem_Detected, &damage_system_handle_event);
 
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,

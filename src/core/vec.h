@@ -29,7 +29,7 @@ void chunk_print_hex(Chunk *c);
 
 Vec vec_create(void);
 
-void vec_init(Vec* v);
+void vec_init(Vec *v);
 
 void vec_reserve(Vec *v, int s);
 
@@ -91,8 +91,8 @@ void vec_destroy(Vec *v);
 
 #define VEC_ERASE_T(vec, type, index)                                          \
   int end = (vec)->size - 1;                                                   \
-  for (int i = index; i < end; ++i) {                                          \
-    VEC_SET_T(vec, type, i, VEC_GET_T(vec, type, i + 1));                      \
+  for (int i_ = index; i_ < end; ++i_) {                                       \
+    VEC_SET_T(vec, type, i_, VEC_GET_T(vec, type, i_ + 1));                    \
   }                                                                            \
   (vec)->size -= 1;
 

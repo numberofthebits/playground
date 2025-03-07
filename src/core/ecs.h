@@ -77,8 +77,6 @@ struct Pool *registry_get_pool(Registry *reg, int component_bit);
 
 #define PoolGetComponent(pool, type, index) ((type *)pool->data) + index;
 
-
-
 void registry_add_system(Registry *reg, struct SystemBase *s);
 
 struct SystemBase *registry_get_system(Registry *reg, int system_id);
@@ -96,9 +94,11 @@ void registry_entity_commit_entities(Registry *reg);
 void registry_entity_add_component(Registry *reg, Entity e, int component_bit,
                                    void *data);
 void registry_entity_tag(Registry *reg, Entity entity, char *tag);
+void registry_entity_untag(Registry *reg, Entity entity);
 void registry_entity_group(Registry *reg, Entity entity, char *group);
-int registry_entity_has_tag(Registry *reg, Entity e, char* tag);
-int registry_entity_in_group(Registry * reg, Entity e, char* group);
+void registry_entity_ungroup(Registry *reg, Entity entity);
+int registry_entity_has_tag(Registry *reg, Entity e, char *tag);
+int registry_entity_in_group(Registry *reg, Entity e, char *group);
 
 int registry_entity_has_component(Registry *reg, Entity e, int component_bit);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity

@@ -212,8 +212,7 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
   }
 }
 
-static void remove_entity_from_systems(Registry *registry,
-                                       Entity entity) {
+static void remove_entity_from_systems(Registry *registry, Entity entity) {
   size_t entity_index = entity.index;
   SignatureT entity_signature =
       registry->entity_component_signatures[entity_index];
@@ -328,60 +327,113 @@ int registry_entity_has_component(Registry *reg, Entity e, int component_bit) {
 void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
   unsigned long long len = strlen(tag);
   if (registry_entity_has_tag(reg, entity, tag)) {
-    LOG_WARN("Entity ID %d (index %d) already has tag %s", entity.id, entity.index, tag);
+    LOG_WARN("Entity ID %d (index %d) already has tag %s", entity.id,
+             entity.index, tag);
     return;
   }
-  
-  hash_map_insert_value(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity), tag);
-  hash_map_insert(&reg->entity_tags.entity_tag_map, tag, len, &entity);
+
+  hash_map_insert_value(&reg->entity_tags.entity_tag_map, &entity,
+                        sizeof(entity), tag);
+  // It's nasty, but whatever
+  Entity *e = malloc(sizeof(Entity));
+  *e = entity;
+  hash_map_insert(&reg->entity_tags.tag_entity_map, tag, len, e);
+}
+
+void registry_entity_untag(Registry *reg, Entity entity) {
+  // Don't free values that strings from data segment
+  char *value = hash_map_remove(&reg->entity_tags.entity_tag_map, &entity,
+                                sizeof(entity));
+  if (value) {
+    Entity *e = hash_map_remove(&reg->entity_tags.tag_entity_map, (char *)value,
+                                strlen(value));
+    if (e) {
+      free(e);
+    } else {
+      LOG_WARN("Tag entity mapping mismatch for entity id %d (index) %d",
+               entity.id, entity.index);
+    }
+  }
 }
 
 void registry_entity_group(Registry *reg, Entity entity, char *group) {
 
   if (registry_entity_in_group(reg, entity, group)) {
-    LOG_WARN("Entity ID %d (index %d) already in group %s", entity.id, entity.index, group);
+    LOG_WARN("Entity ID %d (index %d) already in group %s", entity.id,
+             entity.index, group);
     return;
   }
-  
-  unsigned long long len = strlen(group);
-  hash_map_insert_value(&reg->entity_groups.entity_group_map, &entity, sizeof(entity), group);
 
-  void* entity_vec_ptr;
+  unsigned long long len = strlen(group);
+  hash_map_insert_value(&reg->entity_groups.entity_group_map, &entity,
+                        sizeof(entity), group);
+
+  void *entity_vec_ptr;
   // Check if we already have a group with this name
-  if (hash_map_get(&reg->entity_groups.group_entity_map, group, len, &entity_vec_ptr)) {
+  if (hash_map_get(&reg->entity_groups.group_entity_map, group, len,
+                   &entity_vec_ptr)) {
     // If we do, get the vector and insert our value
-    
-    Vec* vec = (Vec*)entity_vec_ptr;
+
+    Vec *vec = (Vec *)entity_vec_ptr;
     VEC_PUSH_T(vec, Entity, entity);
   } else {
     // Create a vector and stuff it in the map
-    Vec* v = malloc(sizeof(Vec));
+    Vec *v = malloc(sizeof(Vec));
     vec_init(v);
     VEC_PUSH_T(v, Entity, entity);
     hash_map_insert(&reg->entity_groups.group_entity_map, group, len, v);
   }
 }
 
-int registry_entity_has_tag(Registry *reg, Entity entity, char* tag) {
-  void* found_tag = 0;
-  if (!hash_map_get(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity), &found_tag)) {
+void registry_entity_ungroup(Registry *reg, Entity entity) {
+  void *group = 0;
+  if (!hash_map_get(&reg->entity_groups.entity_group_map, &entity,
+                    sizeof(entity), &group)) {
+    LOG_WARN("Entity %d %d not found in entity group mapping", entity.id,
+             entity.index)
+    return;
+  }
+
+  hash_map_remove(&reg->entity_groups.entity_group_map, &entity,
+                  sizeof(entity));
+
+  void *vptr = 0;
+  if (hash_map_get(&reg->entity_groups.group_entity_map, group, strlen(group),
+                   &vptr)) {
+    Vec *v = vptr;
+    if (v) {
+      for (int i = 0; i < v->size; ++i) {
+        Entity *e = VEC_GET_T_PTR(v, Entity, i);
+        if (e->id == entity.id) {
+          VEC_ERASE_T(v, Entity, i);
+          break;
+        }
+      }
+    }
+  }
+}
+
+int registry_entity_has_tag(Registry *reg, Entity entity, char *tag) {
+  void *found_tag = 0;
+  if (!hash_map_get(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity),
+                    &found_tag)) {
     return 0;
   }
 
-  return strcmp((char*)found_tag, tag) == 0;
+  return strcmp((char *)found_tag, tag) == 0;
 }
 
-int registry_entity_in_group(Registry *reg, Entity entity, char* group) {
+int registry_entity_in_group(Registry *reg, Entity entity, char *group) {
   unsigned long long len = strlen(group);
-  void* ptr = 0;
+  void *ptr = 0;
   if (!hash_map_get(&reg->entity_groups.group_entity_map, group, len, &ptr)) {
     return 0;
   }
 
-  Vec* v = (Vec*)ptr;
+  Vec *v = (Vec *)ptr;
   for (int i = 0; i < v->size; ++i) {
     Entity e = VEC_GET_T(v, Entity, i);
-    if(e.id == entity.id) {
+    if (e.id == entity.id) {
       return 1;
     }
   }
