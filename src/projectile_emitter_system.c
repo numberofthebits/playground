@@ -19,10 +19,8 @@ static Vec2f random_direction() {
   return ret;
 }
 
-void create_projectile(ProjectileEmitterComponent* component,
-                       Registry *registry,
-                       Vec3f origin,
-                       TimeT spawn_time) {
+void create_projectile(ProjectileEmitterComponent *component,
+                       Registry *registry, Vec3f origin, TimeT spawn_time) {
   Vec2f dir = random_direction();
   dir.x *= PROJECTILE_VELOCITY_SCALE;
   dir.y *= PROJECTILE_VELOCITY_SCALE;
@@ -70,6 +68,8 @@ void create_projectile(ProjectileEmitterComponent* component,
   registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
 
   registry_entity_add(registry, e);
+
+  registry_entity_group(registry, e, "enemy_projectiles");
 }
 
 void projectile_emitter_system_update(Registry *registry,
@@ -85,7 +85,7 @@ void projectile_emitter_system_update(Registry *registry,
     Entity e = VEC_GET_T(&sys->entities, Entity, i);
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, e.id);
-   ProjectileEmitterComponent *pec =
+    ProjectileEmitterComponent *pec =
         PoolGetComponent(projectile_pool, ProjectileEmitterComponent, e.id);
 
     TimeT elapsed = time_elapsed_now(pec->last_emitted);
@@ -93,7 +93,7 @@ void projectile_emitter_system_update(Registry *registry,
     if (elapsed.QuadPart >= pec->emission_frequency.QuadPart) {
       pec->last_emitted = now;
       (void)tc;
-      create_projectile(pec, registry,  tc->pos, now);
+      create_projectile(pec, registry, tc->pos, now);
     }
   }
 }

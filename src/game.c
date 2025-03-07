@@ -404,6 +404,8 @@ static void map_load(Map *map, Registry *registry, struct Assets *assets) {
       registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
 
       registry_entity_add(registry, e);
+
+      registry_entity_group(registry, e, "tiles");
     }
   }
 }
@@ -417,6 +419,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
   {
     Entity truck = registry_entity_create(registry);
+    registry_entity_group(registry, truck, "enemies");
 
     TransformComponent tc = {0};
     tc.pos.x = 0.5;
@@ -465,6 +468,8 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
     // Add a second truck for collision tests
     truck = registry_entity_create(registry);
+    registry_entity_group(registry, truck, "enemies");
+
     tc.pos.x = 10.f;
     pc.velocity.x = -0.01f;
     registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
@@ -538,51 +543,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
 
     registry_entity_add(registry, chopper);
 
-    if (registry_entity_has_tag(registry, chopper, "player")) {
-      LOG_INFO("Player is tagged");
-    } else {
-      LOG_INFO("Player is not tagged");
-    }
-
     registry_entity_tag(registry, chopper, "player");
-
-    if (registry_entity_has_tag(registry, chopper, "player")) {
-      LOG_INFO("Player is tagged");
-    } else {
-      LOG_INFO("Player is not tagged");
-    }
-
-    if (registry_entity_in_group(registry, chopper, "group")) {
-      LOG_INFO("in group");
-    } else {
-      LOG_INFO("NOT IN GROUP");
-    }
-
-    registry_entity_group(registry, chopper, "group");
-
-    if (registry_entity_in_group(registry, chopper, "group")) {
-      LOG_INFO("in group");
-    } else {
-      LOG_INFO("NOT IN GROUP");
-    }
-
-    registry_entity_tag(registry, chopper, "player");
-    registry_entity_group(registry, chopper, "group");
-
-    registry_entity_untag(registry, chopper);
-    registry_entity_ungroup(registry, chopper);
-
-    if (registry_entity_has_tag(registry, chopper, "player")) {
-      LOG_INFO("Player is tagged");
-    } else {
-      LOG_INFO("Player is not tagged");
-    }
-
-    if (registry_entity_in_group(registry, chopper, "group")) {
-      LOG_INFO("in group");
-    } else {
-      LOG_INFO("NOT IN GROUP");
-    }
   }
 }
 
