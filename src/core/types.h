@@ -6,6 +6,9 @@
 
 #define ENTITY_INVALID_INDEX -1
 
+#define TRUE 1
+#define FALSE 0
+
 typedef struct {
   int width;
   int height;
@@ -16,6 +19,7 @@ typedef uint32_t AssetId;
 typedef uint32_t SignatureT;
 typedef int EntityId;
 typedef size_t EntityIndex;
+typedef uint64_t EntityFlags;
 
 struct Entity_t {
   // The index of the entity data

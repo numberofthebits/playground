@@ -1,7 +1,7 @@
 #include "systembase.h"
 
-#include "types.h"
 #include "arena.h"
+#include "types.h"
 
 #include <stdlib.h>
 
@@ -47,8 +47,6 @@ void system_remove_entity(struct SystemBase *system, Entity e) {
     return;
   }
 
-  LOG_INFO("Remove entity ID %d with index %d from system %s", e.id, e.index,
-           system->name);
+  LOG_INFO("%s remove entity ID %d with index %d", system->name, e.id, e.index);
   VEC_ERASE_T(&system->entities, Entity, index);
 }
-

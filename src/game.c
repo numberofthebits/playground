@@ -146,7 +146,7 @@ void map_print(Map *map) {
   }
 }
 
-static int load_tile_map_layout(const char *file, Map *map) {
+int load_tile_map_layout(const char *file, Map *map) {
 
   FILE *fp = fopen(file, "rb");
   if (!fp) {
@@ -200,6 +200,7 @@ static int load_tile_map_layout(const char *file, Map *map) {
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action,
                          int mods) {
+  LOG_INFO("key %d scancode %d action %d mods %d", key, scancode, action, mods);
   (void)scancode;
   (void)mods;
   Game *game = glfwGetWindowUserPointer(window);
@@ -332,29 +333,29 @@ Game *game_create() {
       &game->services, window_width, window_height, mode->width, mode->height);
   game->damage_system = damage_system_create(&game->services);
 
-  registry_add_system(&game->registry,
-                      (struct SystemBase *)game->movement_system);
-  registry_add_system(&game->registry,
-                      (struct SystemBase *)game->animation_system);
-  registry_add_system(&game->registry,
-                      (struct SystemBase *)game->collision_system);
   registry_add_system(&game->registry, (struct SystemBase *)game->input_system);
   registry_add_system(&game->registry, (struct SystemBase *)game->time_system);
   registry_add_system(&game->registry,
-                      (struct SystemBase *)game->render_system);
-  registry_add_system(&game->registry,
                       (struct SystemBase *)game->player_system);
   registry_add_system(&game->registry,
-                      (struct SystemBase *)game->camera_movement_system);
+                      (struct SystemBase *)game->movement_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->collision_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->animation_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->projectile_emitter_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->damage_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->camera_movement_system);
+  registry_add_system(&game->registry,
+                      (struct SystemBase *)game->render_system);
 
   return game;
 }
 
-static void map_init(Map *map) {
+void map_init(Map *map) {
   // Hard code this for now, since we haven't defined a meta data
   // structure for maps yet
   map->map_size.x = 25;
@@ -365,7 +366,7 @@ static void map_init(Map *map) {
                           map->map_size.x * map->map_size.y, MapTile);
 }
 
-static void map_load(Map *map, Registry *registry, struct Assets *assets) {
+void map_load(Map *map, Registry *registry, struct Assets *assets) {
   (void)assets;
   const float atlas_cols_f = (float)map->atlas_size.x;
   const float atlas_rows_f = (float)map->atlas_size.y;
@@ -410,13 +411,13 @@ static void map_load(Map *map, Registry *registry, struct Assets *assets) {
   }
 }
 
-static void load_units(Registry *registry, struct Assets *assets) {
+void load_units(Registry *registry, struct Assets *assets) {
   (void)assets;
 
   const char *unit_shader_name = "tilemap";
   AssetId unit_shader_id =
       assets_make_id(unit_shader_name, strlen(unit_shader_name));
-
+#if 0
   {
     Entity truck = registry_entity_create(registry);
     registry_entity_group(registry, truck, "enemies");
@@ -439,7 +440,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
     rc.pipeline_id = unit_shader_id;
 
     PhysicsComponent pc;
-    pc.velocity.x = 0.01f;
+    pc.velocity.x = 0.0001f;
     pc.velocity.y = 0.f;
 
     CollisionComponent cc;
@@ -482,7 +483,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
                                   PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_add(registry, truck);
   }
-
+#endif
   {
     Entity chopper = registry_entity_create(registry);
 
@@ -548,6 +549,7 @@ static void load_units(Registry *registry, struct Assets *assets) {
 }
 
 void game_setup(Game *game) {
+  (void)game;
   LOG_INFO("Setup");
 
   map_init(&game->map);
@@ -644,6 +646,7 @@ void game_frame_buffer_size_changed(Game *game, int width, int height) {
       (RenderSystem *)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
   if (!render_system) {
     LOG_ERROR("Failed to resize frame buffer: System not found");
+    return;
   }
 
   render_system_frame_buffer_size_changed(render_system, width, height);

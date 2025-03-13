@@ -86,36 +86,34 @@ static size_t entity_id_pool_reserve_index(struct EntityIdPool *entity_ids) {
   return index;
 }
 
-static void entity_id_pool_remove_entity(struct EntityIdPool *entity_ids,
+static void entity_id_pool_remove_entity(struct EntityIdPool *entity_id_pool,
                                          Entity entity) {
 
   int to_remove = -1;
 
-  for (size_t i = 0; i < entity_ids->used; ++i) {
-    if (entity.index == entity_ids->pool[i]) {
+  for (size_t i = 0; i < entity_id_pool->used; ++i) {
+    if (entity.index == entity_id_pool->pool[i]) {
       to_remove = (int)i;
       break;
     }
   }
 
   if (to_remove == -1) {
-    LOG_WARN("Failed to remove entity with id %d @ index %zu. Not found",
+    print_entity_id_pool(entity_id_pool);
+    LOG_EXIT("Failed to remove entity with id %d @ index %zu. Not found",
              entity.id, entity.index);
-    for (size_t i = 0; i < entity_ids->used; ++i) {
-      print_entity_id_pool(entity_ids);
-    }
     return;
   }
 
   LOG_INFO("Remove entity ID %d index %zu from ID pool index %d . In use %zu",
-           entity.id, entity.index, to_remove, entity_ids->used);
+           entity.id, entity.index, to_remove, entity_id_pool->used);
 
-  size_t tmp = entity_ids->pool[to_remove];
-  entity_ids->used--;
-  entity_ids->pool[to_remove] = entity_ids->pool[entity_ids->used];
-  entity_ids->pool[entity_ids->used] = tmp;
+  size_t tmp = entity_id_pool->pool[to_remove];
+  entity_id_pool->used--;
+  entity_id_pool->pool[to_remove] = entity_id_pool->pool[entity_id_pool->used];
+  entity_id_pool->pool[entity_id_pool->used] = tmp;
 
-  //    print_entity_id_pool(entity_ids);
+  //    print_entity_id_pool(entity_id_pool);
 }
 
 static Entity create_entity(struct EntityIdPool *entity_id_pool) {
@@ -170,6 +168,8 @@ void registry_init(Registry *reg, size_t max_entity_count,
 
   reg->entity_component_signatures =
       ArenaAlloc(&global_static_allocator, max_entity_count, SignatureT);
+  reg->entity_flags =
+      ArenaAlloc(&global_static_allocator, max_entity_count, EntityFlags);
 
   reg->num_systems = 0;
 
@@ -187,6 +187,7 @@ Entity registry_entity_create(Registry *reg) {
   Entity entity = create_entity(&reg->entity_id_pool);
 
   reg->entity_component_signatures[entity.index] = 0;
+  reg->entity_flags[entity.index] = 0;
 
   return entity;
 }
@@ -344,6 +345,11 @@ void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
 
 void registry_entity_untag(Registry *reg, Entity entity) {
   // Don't free values that strings from data segment
+  void *val = 0;
+  if (!hash_map_get(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity),
+                    &val)) {
+    return;
+  }
   char *value = hash_map_remove(&reg->entity_tags.entity_tag_map, &entity,
                                 sizeof(entity));
   if (value) {
@@ -447,4 +453,17 @@ Vec *registry_entity_group_get(Registry *reg, char *group) {
   hash_map_get(&reg->entity_groups.group_entity_map, group, strlen(group),
                &ptr);
   return (Vec *)ptr;
+}
+
+void registry_entity_set_flags(Registry *reg, Entity entity, EntityFlags flag) {
+  reg->entity_flags[entity.index] |= flag;
+}
+
+void registry_entity_unset_flags(Registry *reg, Entity entity,
+                                 EntityFlags flag) {
+  reg->entity_flags[entity.index] &= ~flag;
+}
+
+EntityFlags registry_entity_get_flags(Registry *reg, Entity entity) {
+  return reg->entity_flags[entity.index];
 }

@@ -19,7 +19,7 @@ typedef struct {
 // be used for anyone for anything except educational purposes,
 // perhaps as an example for why not to try and write your own
 // hash functions.
-unsigned int hash(const void *ptr, size_t len);
+size_t hash(const void *ptr, size_t len);
 
 // Size is unique entries size
 void hash_map_init(HashMap *map, unsigned int size);

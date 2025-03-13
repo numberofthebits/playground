@@ -60,6 +60,9 @@ struct Registry_t {
   // Array must must be 'num_entities' size always
   SignatureT *entity_component_signatures;
 
+  // Array must be 'num_entities' size always
+  EntityFlags *entity_flags;
+
   struct Components components;
 
   EntityTags entity_tags;
@@ -84,22 +87,38 @@ struct SystemBase *registry_get_system(Registry *reg, int system_id);
 // Process 'to_add' and 'to_remove' lists
 void registry_update(Registry *reg, size_t frame_index);
 
-/*
+/*******************
   Entity API
-*/
+********************/
 Entity registry_entity_create(Registry *reg);
 void registry_entity_add(Registry *reg, Entity entity);
 void registry_entity_remove(Registry *reg, Entity e);
 void registry_entity_commit_entities(Registry *reg);
 void registry_entity_add_component(Registry *reg, Entity e, int component_bit,
                                    void *data);
+
+/*
+ Entity tag
+ */
 void registry_entity_tag(Registry *reg, Entity entity, char *tag);
 void registry_entity_untag(Registry *reg, Entity entity);
+int registry_entity_has_tag(Registry *reg, Entity e, char *tag);
+
+/*
+ Entity group
+ */
+int registry_entity_in_group(Registry *reg, Entity e, char *group);
 void registry_entity_group(Registry *reg, Entity entity, char *group);
 void registry_entity_ungroup(Registry *reg, Entity entity);
-int registry_entity_has_tag(Registry *reg, Entity e, char *tag);
-int registry_entity_in_group(Registry *reg, Entity e, char *group);
 Vec *registry_entity_group_get(Registry *reg, char *group);
+
+/*
+ Entity flag
+ */
+void registry_entity_set_flags(Registry *reg, Entity entity, EntityFlags flag);
+void registry_entity_unset_flags(Registry *reg, Entity entity,
+                                 EntityFlags flag);
+EntityFlags registry_entity_get_flags(Registry *reg, Entity e);
 
 int registry_entity_has_component(Registry *reg, Entity e, int component_bit);
 // TODO: add registry_remove_component(...). Remember to clear bit from entity

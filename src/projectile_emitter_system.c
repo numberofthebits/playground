@@ -69,7 +69,7 @@ void create_projectile(ProjectileEmitterComponent *component,
 
   registry_entity_add(registry, e);
 
-  registry_entity_group(registry, e, "enemy_projectiles");
+  registry_entity_group(registry, e, "projectile");
 }
 
 void projectile_emitter_system_update(Registry *registry,
@@ -90,6 +90,7 @@ void projectile_emitter_system_update(Registry *registry,
 
     TimeT elapsed = time_elapsed_now(pec->last_emitted);
 
+    // TODO: Win API specific. Needs to use os time abstraction
     if (elapsed.QuadPart >= pec->emission_frequency.QuadPart) {
       pec->last_emitted = now;
       (void)tc;

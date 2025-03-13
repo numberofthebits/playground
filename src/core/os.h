@@ -50,11 +50,11 @@ int time_expired(TimeT expires_at);
 
 TimeT time_add(TimeT a, TimeT b);
 
-uint64_t time_to_nanosecs(TimeT timepoint);
-
 TimeT time_from_secs(int seconds);
 
+uint64_t time_to_millisecs(TimeT timepoint);
 uint64_t time_to_microsecs(TimeT timepoint);
+uint64_t time_to_nanosecs(TimeT timepoint);
 
 #ifdef ENABLE_DEBUG_TIMERS
 #define BeginScopedTimer(name)                                                 \

@@ -1,7 +1,7 @@
 #include "render_system.h"
 
-#include "events.h"
 #include "components.h"
+#include "events.h"
 
 #include "systems.h"
 
@@ -750,7 +750,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
     // Skip anything that doesn't have at least a collision component
     if (registry_entity_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
       CollisionComponent *cc =
-          PoolGetComponent(collision_pool, CollisionComponent, e.id);
+          PoolGetComponent(collision_pool, CollisionComponent, e.index);
       Vec3f pos[4] = {0};
       float width = cc->aabr.width;
       float height = cc->aabr.height;
@@ -776,7 +776,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
       Mat4x4 model = identity();
       if (registry_entity_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
         TransformComponent *tc =
-            PoolGetComponent(transform_pool, TransformComponent, e.id);
+            PoolGetComponent(transform_pool, TransformComponent, e.index);
         translate(&model, &tc->pos);
       }
 

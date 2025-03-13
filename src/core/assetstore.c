@@ -125,7 +125,7 @@ static int extension_to_shader_type(const char *extension) {
     return AssetShaderFragment;
   }
 
-  LOG_INFO("Unhandled shader extension '%s'", extension);
+  LOG_EXIT("Unhandled shader extension '%s'", extension);
   return AssetShaderUnknown;
 }
 

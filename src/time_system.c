@@ -21,8 +21,6 @@ static void time_update(Registry *reg, struct SystemBase *sys,
     TimeComponent *tc = PoolGetComponent(time_pool, TimeComponent, e.index);
 
     if (time_expired(tc->expires)) {
-      LOG_INFO("entity id %d %zu", e.id, e.index);
-      LOG_INFO("What the fuck %llu %llu", tc->created, tc->expires);
       registry_entity_remove(reg, e);
     }
   }

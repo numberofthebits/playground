@@ -19,28 +19,39 @@ struct InputSystem *input_system_create(struct Services *services) {
   system_base_init((struct SystemBase *)system, INPUT_SYSTEM_BIT,
                    &input_system_update, 0, services, "InputSystem");
 
-  input_system_reset(system);
+  memset(system->keys, 0x0, sizeof(system->keys));
+  memset(system->events, 0x0, sizeof(system->events));
+
+  system->keys[GLFW_KEY_SPACE].flags |= KeyFlag_IsOneShot;
 
   return system;
 }
 
-void input_system_reset(struct InputSystem *system) {
-  memset(system->keys, 0x0, sizeof(system->keys));
+static inline void input_system_reset(struct InputSystem *system) {
   memset(system->events, 0x0, sizeof(system->events));
+}
+
+static inline void clear_key_pressed_flag(struct KeyState *state) {
+  state->flags &= ~KeyFlag_Pressed;
 }
 
 void input_system_handle_keyboard_input(struct InputSystem *system, int key,
                                         int action) {
+  // TODO: is there still some jank in this function, or
+  // the update function or between the two? When pressing
+  // a button, the duration seems longer than it should be
   struct KeyState *state = &system->keys[key];
-  TimeT now = time_now();
 
-  if (action == 0) {
-    state->flags = KeyFlag_Released;
-    time_append(&state->elapsed, time_elapsed(state->time_start, now));
-    memset(&state->time_start, 0x0, sizeof(TimeT));
-  } else {
-    state->flags = KeyFlag_Pressed;
-    state->time_start = now;
+  switch (action) {
+  case 0:
+    clear_key_pressed_flag(state);
+    break;
+  case 1:
+    state->flags |= KeyFlag_Pressed;
+    LOG_INFO("Pressed %d", key);
+    break;
+  default:
+    LOG_WARN("Unhandled key action");
   }
 }
 
@@ -54,22 +65,27 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
   size_t num_events = 0;
 
   for (int i = 0; i < INPUT_SYSTEM_MAX_KEY_STATES; ++i) {
-    if (time_to_nanosecs(system->keys[i].elapsed) > 0) {
+    if (system->keys[i].flags & KeyFlag_Pressed) {
       struct KeyStateEventData *data = &system->events[num_events++];
-      data->elapsed = system->keys[i].elapsed;
       data->key = i;
+
+      if (system->keys[i].flags & KeyFlag_IsOneShot) {
+        clear_key_pressed_flag(&system->keys[i]);
+      }
     }
   }
 
-  struct AggregatedKeyboardEvents aggregated;
-  aggregated.num_events = num_events;
-  aggregated.events = &system->events[0];
+  if (num_events) {
+    struct AggregatedKeyboardEvents aggregated;
+    aggregated.num_events = num_events;
+    aggregated.events = &system->events[0];
 
-  struct Event events;
-  events.id = KeyboardInput_Update;
-  events.event_data = &aggregated;
+    struct Event events;
+    events.id = KeyboardInput_Update;
+    events.event_data = &aggregated;
 
-  event_bus_emit(bus, &events);
+    event_bus_emit(bus, &events);
+  }
 
   input_system_reset(system);
 }

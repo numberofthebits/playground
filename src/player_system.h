@@ -6,7 +6,8 @@
 #include "core/log.h"
 #include "core/systembase.h"
 
-#define PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR (1.f / 100000000000000.f)
+// This is an arbirary number. Something that feels right
+#define PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR (1.f / 100.f)
 #define PLAYER_SYSTEM_TIME_TO_ROTATION_FACTOR (1.f / 1000000000000.f)
 #define PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX 0
 #define PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX 1

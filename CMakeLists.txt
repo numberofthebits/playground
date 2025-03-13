@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(pikuma_2d_game_engine C)
 
 # This is apparently ignored for non make/ninja generators so
-# leave it on so i never have to specify this stupid flag again
+# leave it on so i never have to specify this manually again
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(game)
@@ -70,18 +70,15 @@ target_sources(game
   $<$<PLATFORM_ID:Linux>:${PROJECT_SOURCE_DIR}/src/core/os_linux.c>
 )
 
-message("SRC DIR  ${PROJECT_SOURCE_DIR}/src/")
-# TODO: Fix for Windows
 target_include_directories(game
   PUBLIC
-  $<$<PLATFORM_ID:Windows>:${PROJECT_SOURCE_DIR}/libs/GLFW/include>
   ${PROJECT_SOURCE_DIR}/libs/glad/include
   ${PROJECT_SOURCE_DIR}/libs/stb
   ${PROJECT_SOURCE_DIR}/src/
-  $<$<OR:$<BOOL:CMAKE_C_COMPILER_ID:GNU>,$<BOOL:CMAKE_C_COMPILER_ID:Clang>>:/usr/include/>
+  $<$<PLATFORM_ID:Windows>:${PROJECT_SOURCE_DIR}/libs/GLFW/include>
+  $<$<PLATFORM_ID:Linux>:/usr/include/>
 )
 
-# TODO: Fix for Windows
 target_link_libraries(game
   PRIVATE
   $<$<PLATFORM_ID:Linux>:m;c;rt;glfw>
@@ -100,7 +97,9 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     -Wextra
     -Werror
   )
+endif()
 
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang") 
   if (ENABLE_SANITIZERS)
      message(STATUS "Enabling sanitizers")
      target_compile_options(game PRIVATE -fsanitize=address,undefined,leak)
@@ -109,20 +108,17 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
      message(STATUS "No sanitizers enabled")
    endif()
 
-   # Because / and - are two completely different things ... :) 
+   # Clang on windows uses -D, not /D
    target_compile_options(game
      PRIVATE
      $<$<PLATFORM_ID:Windows>:-D_CRT_SECURE_NO_WARNINGS>
-     $<$<PLATFORM_ID:Windows>:-DENABLE_DEBUG_TIMERS>
    )
-
 endif()
   
 if ( MSVC )
   target_compile_options(game
     PRIVATE
      /D_CRT_SECURE_NO_WARNINGS
-     /DENABLE_DEBUG_TIMERS
      /MP16
      /arch:AVX
      /Zi

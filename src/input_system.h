@@ -8,16 +8,19 @@
 
 #define INPUT_SYSTEM_MAX_KEY_STATES 512
 
-enum KeyFlag { KeyFlag_Released = 0x1, KeyFlag_Pressed = 0x2 };
+typedef enum {
+  KeyFlag_Released = 0x0,
+  KeyFlag_Pressed = 0x1,
+  // If IsToggle, pressed state is reset to
+  // released immediately
+  KeyFlag_IsOneShot = 0x2
+} KeyFlags;
 
 struct KeyState {
-  TimeT time_start;
-  TimeT elapsed;
-  int flags;
+  KeyFlags flags;
 };
 
 struct KeyStateEventData {
-  TimeT elapsed;
   int key;
 };
 

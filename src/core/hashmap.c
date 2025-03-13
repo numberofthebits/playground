@@ -3,25 +3,26 @@
 #include "log.h"
 
 #include <memory.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-unsigned int hash(const void *ptr, size_t len) {
+size_t hash(const void *ptr, size_t len) {
   const char *data = ptr;
-  const size_t block_size = sizeof(int);
-  const size_t blocks_end = len - len % sizeof(unsigned int);
-  unsigned int hash = (unsigned int)len;
+  const size_t block_size = sizeof(uint32_t);
+  const size_t blocks_end = len - len % sizeof(uint32_t);
+  size_t hash = len;
   size_t i = 0;
   for (; i < blocks_end; i += block_size) {
-    unsigned int tmp = ((data[i] << 24) | (data[i + 1] << 16) |
-                        (data[i + 2] << 8) | data[i + 3]);
+    size_t tmp = ((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) |
+                  data[i + 3]);
 
     hash += tmp;
     tmp = ((data[i]) | (data[i + 1]) | (data[i + 2]) | data[i + 3]);
     hash ^= tmp;
   }
 
-  const size_t remainder = len % sizeof(unsigned);
+  const size_t remainder = len % sizeof(size_t);
 
   switch (remainder) {
   case 0:

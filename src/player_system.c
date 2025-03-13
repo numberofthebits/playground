@@ -1,6 +1,7 @@
 #include "player_system.h"
 
 #include "components.h"
+#include "entity_flags.h"
 #include "events.h"
 #include "input_system.h"
 #include "systems.h"
@@ -13,7 +14,7 @@
 
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
-static Vec2f BULLET_MIN_VELOCITY = {0.001f, 0.001f};
+static Vec2f BULLET_VELOCITY = {0.01f, 0.01f};
 
 void player_system_reset(struct PlayerSystem *system) {
   memset(system->movement, 0x0, sizeof(system->movement));
@@ -34,9 +35,11 @@ struct PlayerSystem *player_system_create(struct Services *services) {
   return system;
 }
 
-static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
-                                           Vec2f player_velocity) {
+static void player_system_spawn_projectile(Registry *registry,
+                                           Vec3f player_pos) {
   Entity e = registry_entity_create(registry);
+
+  registry_entity_group(registry, e, "projectile");
 
   TransformComponent tc = {0};
   tc.pos = player_pos;
@@ -46,10 +49,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};
-  pc.velocity.x =
-      Max(player_velocity.x, player_velocity.x + BULLET_MIN_VELOCITY.x);
-  pc.velocity.y =
-      Max(player_velocity.y, player_velocity.y + BULLET_MIN_VELOCITY.y);
+  pc.velocity = BULLET_VELOCITY;
 
   RenderComponent rc;
   rc.render_layer = 1;
@@ -66,12 +66,19 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   TimeT expires = time_from_secs(5);
   ttc.expires = time_add(ttc.created, expires);
 
+  CollisionComponent cc;
+  cc.aabr.pos.x = 0.f;
+  cc.aabr.pos.y = 0.f;
+  cc.aabr.width = 1.f * tc.scale.x;
+  cc.aabr.height = 1.f * tc.scale.y;
+
   registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
   registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
   registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
   registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-
+  registry_entity_add_component(registry, e, COLLISION_COMPONENT_BIT, &cc);
   registry_entity_add(registry, e);
+  registry_entity_set_flags(registry, e, ENTITY_PROJECTILE_FRIENDLY);
 }
 
 void player_system_update(Registry *registry, struct SystemBase *sys,
@@ -95,7 +102,7 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 
     // NOTE: It would probably be fine to spawn 1 bullet per frame
     for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
-      player_system_spawn_projectile(registry, tc->pos, pc->velocity);
+      player_system_spawn_projectile(registry, tc->pos);
     }
 
     pc->velocity.x +=
@@ -112,29 +119,27 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 static void player_system_handle_keyboard_update(
     struct PlayerSystem *sys, struct AggregatedKeyboardEvents *event_data) {
   for (size_t i = 0; i < event_data->num_events; ++i) {
+
     struct KeyStateEventData key_state = event_data->events[i];
     switch (key_state.key) {
     case GLFW_KEY_SPACE:
+      LOG_INFO("SPACE");
       sys->bullets_spawned++;
       break;
     case GLFW_KEY_UP:
       sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX] +=
-          (float)time_to_nanosecs(key_state.elapsed) *
           PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
       break;
     case GLFW_KEY_DOWN:
       sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX] -=
-          (float)time_to_nanosecs(key_state.elapsed) *
           PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
       break;
     case GLFW_KEY_LEFT:
       sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] -=
-          (float)time_to_nanosecs(key_state.elapsed) *
           PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
       break;
     case GLFW_KEY_RIGHT:
       sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] +=
-          (float)time_to_nanosecs(key_state.elapsed) *
           PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
       break;
     case GLFW_KEY_A:
@@ -155,6 +160,7 @@ static void player_system_handle_keyboard_update(
 }
 
 void player_system_handle_event(struct SystemBase *base, struct Event e) {
+  LOG_INFO("Player system handle event");
   struct PlayerSystem *system = (struct PlayerSystem *)base;
   switch (e.id) {
   case KeyboardInput_Update:

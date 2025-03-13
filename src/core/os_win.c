@@ -1,8 +1,7 @@
 #include "os.h"
 
-#define NOMIXMAX
 #define WIN32_LEAN_AND_MEAN
-#define _WIN32_LEAN_AND_MEAN
+#define TICK_TO_MILLISECS 1000
 #define TICK_TO_MICROSECS 1000000
 #define TICK_TO_NANOSECS 1000000000
 #define MICROSECS_TO_TICKS 1 / 1000000
@@ -127,6 +126,11 @@ TimeT time_from_secs(int seconds) {
   result.QuadPart = seconds * performance_counter_frequency.QuadPart;
 
   return result;
+}
+
+uint64_t time_to_millisecs(TimeT timepoint) {
+  return timepoint.QuadPart * TICK_TO_MILLISECS /
+         performance_counter_frequency.QuadPart;
 }
 
 uint64_t time_to_microsecs(TimeT timepoint) {

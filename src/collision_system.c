@@ -53,9 +53,9 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
         e.id = CollisionSystem_Detected;
         e.event_data = &event;
 
-        // Queue both entities for removal
-        registry_entity_remove(reg, self);
-        registry_entity_remove(reg, other);
+        /* // Queue both entities for removal */
+        /* registry_entity_remove(reg, self); */
+        /* registry_entity_remove(reg, other); */
 
         // And notify anybody interested in the event
         event_bus_emit(event_bus, &e);
