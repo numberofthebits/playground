@@ -38,25 +38,35 @@ damage_system_handle_collision_detected(DamageSystem *sys,
   // Now we know the two entities are hostile towards each other
   int is_a_projectile = is_projectile(flags_a);
   int is_b_projectile = is_projectile(flags_b);
+
+  // One should be a projectile and one should be a unit
+  if (!(is_a_projectile ^ is_b_projectile)) {
+    return;
+  }
+
   struct Pool *health_pool = registry_get_pool(reg, HEALTH_COMPONENT_BIT);
   struct Pool *projectile_pool =
       registry_get_pool(reg, PROJECTILE_COMPONENT_BIT);
 
   HealthComponent *hc = 0;
   ProjectileComponent *pc = 0;
+  Entity damager;
+  Entity damagee;
+
   if (is_a_projectile && !is_b_projectile) {
     // A damages B
-    hc = PoolGetComponent(health_pool, HealthComponent, ev->entity_b.index);
-    pc = PoolGetComponent(projectile_pool, ProjectileComponent,
-                          ev->entity_a.index);
-    registry_entity_remove(sys->base.services.registry, ev->entity_a);
+    damager = ev->entity_a;
+    damagee = ev->entity_b;
   } else if (!is_a_projectile && is_b_projectile) {
     // B damages A
-    hc = PoolGetComponent(health_pool, HealthComponent, ev->entity_a.index);
-    pc = PoolGetComponent(projectile_pool, ProjectileComponent,
-                          ev->entity_b.index);
-    registry_entity_remove(sys->base.services.registry, ev->entity_b);
+    damager = ev->entity_b;
+    damagee = ev->entity_a;
   }
+
+  hc = PoolGetComponent(health_pool, HealthComponent, damagee.index);
+  pc = PoolGetComponent(projectile_pool, ProjectileComponent, damager.index);
+
+  registry_entity_remove(sys->base.services.registry, damager);
 
   hc->health -= pc->damage;
 }
