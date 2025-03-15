@@ -1,9 +1,9 @@
-#ifndef SYSTEM_H
-#define SYSTEM_H
+#ifndef SYSTEMS_H
+#define SYSTEMS_H
 
 #include <stddef.h>
 
-enum SystemBit {
+typedef enum {
   SYSTEM_BIT_ITER_BEGIN = (1U << 0),
 
   MOVEMENT_SYSTEM_BIT = (1U << 0),
@@ -17,44 +17,20 @@ enum SystemBit {
   PROJECTILE_EMITTER_SYSTEM_BIT = (1U << 8),
   DAMAGE_SYSTEM_BIT = (1U << 9),
 
-  SYSTEM_BIT_ITER_END = (1U << 8),
+  SYSTEM_BIT_ITER_END = (1U << 10),
 
   INVALID_SYSTEM_BIT = (1U << 30)
-};
-typedef enum SystemBit SystemBit;
+} SystemBit;
 
-// const System system_table[] = {
-//     {
-//         .name = "MovementSystem",
-//         .flag = MOVEMENT_SYSTEM_BIT,
-//         .evaluation_order = 0,
-//     },
-//     {
-//         .name = "RenderSystem",
-//         .flag = RENDER_SYSTEM_BIT,
-//         .evaluation_order = 0,
-//     },
-//     {
-//         .name = "RenderSystem",
-//         .flag = RENDER_SYSTEM_BIT,
-//         .evaluation_order = 0,
-//     },
-//     {.name = "AnimationSystem",
-//      .flag = ANIMATION_SYSTEM_BIT,
-//      .evaluation_order = 0},
-//     {
-//         .name = "InputSystem",
-//         .flag = INPUT_SYSTEM_BIT,
-//         .evaluation_order = 0,
-//     },
-//     {.name = "TimeSystem", .flag = TIME_SYSTEM_BIT, .evaluation_order = 0},
-//     {.name = "PlayerSystem", .flag = PLAYER_SYSTEM_BIT, .evaluation_order =
-//     0},
-//     {.name = "CameraMovementSystem",
-//      .flag = CAMERA_MOVEMENT_SYSTEM_BIT,
-//      .evaluation_order = 0},
-//     {.name = "ProjectileEmitterSystem",
-//      .flag = PROJECTILE_EMITTER_SYSTEM_BIT,
-//      .evaluation_order = 0}};
+#include "animation_system.h"
+#include "camera_movement_system.h"
+#include "collision_system.h"
+#include "damage_system.h"
+#include "input_system.h"
+#include "movement_system.h"
+#include "player_system.h"
+#include "projectile_emitter_system.h"
+#include "render_system.h"
+#include "time_system.h"
 
 #endif

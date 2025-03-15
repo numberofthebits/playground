@@ -9,7 +9,7 @@
 
 #include <memory.h>
 
-struct InputSystem *input_system_create(struct Services *services) {
+struct InputSystem *input_system_create(Services *services) {
   struct InputSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct InputSystem);
 
@@ -60,7 +60,7 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
   (void)registry;
   (void)frame_nr;
 
-  struct EventBus *bus = sys->services->event_bus;
+  struct EventBus *bus = sys->services.event_bus;
   struct InputSystem *system = (struct InputSystem *)sys;
   size_t num_events = 0;
 

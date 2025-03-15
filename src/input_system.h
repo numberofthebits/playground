@@ -39,7 +39,7 @@ struct InputSystem {
   struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
 };
 
-struct InputSystem *input_system_create(struct Services *services);
+struct InputSystem *input_system_create(Services *services);
 
 void input_system_handle_keyboard_input(struct InputSystem *input_system,
                                         int key, int action);

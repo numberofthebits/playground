@@ -26,7 +26,7 @@ static void time_update(Registry *reg, struct SystemBase *sys,
   }
 }
 
-struct TimeSystem *time_system_create(struct Services *services) {
+struct TimeSystem *time_system_create(Services *services) {
   struct TimeSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct TimeSystem);
   system_base_init((struct SystemBase *)system, TIME_SYSTEM_BIT, &time_update,

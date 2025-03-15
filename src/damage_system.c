@@ -26,7 +26,7 @@ void damage_system_update(Registry *registry, struct SystemBase *sys,
 static void
 damage_system_handle_collision_detected(DamageSystem *sys,
                                         struct CollisionDetectedEvent *ev) {
-  Registry *reg = sys->base.services->registry;
+  Registry *reg = sys->base.services.registry;
 
   EntityFlags flags_a = registry_entity_get_flags(reg, ev->entity_a);
   EntityFlags flags_b = registry_entity_get_flags(reg, ev->entity_b);
@@ -49,12 +49,13 @@ damage_system_handle_collision_detected(DamageSystem *sys,
     hc = PoolGetComponent(health_pool, HealthComponent, ev->entity_b.index);
     pc = PoolGetComponent(projectile_pool, ProjectileComponent,
                           ev->entity_a.index);
-
+    registry_entity_remove(sys->base.services.registry, ev->entity_a);
   } else if (!is_a_projectile && is_b_projectile) {
     // B damages A
-    hc = PoolGetComponent(health_pool, HealthComponent, ev->entity_b.index);
+    hc = PoolGetComponent(health_pool, HealthComponent, ev->entity_a.index);
     pc = PoolGetComponent(projectile_pool, ProjectileComponent,
-                          ev->entity_a.index);
+                          ev->entity_b.index);
+    registry_entity_remove(sys->base.services.registry, ev->entity_b);
   }
 
   hc->health -= pc->damage;
@@ -71,7 +72,7 @@ void damage_system_handle_event(struct SystemBase *sys, struct Event e) {
   }
 }
 
-DamageSystem *damage_system_create(struct Services *services) {
+DamageSystem *damage_system_create(Services *services) {
   DamageSystem *sys = ArenaAlloc(&global_static_allocator, 1, DamageSystem);
   system_base_init((struct SystemBase *)sys, DAMAGE_SYSTEM_BIT,
                    &damage_system_update, HEALTH_COMPONENT_BIT, services,

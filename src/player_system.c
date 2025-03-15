@@ -14,14 +14,14 @@
 
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
-static Vec2f BULLET_VELOCITY = {0.01f, 0.01f};
+static Vec2f BULLET_VELOCITY = {0.1f, 0.1f};
 
 void player_system_reset(struct PlayerSystem *system) {
   memset(system->movement, 0x0, sizeof(system->movement));
   system->bullets_spawned = 0;
 }
 
-struct PlayerSystem *player_system_create(struct Services *services) {
+struct PlayerSystem *player_system_create(Services *services) {
   struct PlayerSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct PlayerSystem);
 
@@ -35,21 +35,26 @@ struct PlayerSystem *player_system_create(struct Services *services) {
   return system;
 }
 
-static void player_system_spawn_projectile(Registry *registry,
-                                           Vec3f player_pos) {
+static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
+                                           float angle) {
   Entity e = registry_entity_create(registry);
 
   registry_entity_group(registry, e, "projectile");
 
+  Vec2f projectile_dir = {sinf(angle), cosf(angle)};
+
   TransformComponent tc = {0};
-  tc.pos = player_pos;
+  // Offset to avoid self collision
+  tc.pos.x = player_pos.x + projectile_dir.x;
+  tc.pos.y = player_pos.y + projectile_dir.y;
   tc.pos.z = 0.0f;
   tc.scale.x = 0.1f;
   tc.scale.y = 0.1f;
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};
-  pc.velocity = BULLET_VELOCITY;
+  pc.velocity.x = projectile_dir.x * BULLET_VELOCITY.x;
+  pc.velocity.y = projectile_dir.y * BULLET_VELOCITY.y;
 
   RenderComponent rc;
   rc.render_layer = 1;
@@ -72,11 +77,15 @@ static void player_system_spawn_projectile(Registry *registry,
   cc.aabr.width = 1.f * tc.scale.x;
   cc.aabr.height = 1.f * tc.scale.y;
 
+  ProjectileComponent prc;
+  prc.damage = 50;
+
   registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
   registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
   registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
   registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
   registry_entity_add_component(registry, e, COLLISION_COMPONENT_BIT, &cc);
+  registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &prc);
   registry_entity_add(registry, e);
   registry_entity_set_flags(registry, e, ENTITY_PROJECTILE_FRIENDLY);
 }
@@ -102,7 +111,7 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 
     // NOTE: It would probably be fine to spawn 1 bullet per frame
     for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
-      player_system_spawn_projectile(registry, tc->pos);
+      player_system_spawn_projectile(registry, tc->pos, player_system->angle);
     }
 
     pc->velocity.x +=

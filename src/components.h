@@ -8,7 +8,6 @@
 
 #include <stdalign.h>
 
-
 enum ComponentBit {
   TRANSFORM_COMPONENT_BIT = (1U << 0),
   RENDER_COMPONENT_BIT = (1U << 1),
@@ -63,7 +62,7 @@ typedef struct {
 
 struct Physics_Component_t {
   // TODO: Replace this with two scalars:
-  //       angle and velocity. 
+  //       angle and velocity.
   Vec2f velocity;
 };
 typedef struct Physics_Component_t PhysicsComponent;
@@ -80,6 +79,8 @@ typedef struct AnimationComponent_t AnimationComponent;
 
 struct CollisionComponent_t {
   // axis aligned bounding rect
+  // When paired with TransformComponent, pos should
+  // act as an offset, so generally leave pos at 0 in this case
   Rectf aabr;
 };
 typedef struct CollisionComponent_t CollisionComponent;
@@ -99,22 +100,15 @@ typedef struct {
   uint8_t dummy;
 } CameraMovementComponent;
 
-typedef enum {
-  PROJECTILE_FLAG_FRIENDLY,
-  PROJECTILE_FLAG_ENEMY
-} ProjectileFlags;
-
 typedef struct {
   TimeT last_emitted;
   TimeT emission_frequency;
   TimeT projectile_duration;
-  ProjectileFlags flags;
   int32_t damage;
 } ProjectileEmitterComponent;
 
 typedef struct {
   int32_t damage;
-  int flags;
 } ProjectileComponent;
 
 typedef struct {
@@ -170,16 +164,14 @@ static const struct Component component_table[] = {
      .size = sizeof(ProjectileEmitterComponent),
      .alignment = alignof(ProjectileEmitterComponent),
      .name = "ProjectileEmitterComponent"},
-    
+
     {.flag = PROJECTILE_COMPONENT_BIT,
      .size = sizeof(ProjectileComponent),
      .alignment = sizeof(ProjectileComponent),
-     .name = "ProjectileComponent"
-    },
+     .name = "ProjectileComponent"},
     {.flag = HEALTH_COMPONENT_BIT,
      .size = sizeof(HealthComponent),
      .alignment = sizeof(HealthComponent),
-     .name = "HealthComponent"}
-};
+     .name = "HealthComponent"}};
 
 #endif // COMPONENTS_H

@@ -14,15 +14,15 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
 
   struct Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
   struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  struct EventBus *event_bus = sys->services->event_bus;
+  struct EventBus *event_bus = sys->services.event_bus;
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity self = entities[i];
     CollisionComponent *self_collision =
-        PoolGetComponent(collision_pool, CollisionComponent, self.id);
+        PoolGetComponent(collision_pool, CollisionComponent, self.index);
     TransformComponent *self_transform =
-        PoolGetComponent(transform_pool, TransformComponent, self.id);
+        PoolGetComponent(transform_pool, TransformComponent, self.index);
 
     Rectf self_rect = self_collision->aabr;
     self_rect.pos.x += self_transform->pos.x;
@@ -36,9 +36,9 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
       }
 
       CollisionComponent *other_collision =
-          PoolGetComponent(collision_pool, CollisionComponent, other.id);
+          PoolGetComponent(collision_pool, CollisionComponent, other.index);
       TransformComponent *other_transform =
-          PoolGetComponent(transform_pool, TransformComponent, other.id);
+          PoolGetComponent(transform_pool, TransformComponent, other.index);
 
       Rectf other_rect = other_collision->aabr;
       other_rect.pos.x += other_transform->pos.x;
@@ -64,7 +64,7 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
   }
 }
 
-struct CollisionSystem *collision_system_create(struct Services *services) {
+struct CollisionSystem *collision_system_create(Services *services) {
   struct CollisionSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct CollisionSystem);
 

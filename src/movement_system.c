@@ -26,7 +26,7 @@ static void movement_update(Registry *reg, struct SystemBase *system,
   }
 }
 
-struct MovementSystem *movement_system_create(struct Services *services) {
+struct MovementSystem *movement_system_create(Services *services) {
   struct MovementSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct MovementSystem);
 

@@ -19,12 +19,12 @@ static int find_entity_index(Vec *entities, Entity e) {
 
 void system_base_init(struct SystemBase *system, int system_flag,
                       pfnSystemUpdate update_fn, int required_component_flags,
-                      struct Services *services, const char *name) {
+                      Services *services, const char *name) {
   system->flag = system_flag;
   system->signature = required_component_flags;
   system->update_fn = update_fn;
   system->entities = vec_create();
-  system->services = services;
+  system->services = *services;
   system->name = name;
 
   VEC_RESERVE_T(&system->entities, Entity, SYSTEM_ENTITIES_DEFAULT_CAPACITY);

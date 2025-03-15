@@ -3,12 +3,12 @@
 
 #define MAX_SUBSCRIBERS 1024
 
-#include "systembase.h"
-
+// Forward declare as systembase needs to know about
+// EventBus impl
 struct SystemBase;
 
 // General event type
-// The producer and consumber needs to know the meaning
+// The producer and consumer needs to know the meaning
 // of both the type of event and its data
 struct Event {
   int id;

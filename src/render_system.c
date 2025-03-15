@@ -516,7 +516,7 @@ static void recalc_camera(struct OrthoCamera *camera, int width, int height,
   translate(&camera->view, center);
 }
 
-RenderSystem *render_system_create(struct Services *services, int window_w,
+RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h) {
   LOG_INFO("Create render system implementation...");
   (void)screen_w;
@@ -771,8 +771,9 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
       pos[3].y = cc->aabr.pos.y + height;
       pos[3].z = 0.f;
 
-      // If it does have a transform component, we build that into the vertex
-      // data and just issue the draw call for the hardcoded vertex data
+      /* // If it does have a transform component, we build that into the vertex
+       */
+      /* // data and just issue the draw call for the hardcoded vertex data */
       Mat4x4 model = identity();
       if (registry_entity_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
         TransformComponent *tc =

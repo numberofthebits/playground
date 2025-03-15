@@ -7,6 +7,6 @@ struct TimeSystem {
   struct SystemBase base;
 };
 
-struct TimeSystem *time_system_create(struct Services *services);
+struct TimeSystem *time_system_create(Services *services);
 
 #endif

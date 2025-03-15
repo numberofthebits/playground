@@ -1,10 +1,10 @@
 #include "animation_system.h"
 
 #include "components.h"
-#include "systems.h"
 #include "core/arena.h"
 #include "core/math.h"
 #include "core/systembase.h"
+#include "systems.h"
 
 static void animation_update(Registry *reg, struct SystemBase *system,
                              size_t frame_nr) {
@@ -67,7 +67,7 @@ static void animation_update(Registry *reg, struct SystemBase *system,
   }
 }
 
-struct AnimationSystem *animation_system_create(struct Services *services) {
+struct AnimationSystem *animation_system_create(Services *services) {
   struct AnimationSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct AnimationSystem);
 

@@ -7,6 +7,6 @@ struct MovementSystem {
   struct SystemBase base;
 };
 
-struct MovementSystem *movement_system_create(struct Services *services);
+struct MovementSystem *movement_system_create(Services *services);
 
 #endif

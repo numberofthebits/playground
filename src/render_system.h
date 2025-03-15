@@ -1,9 +1,9 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
-#include "core/math.h"
 #include "core/assetstore.h"
 #include "core/ecs.h"
+#include "core/math.h"
 #include "core/renderer.h"
 #include "core/systembase.h"
 #include "core/types.h"
@@ -52,7 +52,7 @@ typedef struct RenderSystem RenderSystem;
 
 void render_system_global_init();
 
-RenderSystem *render_system_create(struct Services *services, int window_w,
+RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h);
 
 void render_system_prepare_resources(RenderSystem *system,

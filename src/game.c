@@ -3,17 +3,8 @@
 #include "components.h"
 #include "events.h"
 
-#include "animation_system.h"
-#include "camera_movement_system.h"
-#include "collision_system.h"
-#include "damage_system.h"
-#include "input_system.h"
-#include "movement_system.h"
-#include "player_system.h"
-#include "projectile_emitter_system.h"
-#include "render_system.h"
+#include "entity_flags.h"
 #include "systems.h"
-#include "time_system.h"
 
 #include "core/arena.h"
 #include "core/assetstore.h"
@@ -64,7 +55,7 @@ struct Game_t {
 
   int state;
   size_t frame_counter;
-  struct Services services;
+  Services services;
 
   // Systems live here, but we register them in the
   // registry to wire them up to entity related things
@@ -417,7 +408,6 @@ void load_units(Registry *registry, struct Assets *assets) {
   const char *unit_shader_name = "tilemap";
   AssetId unit_shader_id =
       assets_make_id(unit_shader_name, strlen(unit_shader_name));
-#if 0
   {
     Entity truck = registry_entity_create(registry);
     registry_entity_group(registry, truck, "enemies");
@@ -454,7 +444,9 @@ void load_units(Registry *registry, struct Assets *assets) {
     pec.last_emitted = time_now();
     pec.damage = 50;
     pec.projectile_duration = time_from_secs(3);
-    pec.flags = PROJECTILE_FLAG_ENEMY;
+
+    HealthComponent hc;
+    hc.health = 100;
 
     registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
     registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT,
@@ -464,11 +456,13 @@ void load_units(Registry *registry, struct Assets *assets) {
                                   &cc);
     registry_entity_add_component(registry, truck,
                                   PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
+    registry_entity_add_component(registry, truck, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, truck);
+    registry_entity_set_flags(registry, truck, ENTITY_HOSTILE);
 
     // Add a second truck for collision tests
-    truck = registry_entity_create(registry);
+    //  truck = registry_entity_create(registry);
     registry_entity_group(registry, truck, "enemies");
 
     tc.pos.x = 10.f;
@@ -483,9 +477,10 @@ void load_units(Registry *registry, struct Assets *assets) {
                                   PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_add(registry, truck);
   }
-#endif
+
   {
     Entity chopper = registry_entity_create(registry);
+    registry_entity_set_flags(registry, chopper, ENTITY_FRIENDLY);
 
     TransformComponent tc = {0};
     tc.pos.x = 0.0f;

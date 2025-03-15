@@ -2,6 +2,7 @@
 
 #include "components.h"
 #include "core/os.h"
+#include "entity_flags.h"
 #include "systems.h"
 
 #include "core/ecs.h"
@@ -13,8 +14,11 @@ static Vec2f random_direction() {
   Vec2f ret;
 
   float r = (float)rand() / (float)RAND_MAX * PI_MUL_2;
-  ret.x = cosf(r);
-  ret.y = sinf(r);
+  (void)r;
+  /* ret.x = cosf(r); */
+  /* ret.y = sinf(r); */
+  ret.x = -1.f;
+  ret.y = 0.f;
 
   return ret;
 }
@@ -22,20 +26,18 @@ static Vec2f random_direction() {
 void create_projectile(ProjectileEmitterComponent *component,
                        Registry *registry, Vec3f origin, TimeT spawn_time) {
   Vec2f dir = random_direction();
-  dir.x *= PROJECTILE_VELOCITY_SCALE;
-  dir.y *= PROJECTILE_VELOCITY_SCALE;
-
   Entity e = registry_entity_create(registry);
 
   TransformComponent tc = {0};
-  tc.pos = origin;
+  tc.pos.x = origin.x + dir.x;
+  tc.pos.y = origin.y + dir.y;
   tc.scale.x = 0.1f;
   tc.scale.y = 0.1f;
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};
-  pc.velocity.x = dir.x;
-  pc.velocity.y = dir.y;
+  pc.velocity.x = dir.x * PROJECTILE_VELOCITY_SCALE;
+  pc.velocity.y = dir.y * PROJECTILE_VELOCITY_SCALE;
 
   RenderComponent rc;
   rc.render_layer = 1;
@@ -52,24 +54,25 @@ void create_projectile(ProjectileEmitterComponent *component,
   ttc.expires = time_add(ttc.created, component->projectile_duration);
 
   CollisionComponent cc;
-  cc.aabr.pos.x = tc.pos.x;
-  cc.aabr.pos.y = tc.pos.y;
+  cc.aabr.pos.x = 0.f;
+  cc.aabr.pos.y = 0.f;
   cc.aabr.width = 0.1f;
   cc.aabr.height = 0.1f;
 
   ProjectileComponent projc;
   projc.damage = component->damage;
-  projc.flags = component->flags;
 
   registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
   registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
   registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
   registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_entity_add_component(registry, e, COLLISION_COMPONENT_BIT, &cc);
   registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
 
   registry_entity_add(registry, e);
 
   registry_entity_group(registry, e, "projectile");
+  registry_entity_set_flags(registry, e, ENTITY_PROJECTILE_HOSTILE);
 }
 
 void projectile_emitter_system_update(Registry *registry,
@@ -99,8 +102,7 @@ void projectile_emitter_system_update(Registry *registry,
   }
 }
 
-ProjectileEmitterSystem *
-projectile_emitter_system_create(struct Services *services) {
+ProjectileEmitterSystem *projectile_emitter_system_create(Services *services) {
   ProjectileEmitterSystem *sys =
       ArenaAlloc(&global_static_allocator, 1, ProjectileEmitterSystem);
 

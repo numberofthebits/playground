@@ -18,7 +18,7 @@ struct AnimationResources {
   size_t count;
 };
 
-struct AnimationSystem *animation_system_create(struct Services *services);
+struct AnimationSystem *animation_system_create(Services *services);
 
 void animation_system_prepare(struct AnimationSystem *sys,
                               struct AnimationResources *resources);

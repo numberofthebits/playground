@@ -65,12 +65,12 @@ static inline void camera_movement_system_update(Registry *reg,
 
     ev.event_data = &data;
 
-    event_bus_emit(base->services->event_bus, &ev);
+    event_bus_emit(base->services.event_bus, &ev);
   }
 }
 
 static inline CameraMovementSystem *
-camera_movement_system_create(struct Services *services, Vec2f *camera_area) {
+camera_movement_system_create(Services *services, Vec2f *camera_area) {
   CameraMovementSystem *sys =
       ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
 
