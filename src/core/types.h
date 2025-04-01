@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ENTITY_INVALID_INDEX -1
+#define ENTITY_INVALID_INDEX (EntityIndex)(-1)
 
 #define TRUE 1
 #define FALSE 0

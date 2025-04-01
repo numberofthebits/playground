@@ -9,7 +9,7 @@ void damage_system_update(Registry *registry, struct SystemBase *sys,
   (void)registry;
   (void)sys;
   (void)frame_nr;
-  struct Pool *health_pool = registry_get_pool(registry, HEALTH_COMPONENT_BIT);
+  Pool *health_pool = registry_get_pool(registry, HEALTH_COMPONENT_BIT);
 
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity e = VEC_GET_T(&sys->entities, Entity, i);
@@ -44,9 +44,8 @@ damage_system_handle_collision_detected(DamageSystem *sys,
     return;
   }
 
-  struct Pool *health_pool = registry_get_pool(reg, HEALTH_COMPONENT_BIT);
-  struct Pool *projectile_pool =
-      registry_get_pool(reg, PROJECTILE_COMPONENT_BIT);
+  Pool *health_pool = registry_get_pool(reg, HEALTH_COMPONENT_BIT);
+  Pool *projectile_pool = registry_get_pool(reg, PROJECTILE_COMPONENT_BIT);
 
   HealthComponent *hc = 0;
   ProjectileComponent *pc = 0;

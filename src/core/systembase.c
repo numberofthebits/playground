@@ -7,7 +7,7 @@
 
 #define SYSTEM_ENTITIES_DEFAULT_CAPACITY 1024
 
-static int find_entity_index(Vec *entities, Entity e) {
+static EntityIndex find_entity_index(Vec *entities, Entity e) {
   Entity *iter = VEC_ITER_BEGIN_T(entities, Entity);
   for (int i = 0; i < entities->size; ++i, ++iter) {
     if (iter->id == e.id) {
@@ -31,7 +31,7 @@ void system_base_init(struct SystemBase *system, int system_flag,
 }
 
 void system_add_entity(struct SystemBase *system, Entity e) {
-  int index = find_entity_index(&system->entities, e);
+  EntityIndex index = find_entity_index(&system->entities, e);
   if (index != ENTITY_INVALID_INDEX) {
     LOG_WARN("Entity %d already in System %s", e.id, system->name);
     return;
@@ -41,7 +41,7 @@ void system_add_entity(struct SystemBase *system, Entity e) {
 }
 
 void system_remove_entity(struct SystemBase *system, Entity e) {
-  int index = find_entity_index(&system->entities, e);
+  EntityIndex index = find_entity_index(&system->entities, e);
   if (index == ENTITY_INVALID_INDEX) {
     LOG_WARN("Entity %d not found in System %s", e.id, system->name);
     return;

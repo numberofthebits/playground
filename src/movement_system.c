@@ -12,8 +12,8 @@ static void movement_update(Registry *reg, struct SystemBase *system,
   (void)frame_nr;
 
   Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
-  struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  struct Pool *physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
 
   for (int i = 0; i < system->entities.size; ++i) {
     Entity e = entities[i];

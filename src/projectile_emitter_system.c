@@ -78,9 +78,8 @@ void create_projectile(ProjectileEmitterComponent *component,
 void projectile_emitter_system_update(Registry *registry,
                                       struct SystemBase *sys, size_t frame_nr) {
   (void)frame_nr;
-  struct Pool *transform_pool =
-      registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
-  struct Pool *projectile_pool =
+  Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+  Pool *projectile_pool =
       registry_get_pool(registry, PROJECTILE_EMITTER_COMPONENT_BIT);
   TimeT now = time_now();
 

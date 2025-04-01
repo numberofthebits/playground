@@ -144,12 +144,14 @@ void registry_init(Registry *reg, size_t max_entity_count,
   memset(&reg->pools[0], 0x0, sizeof(reg->pools));
   for (size_t i = 0; i < component_count; ++i) {
     const struct Component *component = &components[i];
-    struct Pool pool;
-    pool.descriptor = component;
-    pool.count = max_entity_count;
-    pool.data = arena_alloc(&global_static_allocator, component->size,
-                            max_entity_count, component->alignment);
-    reg->pools[i] = pool;
+
+    pool_init(&reg->pools[i], component, max_entity_count);
+    /* Pool pool; */
+    /* pool.descriptor = component; */
+    /* pool.count = max_entity_count; */
+    /* pool.data = arena_alloc(&global_static_allocator, component->size, */
+    /*                         max_entity_count, component->alignment); */
+    /* reg->pools[i] = pool; */
   }
 
   hash_map_init(&reg->entity_tags.entity_tag_map, 10);
@@ -177,7 +179,7 @@ void registry_init(Registry *reg, size_t max_entity_count,
   reg->components.components = components;
 }
 
-struct Pool *registry_get_pool(Registry *reg, int component_bit) {
+Pool *registry_get_pool(Registry *reg, int component_bit) {
   const int index = component_index(&reg->components, component_bit);
   return &reg->pools[index];
 }
@@ -268,14 +270,13 @@ void registry_entity_add_component(Registry *reg, Entity e, int component_bit,
   LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index,
            component_name(&reg->components, index));
 
-  struct Pool *pool = registry_get_pool(reg, component_bit);
+  Pool *pool = registry_get_pool(reg, component_bit);
   if (!pool) {
     LOG_EXIT("Could not find pool for component %d", component_bit);
     return;
   }
 
-  ptrdiff_t ptr_offset = e.index * pool->descriptor->size;
-  memcpy((char *)pool->data + ptr_offset, data, pool->descriptor->size);
+  pool_insert(pool, e, data);
 
   SignatureT *entity_signature = &reg->entity_component_signatures[e.index];
   *entity_signature |= component_bit;

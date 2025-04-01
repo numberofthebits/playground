@@ -343,6 +343,9 @@ Game *game_create() {
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->render_system);
 
+#ifdef BUILD_TESTS
+  pool_test();
+#endif
   return game;
 }
 

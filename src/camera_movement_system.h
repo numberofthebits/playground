@@ -48,7 +48,7 @@ static inline void camera_movement_system_update(Registry *reg,
   (void)base;
   (void)frame_nr;
   Entity *ptr = base->entities.storage.ptr;
-  struct Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
   CameraMovementSystem *camera_movement_system = (CameraMovementSystem *)base;
 
   for (int i = 0; i < base->entities.size || i < 1; ++i) {

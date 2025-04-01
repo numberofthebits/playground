@@ -19,6 +19,7 @@ int main(void) {
   }
 
   game_setup(game);
+
   game_run(game);
 
   game_destroy(game);

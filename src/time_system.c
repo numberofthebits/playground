@@ -11,7 +11,7 @@
 static void time_update(Registry *reg, struct SystemBase *sys,
                         size_t frame_nr) {
   (void)frame_nr;
-  struct Pool *time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
+  Pool *time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
 
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 

@@ -12,8 +12,8 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
                              size_t frame_nr) {
   (void)frame_nr;
 
-  struct Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
-  struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
   struct EventBus *event_bus = sys->services.event_bus;
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 

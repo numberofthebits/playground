@@ -121,7 +121,7 @@ static GLuint get_program_handle_by_asset_id(RenderSystem *system, AssetId id) {
   GLuint *program = 0;
   if (!hash_map_get(&system->programs, &id, sizeof(AssetId),
                     (void **)&program)) {
-    LOG_EXIT("Failed to find shader program");
+    LOG_EXIT("Failed to find shader program with asset ID %d", id);
   }
   return (GLuint)(uintptr_t)program;
 }
@@ -139,7 +139,7 @@ static int render_data_order_comp(const void *lhs, const void *rhs) {
   return a->render_layer - b->render_layer;
 }
 
-static void sort_render_data(RenderData *data, size_t count) {
+void sort_render_data(RenderData *data, size_t count) {
   qsort(data, count, sizeof(RenderData), &render_data_order_comp);
 }
 
@@ -167,7 +167,7 @@ static GLint get_uniform_location_checked(GLuint program, const char *name) {
   return loc;
 }
 
-static void render_entities(RenderSystem *system, RenderData *data,
+static void render_entities(RenderSystem *system, RenderData *render_data,
                             size_t render_data_size) {
   CHECK_GL_ERROR();
 
@@ -188,13 +188,13 @@ static void render_entities(RenderSystem *system, RenderData *data,
                system->tile_renderer->multi_draw_indirect_buffer);
   CHECK_GL_ERROR();
 
-  sort_render_data(data, render_data_size);
+  // sort_render_data(data, render_data_size);
 
   unsigned int count_in_batch = 0;
   AssetId current_program = 0;
 
   for (size_t i = 0; i < render_data_size; ++i) {
-    RenderData *render_data = data + i;
+    RenderData *rd = &render_data[i];
 
     if (render_data->program_id != current_program) {
       // We we encounter a new program/pipeline
@@ -204,11 +204,11 @@ static void render_entities(RenderSystem *system, RenderData *data,
       count_in_batch = 0;
 
       GLuint program_handle =
-          get_program_handle_by_asset_id(system, render_data->program_id);
+          get_program_handle_by_asset_id(system, rd->program_id);
       glUseProgram(program_handle);
       CHECK_GL_ERROR();
 
-      current_program = render_data->program_id;
+      current_program = rd->program_id;
 
       loc_view = get_uniform_location_checked(program_handle, "View");
       loc_proj = get_uniform_location_checked(program_handle, "Proj");
@@ -227,14 +227,13 @@ static void render_entities(RenderSystem *system, RenderData *data,
 
     DrawCommandDataTiled *draw_data =
         &system->draw_command_data[count_in_batch];
-    draw_data->model = render_data->model_matrix;
-    draw_data->tex_coord_offset = render_data->tex_coord_offset;
-    draw_data->tex_coord_scale = render_data->tex_coord_scale;
+    draw_data->model = rd->model_matrix;
+    draw_data->tex_coord_offset = rd->tex_coord_offset;
+    draw_data->tex_coord_scale = rd->tex_coord_scale;
 
     void *value = 0;
-    int found =
-        hash_map_get(&system->material_asset_index_mapping,
-                     &render_data->material_id, sizeof(AssetId), &value);
+    int found = hash_map_get(&system->material_asset_index_mapping,
+                             &rd->material_id, sizeof(AssetId), &value);
 
     // We only have to do more work if haven't seen this material id
     // before.
@@ -276,8 +275,8 @@ static void render_update(Registry *reg, struct SystemBase *sys,
   RenderSystem *render_sys = (RenderSystem *)sys;
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 
-  struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  struct Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
 
   RenderData *render_data =
       ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
@@ -738,10 +737,8 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
   glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
   CHECK_GL_ERROR();
 
-  struct Pool *collision_pool =
-      registry_get_pool(registry, COLLISION_COMPONENT_BIT);
-  struct Pool *transform_pool =
-      registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+  Pool *collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
   (void)transform_pool;
 
   for (int i = 0; i < system->base.entities.size; ++i) {

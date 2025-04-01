@@ -94,10 +94,8 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
                           size_t frame_nr) {
   (void)frame_nr;
   struct PlayerSystem *player_system = (struct PlayerSystem *)sys;
-  struct Pool *physics_pool =
-      registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
-  struct Pool *transform_pool =
-      registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+  Pool *physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
 
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
 

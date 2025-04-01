@@ -11,9 +11,9 @@ static void animation_update(Registry *reg, struct SystemBase *system,
   (void)frame_nr;
   (void)system;
 
-  struct Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-  struct Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
-  struct Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+  Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
+  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
 
   Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
 

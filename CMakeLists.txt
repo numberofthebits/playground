@@ -6,6 +6,8 @@ project(pikuma_2d_game_engine C)
 # leave it on so i never have to specify this manually again
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(BUILD_TESTS "Compile test functions" ON)
+
 add_executable(game)
 
 target_sources(game
@@ -38,6 +40,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/renderer.h
   ${PROJECT_SOURCE_DIR}/src/core/services.c
   ${PROJECT_SOURCE_DIR}/src/core/services.h
+  ${PROJECT_SOURCE_DIR}/src/core/sparsecomponentpool.c
+  ${PROJECT_SOURCE_DIR}/src/core/sparsecomponentpool.h
   ${PROJECT_SOURCE_DIR}/src/core/systembase.c
   ${PROJECT_SOURCE_DIR}/src/core/systembase.h
   ${PROJECT_SOURCE_DIR}/src/core/types.h
@@ -97,6 +101,10 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     -Wextra
     -Werror
   )
+endif()
+
+if(BUILD_TESTS) 
+  target_compile_options(game PRIVATE -DBUILD_TESTS)
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang") 

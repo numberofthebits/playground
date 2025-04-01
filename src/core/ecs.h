@@ -4,6 +4,7 @@
 #include "assetstore.h"
 #include "componentbase.h"
 #include "hashmap.h"
+#include "sparsecomponentpool.h"
 #include "types.h"
 #include "vec.h"
 
@@ -11,12 +12,6 @@
 #define SYSTEMS_MAX 32
 
 struct SystemBase;
-
-struct Pool {
-  void *data;
-  size_t count;
-  const struct Component *descriptor;
-};
 
 // Track our entity indexes so we can reuse destroyed entities
 // Note this is not a component pool
@@ -41,7 +36,7 @@ typedef struct {
 } EntityGroups;
 
 struct Registry_t {
-  struct Pool pools[COMPONENT_POOLS_MAX];
+  Pool pools[COMPONENT_POOLS_MAX];
 
   struct SystemBase *systems[SYSTEMS_MAX];
   size_t num_systems;
@@ -76,9 +71,7 @@ typedef struct Registry_t Registry;
 void registry_init(Registry *registry, size_t max_entity_count,
                    const struct Component *components, size_t component_count);
 
-struct Pool *registry_get_pool(Registry *reg, int component_bit);
-
-#define PoolGetComponent(pool, type, index) ((type *)pool->data) + index;
+Pool *registry_get_pool(Registry *reg, int component_bit);
 
 void registry_add_system(Registry *reg, struct SystemBase *s);
 
