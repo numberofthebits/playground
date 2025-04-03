@@ -188,7 +188,7 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
                system->tile_renderer->multi_draw_indirect_buffer);
   CHECK_GL_ERROR();
 
-  // sort_render_data(data, render_data_size);
+  // sort_render_data(render_data, render_data_size);
 
   unsigned int count_in_batch = 0;
   AssetId current_program = 0;

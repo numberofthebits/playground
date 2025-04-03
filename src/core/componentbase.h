@@ -21,6 +21,8 @@ struct Components {
   const struct Component *components;
 };
 
+// TODO: Just return a pointer to Component instead of all these
+//       pointless functions
 int component_index(struct Components *components, int component_bit);
 
 int component_flag(struct Components *components, int index);

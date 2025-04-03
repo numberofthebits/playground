@@ -378,7 +378,7 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
       tc.pos.z = 0.0f;
       tc.rotation = 0.0f;
 
-      registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+      registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
       MapTile tile = map_get_tile(map, col, row);
 
@@ -396,7 +396,7 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
       rc.material_id = assets_make_id_str("jungle-mat");
       rc.pipeline_id = assets_make_id_str("tilemap");
 
-      registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
+      registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
 
       registry_entity_add(registry, e);
 
@@ -451,15 +451,15 @@ void load_units(Registry *registry, struct Assets *assets) {
     HealthComponent hc;
     hc.health = 100;
 
-    registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT,
+    registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
                                   &tc);
-    registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT,
+    registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
                                   &cc);
-    registry_entity_add_component(registry, truck,
+    registry_entity_component_add(registry, truck,
                                   PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
-    registry_entity_add_component(registry, truck, HEALTH_COMPONENT_BIT, &hc);
+    registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, truck);
     registry_entity_set_flags(registry, truck, ENTITY_HOSTILE);
@@ -470,13 +470,13 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     tc.pos.x = 10.f;
     pc.velocity.x = -0.01f;
-    registry_entity_add_component(registry, truck, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, truck, TRANSFORM_COMPONENT_BIT,
+    registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
                                   &tc);
-    registry_entity_add_component(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
-    registry_entity_add_component(registry, truck, COLLISION_COMPONENT_BIT,
+    registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
                                   &cc);
-    registry_entity_add_component(registry, truck,
+    registry_entity_component_add(registry, truck,
                                   PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_add(registry, truck);
   }
@@ -526,19 +526,19 @@ void load_units(Registry *registry, struct Assets *assets) {
     HealthComponent hc;
     hc.health = 100;
 
-    registry_entity_add_component(registry, chopper, RENDER_COMPONENT_BIT, &rc);
-    registry_entity_add_component(registry, chopper, TRANSFORM_COMPONENT_BIT,
+    registry_entity_component_add(registry, chopper, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_component_add(registry, chopper, TRANSFORM_COMPONENT_BIT,
                                   &tc);
-    registry_entity_add_component(registry, chopper, PHYSICS_COMPONENT_BIT,
+    registry_entity_component_add(registry, chopper, PHYSICS_COMPONENT_BIT,
                                   &pc);
-    registry_entity_add_component(registry, chopper, ANIMATION_COMPONENT_BIT,
+    registry_entity_component_add(registry, chopper, ANIMATION_COMPONENT_BIT,
                                   &ac);
-    registry_entity_add_component(registry, chopper, INPUT_COMPONENT_BIT, &ic);
-    registry_entity_add_component(registry, chopper, COLLISION_COMPONENT_BIT,
+    registry_entity_component_add(registry, chopper, INPUT_COMPONENT_BIT, &ic);
+    registry_entity_component_add(registry, chopper, COLLISION_COMPONENT_BIT,
                                   &cc);
-    registry_entity_add_component(registry, chopper,
+    registry_entity_component_add(registry, chopper,
                                   CAMERA_MOVEMENT_COMPONENT_BIT, &cmc);
-    registry_entity_add_component(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
+    registry_entity_component_add(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, chopper);
 

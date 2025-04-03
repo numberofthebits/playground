@@ -62,12 +62,12 @@ void create_projectile(ProjectileEmitterComponent *component,
   ProjectileComponent projc;
   projc.damage = component->damage;
 
-  registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
-  registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-  registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-  registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-  registry_entity_add_component(registry, e, COLLISION_COMPONENT_BIT, &cc);
-  registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
+  registry_entity_component_add(registry, e, TIME_COMPONENT_BIT, &ttc);
+  registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
+  registry_entity_component_add(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+  registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_entity_component_add(registry, e, COLLISION_COMPONENT_BIT, &cc);
+  registry_entity_component_add(registry, e, PROJECTILE_COMPONENT_BIT, &projc);
 
   registry_entity_add(registry, e);
 

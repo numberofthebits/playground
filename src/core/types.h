@@ -20,6 +20,7 @@ typedef uint32_t SignatureT;
 typedef int EntityId;
 typedef size_t EntityIndex;
 typedef uint64_t EntityFlags;
+typedef int Bool;
 
 struct Entity_t {
   // The index of the entity data

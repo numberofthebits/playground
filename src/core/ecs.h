@@ -37,6 +37,7 @@ typedef struct {
 
 struct Registry_t {
   Pool pools[COMPONENT_POOLS_MAX];
+  size_t num_pools;
 
   struct SystemBase *systems[SYSTEMS_MAX];
   size_t num_systems;
@@ -87,8 +88,10 @@ Entity registry_entity_create(Registry *reg);
 void registry_entity_add(Registry *reg, Entity entity);
 void registry_entity_remove(Registry *reg, Entity e);
 void registry_entity_commit_entities(Registry *reg);
-void registry_entity_add_component(Registry *reg, Entity e, int component_bit,
+void registry_entity_component_add(Registry *reg, Entity e, int component_bit,
                                    void *data);
+void registry_entity_component_remove(Registry *reg, Entity e,
+                                      int component_bit);
 
 /*
  Entity tag

@@ -80,12 +80,12 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   ProjectileComponent prc;
   prc.damage = 50;
 
-  registry_entity_add_component(registry, e, TIME_COMPONENT_BIT, &ttc);
-  registry_entity_add_component(registry, e, RENDER_COMPONENT_BIT, &rc);
-  registry_entity_add_component(registry, e, PHYSICS_COMPONENT_BIT, &pc);
-  registry_entity_add_component(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
-  registry_entity_add_component(registry, e, COLLISION_COMPONENT_BIT, &cc);
-  registry_entity_add_component(registry, e, PROJECTILE_COMPONENT_BIT, &prc);
+  registry_entity_component_add(registry, e, TIME_COMPONENT_BIT, &ttc);
+  registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
+  registry_entity_component_add(registry, e, PHYSICS_COMPONENT_BIT, &pc);
+  registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
+  registry_entity_component_add(registry, e, COLLISION_COMPONENT_BIT, &cc);
+  registry_entity_component_add(registry, e, PROJECTILE_COMPONENT_BIT, &prc);
   registry_entity_add(registry, e);
   registry_entity_set_flags(registry, e, ENTITY_PROJECTILE_FRIENDLY);
 }
