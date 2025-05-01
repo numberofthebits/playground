@@ -86,9 +86,9 @@ void projectile_emitter_system_update(Registry *registry,
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity e = VEC_GET_T(&sys->entities, Entity, i);
     TransformComponent *tc =
-        PoolGetComponent(transform_pool, TransformComponent, e.id);
+        PoolGetComponent(transform_pool, TransformComponent, e.index);
     ProjectileEmitterComponent *pec =
-        PoolGetComponent(projectile_pool, ProjectileEmitterComponent, e.id);
+        PoolGetComponent(projectile_pool, ProjectileEmitterComponent, e.index);
 
     TimeT elapsed = time_elapsed_now(pec->last_emitted);
 

@@ -7,6 +7,7 @@
 #include "types.h"
 
 #include <assert.h>
+#include <stdalign.h>
 #include <stddef.h>
 
 #define REGISTRY_ENTITY_COMMIT_BUFFER_CAPACITY 1024
@@ -291,6 +292,8 @@ void registry_entity_component_remove(Registry *reg, Entity e,
            component_name(&reg->components, index));
   Pool *pool = registry_get_pool(reg, component_bit);
   pool_remove(pool, e);
+
+  reg->entity_component_signatures[e.index] &= ~component_bit;
 }
 
 void registry_add_system(Registry *registry, struct SystemBase *systembase) {
@@ -479,3 +482,81 @@ void registry_entity_unset_flags(Registry *reg, Entity entity,
 EntityFlags registry_entity_get_flags(Registry *reg, Entity entity) {
   return reg->entity_flags[entity.index];
 }
+
+#ifdef BUILD_TESTS
+typedef struct {
+  const char *text;
+} TestComponentA;
+
+typedef struct {
+  int a;
+  int b;
+} TestComponentB;
+
+void registry_test() {
+  struct Component components[2];
+  components[0].alignment = alignof(TestComponentA);
+  components[0].flag = 1;
+  components[0].name = "TestComponentA";
+  components[0].size = sizeof(TestComponentA);
+
+  components[1].alignment = alignof(TestComponentB);
+  components[1].flag = 2;
+  components[1].name = "TestComponentB";
+  components[1].size = sizeof(TestComponentB);
+
+  TestComponentA a;
+  a.text = "entity1";
+
+  TestComponentB b;
+  b.a = 2;
+  b.b = 2;
+
+  TestComponentA c;
+  c.text = "entity3";
+  TestComponentB d;
+  b.a = 3;
+  b.b = 3;
+
+  Registry r;
+  registry_init(&r, 10, components, 2);
+
+  Entity e1 = registry_entity_create(&r);
+  Entity e2 = registry_entity_create(&r);
+  Entity e3 = registry_entity_create(&r);
+
+  registry_entity_add(&r, e1);
+  registry_entity_add(&r, e2);
+  registry_entity_add(&r, e3);
+
+  registry_entity_commit_entities(&r);
+
+  registry_entity_component_add(&r, e1, 1, &a);
+  registry_entity_component_add(&r, e2, 2, &b);
+  registry_entity_component_add(&r, e3, 1, &c);
+  registry_entity_component_add(&r, e3, 2, &d);
+
+  assert(registry_entity_has_component(&r, e1, 1));
+  assert(registry_entity_has_component(&r, e2, 2));
+  assert(registry_entity_has_component(&r, e3, 1));
+  assert(registry_entity_has_component(&r, e3, 2));
+
+  registry_entity_component_remove(&r, e1, 1);
+  assert(!registry_entity_has_component(&r, e1, 1));
+
+  registry_entity_component_remove(&r, e2, 2);
+  assert(!registry_entity_has_component(&r, e2, 2));
+
+  registry_entity_component_remove(&r, e3, 1);
+  assert(!registry_entity_has_component(&r, e3, 1));
+
+  registry_entity_component_remove(&r, e3, 2);
+  assert(!registry_entity_has_component(&r, e3, 2));
+
+  registry_entity_remove(&r, e1);
+  registry_entity_remove(&r, e2);
+  registry_entity_remove(&r, e3);
+
+  registry_entity_commit_entities(&r);
+}
+#endif

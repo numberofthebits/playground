@@ -117,6 +117,9 @@ void registry_entity_unset_flags(Registry *reg, Entity entity,
 EntityFlags registry_entity_get_flags(Registry *reg, Entity e);
 
 int registry_entity_has_component(Registry *reg, Entity e, int component_bit);
-// TODO: add registry_remove_component(...). Remember to clear bit from entity
+
+#ifdef BUILD_TESTS
+void registry_test();
+#endif
 
 #endif // ECS_H

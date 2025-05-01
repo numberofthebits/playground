@@ -345,6 +345,7 @@ Game *game_create() {
 
 #ifdef BUILD_TESTS
   pool_test();
+  registry_test();
 #endif
   return game;
 }

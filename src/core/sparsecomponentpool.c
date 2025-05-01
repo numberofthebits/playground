@@ -6,7 +6,27 @@
 #include "types.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
+
+void pool_print(Pool *p) {
+  printf("Sparse:\n");
+  for (size_t i = 0; i < p->max_entities; ++i) {
+    printf("#%zu=", i);
+    if (p->sparse[i] == ENTITY_INVALID_INDEX) {
+      printf("X");
+    } else {
+      printf("%zu", p->sparse[i]);
+    }
+    printf("\n");
+  }
+
+  printf("\nPacked:\n");
+
+  for (size_t i = 0; i < p->count; ++i) {
+    printf("%zu=%zu\n", i, p->packed[i]);
+  }
+}
 
 void pool_init(Pool *pool, const struct Component *descriptor,
                size_t max_entities) {
@@ -43,6 +63,7 @@ void pool_insert(Pool *pool, Entity e, void *data) {
   pool->packed[current_idx] = e.index;
 
   pool->count++;
+  //  pool_print(pool);
 }
 
 void pool_remove(Pool *pool, Entity e) {
@@ -51,39 +72,41 @@ void pool_remove(Pool *pool, Entity e) {
   }
 
   EntityIndex to_remove = pool->sparse[e.index];
-  // If we passed the invalid entity test, we must have a count
-  // of at least one
-  EntityIndex to_move = pool->count - 1;
   pool->sparse[e.index] = ENTITY_INVALID_INDEX;
 
-  // This gives us entity ID used to index into pool->sparse
-  // The value of pool->sparse must be updated for the entity
-  // where we moved its data and index
-  EntityIndex moved_entity_id = pool->packed[to_move];
-  pool->packed[to_remove] = pool->packed[to_move];
-  pool->sparse[moved_entity_id] = to_remove;
+  // swap packed_to_remove and last
+  EntityIndex last = pool->count - 1;
+  if (to_remove == last) {
+    pool->count--;
+    return;
+  }
+
+  EntityIndex sparse_to_update = pool->packed[last];
+  pool->packed[to_remove] = pool->packed[last];
+  pool->sparse[sparse_to_update] = to_remove;
 
   size_t count_bytes = pool->descriptor->size;
-  ptrdiff_t ptr_offset_last = to_move * count_bytes;
+  ptrdiff_t ptr_offset_last = last * count_bytes;
   ptrdiff_t ptr_offset_removed = to_remove * count_bytes;
   memcpy((char *)pool->data + ptr_offset_removed,
          (char *)pool->data + ptr_offset_last, count_bytes);
 
   pool->count--;
+
+  // pool_print(pool);
 }
 
 #ifdef BUILD_TESTS
 typedef struct {
   int a;
-  int b;
 } PoolTestComponentData;
 
 void pool_test() {
-  const int max_entities = 1024;
+  const int max_entities = 10;
   struct Component c;
-  c.alignment = 8;
+  c.alignment = alignof(PoolTestComponentData);
   c.name = "test_component";
-  c.size = 8;
+  c.size = sizeof(PoolTestComponentData);
 
   Pool p;
 
@@ -95,55 +118,80 @@ void pool_test() {
 
   Entity e1;
   e1.id = 0;
-  e1.index = 512;
+  e1.index = 0;
 
   Entity e2;
   e2.id = 1;
-  e2.index = 0;
+  e2.index = 1;
 
-  PoolTestComponentData entity_1_data = {123, 987};
-  PoolTestComponentData entity_2_data = {456, 654};
+  Entity e3;
+  e3.id = 2;
+  e3.index = 2;
+
+  size_t s = sizeof(PoolTestComponentData);
+  (void)s;
+  PoolTestComponentData entity_1_data = {111};
+  PoolTestComponentData entity_2_data = {222};
+  PoolTestComponentData entity_3_data = {333};
   pool_insert(&p, e1, &entity_1_data);
+  pool_insert(&p, e2, &entity_2_data);
+  pool_insert(&p, e3, &entity_3_data);
 
-  assert(p.count == 1);
+  assert(p.count == 3);
   assert(p.sparse[e1.index] == 0);
+  assert(p.sparse[e2.index] == 1);
+  assert(p.sparse[e3.index] == 2);
+
   assert(p.packed[0] == e1.index);
+  assert(p.packed[1] == e2.index);
+  assert(p.packed[2] == e3.index);
 
   PoolTestComponentData *e1_data =
       PoolGetComponent(&p, PoolTestComponentData, e1.index);
-
-  assert(e1_data->a == entity_1_data.a);
-  assert(e1_data->b == entity_1_data.b);
-
-  pool_insert(&p, e2, &entity_2_data);
-
-  assert(p.count == 2);
-  assert(p.sparse[e1.index] == 0);
-  assert(p.sparse[e2.index] == 1);
-  assert(p.packed[0] == e1.index);
-  assert(p.packed[1] == e2.index);
-
   PoolTestComponentData *e2_data =
       PoolGetComponent(&p, PoolTestComponentData, e2.index);
+  PoolTestComponentData *e3_data =
+      PoolGetComponent(&p, PoolTestComponentData, e3.index);
+
+  assert(e1_data->a == entity_1_data.a);
   assert(e2_data->a == entity_2_data.a);
-  assert(e2_data->b == entity_2_data.b);
+  assert(e3_data->a == entity_3_data.a);
 
   pool_remove(&p, e1);
 
-  assert(p.count == 1);
+  assert(p.count == 2);
   assert(p.sparse[e1.index] == ENTITY_INVALID_INDEX);
-  assert(p.sparse[e2.index] == 0);
-  assert(p.packed[0] == e2.index);
+  assert(p.sparse[e2.index] == 1);
+  assert(p.sparse[e3.index] == 0);
+  assert(p.packed[0] == e3.index);
+  assert(p.packed[1] == e2.index);
+
+  e1_data = PoolGetComponent(&p, PoolTestComponentData, e1.index);
+  assert(e1_data == 0);
 
   e2_data = PoolGetComponent(&p, PoolTestComponentData, e2.index);
   assert(e2_data->a == entity_2_data.a);
-  assert(e2_data->b == entity_2_data.b);
+
+  e3_data = PoolGetComponent(&p, PoolTestComponentData, e3.index);
+  assert(e3_data->a == entity_3_data.a);
 
   pool_insert(&p, e1, &entity_1_data);
-  assert(p.count == 2);
-  assert(p.sparse[e1.index] == 1);
-  assert(p.sparse[e2.index] == 0);
-  assert(p.packed[0] == e2.index);
-  assert(p.packed[1] == e1.index);
+  assert(p.count == 3);
+  assert(p.sparse[e1.index] == 2);
+  assert(p.sparse[e2.index] == 1);
+  assert(p.sparse[e3.index] == 0);
+
+  assert(p.packed[0] == e3.index);
+  assert(p.packed[1] == e2.index);
+  assert(p.packed[2] == e1.index);
+
+  e1_data = PoolGetComponent(&p, PoolTestComponentData, e1.index);
+  assert(e1_data->a == entity_1_data.a);
+
+  e2_data = PoolGetComponent(&p, PoolTestComponentData, e2.index);
+  assert(e2_data->a == entity_2_data.a);
+
+  e3_data = PoolGetComponent(&p, PoolTestComponentData, e3.index);
+  assert(e3_data->a == entity_3_data.a);
 }
 #endif
