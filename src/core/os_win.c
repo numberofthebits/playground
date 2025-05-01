@@ -128,6 +128,8 @@ TimeT time_from_secs(int seconds) {
   return result;
 }
 
+int time_gte(TimeT a, TimeT b) { return a.QuadPart > b.QuadPart; }
+
 uint64_t time_to_millisecs(TimeT timepoint) {
   return timepoint.QuadPart * TICK_TO_MILLISECS /
          performance_counter_frequency.QuadPart;

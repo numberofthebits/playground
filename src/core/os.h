@@ -52,6 +52,8 @@ TimeT time_add(TimeT a, TimeT b);
 
 TimeT time_from_secs(int seconds);
 
+int time_gte(TimeT a, TimeT b);
+
 uint64_t time_to_millisecs(TimeT timepoint);
 uint64_t time_to_microsecs(TimeT timepoint);
 uint64_t time_to_nanosecs(TimeT timepoint);

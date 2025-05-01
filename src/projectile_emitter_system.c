@@ -92,8 +92,7 @@ void projectile_emitter_system_update(Registry *registry,
 
     TimeT elapsed = time_elapsed_now(pec->last_emitted);
 
-    // TODO: Win API specific. Needs to use os time abstraction
-    if (elapsed.QuadPart >= pec->emission_frequency.QuadPart) {
+    if (time_gte(elapsed, pec->emission_frequency)) {
       pec->last_emitted = now;
       (void)tc;
       create_projectile(pec, registry, tc->pos, now);
