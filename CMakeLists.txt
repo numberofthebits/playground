@@ -19,8 +19,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/collision_system.h
   ${PROJECT_SOURCE_DIR}/src/components.c
   ${PROJECT_SOURCE_DIR}/src/components.h
-  ${PROJECT_SOURCE_DIR}/src/core/arena.c
-  ${PROJECT_SOURCE_DIR}/src/core/arena.h
+  ${PROJECT_SOURCE_DIR}/src/core/allocators.c
+  ${PROJECT_SOURCE_DIR}/src/core/allocators.h
   ${PROJECT_SOURCE_DIR}/src/core/assetstore.c
   ${PROJECT_SOURCE_DIR}/src/core/assetstore.h
   ${PROJECT_SOURCE_DIR}/src/core/componentbase.c

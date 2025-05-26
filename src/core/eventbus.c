@@ -1,6 +1,6 @@
 #include "eventbus.h"
 
-#include "arena.h"
+#include "allocators.h"
 #include "log.h"
 
 void event_bus_init(struct EventBus *bus) {

@@ -5,7 +5,7 @@
 
 #include "systems.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/assetstore.h"
 #include "core/hashmap.h"
 #include "core/log.h"

@@ -5,6 +5,7 @@
 #include "entity_flags.h"
 #include "systems.h"
 
+#include "core/allocators.h"
 #include "core/ecs.h"
 #include <math.h>
 

@@ -3,7 +3,6 @@
 
 #include "components.h"
 
-#include "core/arena.h"
 #include "core/systembase.h"
 
 typedef struct {

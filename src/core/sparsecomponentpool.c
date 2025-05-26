@@ -1,6 +1,6 @@
 #include "sparsecomponentpool.h"
 
-#include "arena.h"
+#include "allocators.h"
 #include "componentbase.h"
 #include "log.h"
 #include "types.h"

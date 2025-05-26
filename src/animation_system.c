@@ -1,7 +1,7 @@
 #include "animation_system.h"
 
 #include "components.h"
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/math.h"
 #include "core/systembase.h"
 #include "systems.h"

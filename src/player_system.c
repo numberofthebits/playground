@@ -6,7 +6,7 @@
 #include "input_system.h"
 #include "systems.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/math.h"
 #include "core/systembase.h"
 

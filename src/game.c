@@ -6,7 +6,7 @@
 #include "entity_flags.h"
 #include "systems.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/assetstore.h"
 #include "core/ecs.h"
 #include "core/log.h"
@@ -244,6 +244,7 @@ static void window_size_callback(GLFWwindow *window, int width, int height) {
 }
 
 Game *game_create() {
+  LOG_INFO("max_align_t == %d", alignof(max_align_t));
   arena_init(&global_static_allocator, STATIC_ARENA_SIZE);
   arena_init(&frame_allocator, FRAME_ARENA_SIZE);
   Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
@@ -344,8 +345,10 @@ Game *game_create() {
                       (struct SystemBase *)game->render_system);
 
 #ifdef BUILD_TESTS
+  stack_test();
   pool_test();
   registry_test();
+
 #endif
   return game;
 }

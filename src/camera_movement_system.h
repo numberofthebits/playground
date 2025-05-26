@@ -6,7 +6,7 @@
 #include "events.h"
 #include "systems.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/componentbase.h"
 #include "core/ecs.h"
 #include "core/log.h"

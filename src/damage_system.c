@@ -1,6 +1,6 @@
 #include "damage_system.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 #include "core/log.h"
 #include "entity_flags.h"
 

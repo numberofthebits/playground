@@ -3,7 +3,7 @@
 #include "events.h"
 #include "systems.h"
 
-#include "core/arena.h"
+#include "core/allocators.h"
 
 #include <GLFW/glfw3.h>
 
