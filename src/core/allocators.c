@@ -20,21 +20,15 @@ static size_t calc_alignment_bump(size_t s, size_t alignment) {
   return alignment_bump;
 }
 
-static ptrdiff_t offset_to_aligned(void *ptr, size_t s, size_t alignment) {
-  uintptr_t res = (uintptr_t)(ptr + s) % alignment;
+static ptrdiff_t offset_to_aligned(void *ptr, size_t s) {
+  uintptr_t res = (uintptr_t)(ptr + s) % alignof(max_align_t);
 
-  if (res != 0) {
-    // We want the remaining number of bytes required to align to
-    // 'alignment'
-    res = alignment - res;
+  if (!res) {
+    return res;
   }
 
-  return res;
+  return alignof(max_align_t) - res;
 }
-
-/* static ptrdiff_t offset_to_aligned_down(void *ptr, size_t alignment) { */
-/*   return (uintptr_t)ptr % alignment; */
-/* } */
 
 void arena_init(struct ArenaAllocator *allocator, size_t capacity) {
   if (!allocator) {
@@ -130,9 +124,7 @@ void stack_init(struct StackAllocator *stack, struct ArenaAllocator *arena,
   stack->used = 0;
 }
 
-void *stack_alloc(struct StackAllocator *allocator, size_t s,
-                  size_t alignment) {
-  (void)alignment;
+void *stack_alloc(struct StackAllocator *allocator, size_t s) {
   if (allocator->used + s >= allocator->capacity) {
     LOG_EXIT("Stack allocation of %zu exceeds capacity %zu", s,
              allocator->capacity);
@@ -141,12 +133,12 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s,
 
   void *ptr = allocator->base + allocator->used;
 
-  if ((uintptr_t)ptr % alignment == 0) {
+  if ((uintptr_t)ptr % alignof(max_align_t) == 0) {
     allocator->used += s;
     return ptr;
   }
 
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
+  ptrdiff_t offset = offset_to_aligned(ptr, s);
   ptr += offset;
 
   allocator->used += offset + s;
@@ -166,28 +158,24 @@ int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
   return 0;
 }
 
-void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s,
-                   size_t alignment) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
+void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
+  ptrdiff_t offset = offset_to_aligned(ptr, s);
 
   if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
-
     allocator->used -= s + offset;
   } else {
-    LOG_EXIT("Failed to deallocate %x of size %zu with alignment %zu", ptr, s,
-             alignment);
+    LOG_EXIT("Failed to deallocate %x of size %zu", ptr);
   }
 }
 
-int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr, size_t s,
-                          size_t alignment) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
+int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
+                          size_t s) {
+  ptrdiff_t offset = offset_to_aligned(ptr, s);
 
   if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
     allocator->used -= s + offset;
   } else {
-    LOG_ERROR("Failed to deallocate %x of size %zu with alignment %zu", ptr, s,
-              alignment);
+    LOG_ERROR("Failed to deallocate %x of size %zu", ptr, s);
     return 0;
   }
 
@@ -213,7 +201,7 @@ static void test_offset_to_align() {
   char *ptr = 0;
 
   for (size_t i = 0; i < alignment; ++i) {
-    uintptr_t offset = (uintptr_t)offset_to_aligned(ptr, i, alignment);
+    uintptr_t offset = (uintptr_t)offset_to_aligned(ptr, i);
     uintptr_t expected = (uintptr_t)((alignment - i) % alignment);
     assert(offset == expected);
   }
@@ -230,13 +218,12 @@ void stack_test() {
   struct StackAllocator stack = {0};
   stack_init(&stack, &arena, 1024 * 1024 * 16);
 
-  int *int_ptr = stack_alloc(&stack, sizeof(int), alignof(int));
+  int *int_ptr = stack_alloc(&stack, sizeof(int));
   assert((uintptr_t)int_ptr % alignof(int) == 0);
   assert(stack.used == 4);
 
   *int_ptr = 0xf0e0d0c0;
-  TestStructPadded *ts =
-      stack_alloc(&stack, sizeof(TestStructPadded), alignof(TestStructPadded));
+  TestStructPadded *ts = stack_alloc(&stack, sizeof(TestStructPadded));
 
   uintptr_t ts_value = (uintptr_t)ts;
   int alignof_ts = alignof(TestStructPadded);
@@ -246,32 +233,24 @@ void stack_test() {
   // should be aligned to eight and we lose 4 bytes because of previous
   // allocation of int when allocating TestStructPadded
   assert(stack.used == 4 + 4 + sizeof(TestStructPadded));
-  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int), alignof(int)) ==
-         0);
-  assert(stack_dealloc_checked(&stack, ts, sizeof(*ts),
-                               alignof(TestStructPadded)) == 1);
+  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 0);
+  assert(stack_dealloc_checked(&stack, ts, sizeof(*ts)) == 1);
   assert(*int_ptr == test_int);
 
-  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int), alignof(int)) ==
-         1);
+  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 1);
   assert(stack.used == 0);
 
-  int *int_ptr_2 = stack_alloc(&stack, sizeof(int), alignof(int));
-  TestStructPadded *ts2 =
-      stack_alloc(&stack, sizeof(TestStructPadded), alignof(TestStructPadded));
-  TestStructLarge *tsl =
-      stack_alloc(&stack, sizeof(TestStructLarge), alignof(TestStructLarge));
+  int *int_ptr_2 = stack_alloc(&stack, sizeof(int));
+  TestStructPadded *ts2 = stack_alloc(&stack, sizeof(TestStructPadded));
+  TestStructLarge *tsl = stack_alloc(&stack, sizeof(TestStructLarge));
   assert((uintptr_t)int_ptr_2 % alignof(int) == 0);
   *int_ptr_2 = 1;
 
   assert(*int_ptr == *int_ptr_2);
 
-  assert(stack_dealloc_checked(&stack, tsl, sizeof(TestStructLarge),
-                               alignof(TestStructLarge)) == 1);
-  assert(stack_dealloc_checked(&stack, ts2, sizeof(TestStructPadded),
-                               alignof(TestStructPadded)) == 1);
-  assert(stack_dealloc_checked(&stack, int_ptr_2, sizeof(int), alignof(int)) ==
-         1);
+  assert(stack_dealloc_checked(&stack, tsl, sizeof(TestStructLarge)) == 1);
+  assert(stack_dealloc_checked(&stack, ts2, sizeof(TestStructPadded)) == 1);
+  assert(stack_dealloc_checked(&stack, int_ptr_2, sizeof(int)) == 1);
 
   assert(stack.used == 0);
 

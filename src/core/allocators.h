@@ -45,17 +45,16 @@ struct StackAllocator {
 void stack_init(struct StackAllocator *stack, struct ArenaAllocator *allocator,
                 size_t s);
 
-void *stack_alloc(struct StackAllocator *allocator, size_t s, size_t alignment);
+void *stack_alloc(struct StackAllocator *allocator, size_t s);
 
 // Returns non-null if true
 int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
                                     size_t s, ptrdiff_t offset);
 
-void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s,
-                   size_t alignment);
+void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s);
 
-int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr, size_t s,
-                          size_t alignment);
+int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
+                          size_t s);
 
 // This is the very definition of dangling pointers. You'd
 // better be sure none of them are in use before allocating
