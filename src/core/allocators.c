@@ -5,12 +5,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <threads.h>
 
 struct ArenaAllocator global_static_allocator;
 
 struct ArenaAllocator frame_allocator;
 
-struct StackAllocator global_stack_allocator;
+thread_local struct StackAllocator stack_allocator;
 
 static size_t calc_alignment_bump(size_t s, size_t alignment) {
   size_t alignment_bump = 0;

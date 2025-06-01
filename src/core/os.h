@@ -5,6 +5,9 @@
 
 #define FILE_CALLBACK_RESULT_CONTINUE 0
 #define FILE_CALLBACK_RESULT_STOP 1
+#define WORKER_THREAD_COUNT 7
+
+#define ENABLE_DEBUG_TIMERS
 
 typedef struct {
   const char *file_path;
@@ -15,6 +18,7 @@ typedef struct {
 typedef int (*IterCallback)(const FileSystemListResult *result, void *context);
 
 #ifdef _WIN32
+#include <intrin.h>
 #include <windows.h>
 typedef LARGE_INTEGER TimeT;
 #define CALLING_CONVENTION APIENTRY
@@ -78,5 +82,40 @@ uint64_t time_to_nanosecs(TimeT timepoint);
 #define AppendScopedTimer(name)
 #define PrintScopedTimer(name)
 #endif // ENABLE_DEBUG_TIMERS
+
+// TODO: _mm_sfence() and _mm_lfence() are actual instructions
+//       while _Read-/WriteBarrier are just compiler hints. On x64
+//       the fences may not be necessary, which lets us not issue
+//       those instructions when not required by the architecture.
+// TODO: Non-MSVC support here. Which include? Probably not intrin.h?
+
+#ifdef _WIN32
+typedef HANDLE SemaphoreHandle;
+
+#define CompletePastWritesBeforeFutureWrites()                                 \
+  _WriteBarrier();                                                             \
+  _mm_sfence()
+
+#define CompletePastReadsBeforeFutureReads()                                   \
+  _ReadBarrier();                                                              \
+  _mm_lfence()
+
+#define MakeSemaphore()                                                        \
+  CreateSemaphoreEx(0, 0, WORKER_THREAD_COUNT, "WorkerThreadsSemaphore", 0,    \
+                    SEMAPHORE_ALL_ACCESS)
+
+#define WaitForSemaphore(handle)                                               \
+  WaitForSingleObjectEx((handle), INFINITE, FALSE)
+
+#define SignalSemaphore(handle)                                                \
+  LONG old_count = 0;                                                          \
+  if (!ReleaseSemaphore((handle), 1, &old_count)) {                            \
+    return;                                                                    \
+  }                                                                            \
+  LOG_INFO("Increased semaphore count to %d", old_count + 1)
+#else
+#error "Not implemented for non-Win32 || non-MSVC"
+typedef WhateverLinuxUses SemaphoreHandle
+#endif
 
 #endif // OS_H

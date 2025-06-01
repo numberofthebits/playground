@@ -13,6 +13,7 @@
 #include "core/math.h"
 #include "core/os.h"
 #include "core/systembase.h"
+#include "core/worker.h"
 
 #include <GLFW/glfw3.h>
 // #include <glad/glad.h>
@@ -249,6 +250,8 @@ Game *game_create() {
   arena_init(&frame_allocator, FRAME_ARENA_SIZE);
   Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
 
+  work_queue_init();
+
   game->state = 0;
   game->frame_counter = 0;
 
@@ -348,7 +351,7 @@ Game *game_create() {
   stack_test();
   pool_test();
   registry_test();
-
+  work_queue_test();
 #endif
   return game;
 }

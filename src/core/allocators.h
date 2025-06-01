@@ -4,6 +4,7 @@
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <threads.h>
 
 struct ArenaAllocator {
   uint8_t *base;
@@ -72,4 +73,5 @@ extern struct ArenaAllocator global_static_allocator;
 // i.e. can die each frame
 extern struct ArenaAllocator frame_allocator;
 
+extern thread_local struct StackAllocator stack_allocator;
 #endif

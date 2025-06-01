@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include "core/log.h"
+#include "core/worker.h"
 
 #include <stdio.h>
 
