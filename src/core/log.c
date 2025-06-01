@@ -2,9 +2,10 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <threads.h>
 #include <time.h>
 
-static char log_buffer[4096 * 4];
+static thread_local char log_buffer[4096 * 4];
 static FILE *fp;
 
 typedef void (*LogFunc)(int);
