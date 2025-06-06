@@ -14,7 +14,6 @@
 
 #define REGISTRY_ARENA_SIZE 1024 * 1024 * 64
 
-// static EntityId entity_id_counter;
 /*
 Insertion:
 Each time insertion happens, 'used' is incremented.
@@ -79,8 +78,8 @@ static size_t entity_id_pool_reserve_index(struct EntityIdPool *entity_ids) {
   }
 
   size_t index = entity_ids->pool[entity_ids->used];
-  LOG_INFO("Reserve entity index %zu (in use total %zu)", index,
-           entity_ids->used + 1);
+  /* LOG_INFO("Reserve entity index %zu (in use total %zu)", index, */
+  /*          entity_ids->used + 1); */
   entity_ids->used++;
 
   //    print_entity_id_pool(entity_ids);
@@ -125,7 +124,8 @@ static Entity create_entity(struct EntityIdPool *entity_id_pool) {
   entity.id = entity_id_counter++;
   entity.index = entity_id_pool_reserve_index(entity_id_pool);
 
-  LOG_INFO("Create entity with ID %d and index %zd", entity.id, entity.index);
+  //  LOG_INFO("Create entity with ID %d and index %zd", entity.id,
+  //  entity.index);
 
   return entity;
 }
@@ -135,6 +135,11 @@ static void zero_system_pointers(struct SystemBase **systems, size_t count) {
     *systems = 0;
     systems++;
   }
+}
+
+static inline void clear_staged_entities_add(Registry *reg) {
+  reg->staged_add.count_to_add = 0;
+  memset(reg->staged_add.counts, 0x0, sizeof(reg->staged_add.counts));
 }
 
 void registry_init(Registry *reg, size_t max_entity_count,
@@ -151,15 +156,16 @@ void registry_init(Registry *reg, size_t max_entity_count,
     pool_init(&reg->pools[i], component, max_entity_count);
   }
 
-  hash_map_init(&reg->entity_tags.entity_tag_map, 10);
-  hash_map_init(&reg->entity_tags.tag_entity_map, 10);
-  hash_map_init(&reg->entity_groups.group_entity_map, 10);
-  hash_map_init(&reg->entity_groups.entity_group_map, 10);
+  hash_map_init(&reg->entity_tags.entity_tag_map, 10000);
+  hash_map_init(&reg->entity_tags.tag_entity_map, 10000);
+  hash_map_init(&reg->entity_groups.group_entity_map, 10000);
+  hash_map_init(&reg->entity_groups.entity_group_map, 10000);
 
   zero_system_pointers(&reg->systems[0], SYSTEMS_MAX);
 
-  reg->to_add = ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
-  reg->count_to_add = 0;
+  /* reg->to_add = ArenaAlloc(&global_static_allocator, max_entity_count,
+   * Entity); */
+  /* reg->count_to_add = 0; */
 
   reg->to_remove =
       ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
@@ -174,6 +180,11 @@ void registry_init(Registry *reg, size_t max_entity_count,
 
   reg->components.num_components = component_count;
   reg->components.components = components;
+
+  reg->staged_add.to_add =
+      ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
+
+  clear_staged_entities_add(reg);
 }
 
 Pool *registry_get_pool(Registry *reg, int component_bit) {
@@ -192,22 +203,22 @@ Entity registry_entity_create(Registry *reg) {
 }
 
 static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
-  size_t entity_index = entity.index;
+
   SignatureT entity_signature =
-      registry->entity_component_signatures[entity_index];
+      registry->entity_component_signatures[entity.index];
 
   for (size_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
-    if (!system) {
+    SignatureT system_signature = system->signature;
+
+    if (!system || !system_signature) {
       continue;
     }
 
-    SignatureT system_signature = system->signature;
     if ((entity_signature & system_signature) == system_signature) {
-
-      LOG_INFO("Add entity %d (index %d) to system %s", entity.id, entity.index,
-               system->name);
-      system_add_entity(system, entity);
+      //      LOG_INFO("Add entity %d to %s", entity.id,
+      //      registry->systems[i]->name);
+      system_add_entity(registry->systems[i], entity);
     }
   }
 }
@@ -219,11 +230,11 @@ static void remove_entity_from_systems(Registry *registry, Entity entity) {
 
   for (size_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
-    if (!system) {
+    SignatureT system_signature = system->signature;
+    if (!system || !system_signature) {
       continue;
     }
 
-    SignatureT system_signature = system->signature;
     if ((entity_signature & system_signature) == system_signature) {
       system_remove_entity(system, entity);
     }
@@ -237,8 +248,25 @@ static void remove_entity_from_pools(Registry *registry, Entity entity) {
 }
 
 void registry_entity_add(Registry *reg, Entity e) {
-  LOG_INFO("Add entity ID %d index %zu", e.id, e.index);
-  reg->to_add[reg->count_to_add++] = e;
+  reg->staged_add.to_add[reg->staged_add.count_to_add++] = e;
+
+  /* LOG_INFO("Add entity ID %d index %zu", e.id, e.index); */
+  SignatureT entity_signature = reg->entity_component_signatures[e.index];
+
+  for (size_t i = 0; i < reg->num_systems; ++i) {
+    struct SystemBase *system = reg->systems[i];
+    SignatureT system_signature = system->signature;
+    if (!system || !system_signature) {
+      continue;
+    }
+
+    if ((entity_signature & system_signature) == system_signature) {
+      reg->staged_add.counts[i]++;
+      /* LOG_INFO("Add entity %d (index %d) to system %s", entity.id,
+       * entity.index, */
+      /*          system->name); */
+    }
+  }
 }
 
 void registry_entity_remove(Registry *reg, Entity e) {
@@ -257,20 +285,39 @@ void registry_entity_commit_entities(Registry *reg) {
   }
   reg->count_to_remove = 0;
 
-  for (size_t i = 0; i < reg->count_to_add; ++i) {
-    registry_add_entity_to_systems(reg, reg->to_add[i]);
+  BeginScopedTimer(add_entity_to_systems);
+  for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+    // Reserve space for as many entities as the system will need
+    // up front
+    if (reg->staged_add.counts[i] != 0) {
+      size_t current_free_capacity =
+          reg->systems[i]->entities.capacity - reg->systems[i]->entities.size;
+
+      if (current_free_capacity < reg->staged_add.counts[i]) {
+        size_t required_capacity =
+            reg->systems[i]->entities.size + reg->staged_add.counts[i];
+        VEC_RESERVE_T(&reg->systems[i]->entities, Entity, required_capacity);
+      }
+    }
   }
 
-  reg->count_to_add = 0;
+  for (size_t i = 0; i < reg->staged_add.count_to_add; ++i) {
+    registry_add_entity_to_systems(reg, reg->staged_add.to_add[i]);
+  }
+
+  clear_staged_entities_add(reg);
+
+  AppendScopedTimer(add_entity_to_systems);
+  PrintScopedTimer(add_entity_to_systems);
 }
 
 void registry_entity_component_add(Registry *reg, Entity e, int component_bit,
                                    void *data) {
-  int index = component_index(&reg->components, component_bit);
-  assert(index >= 0 && index < COMPONENT_POOLS_MAX);
+  /* int index = ; */
+  // assert(index >= 0 && index < COMPONENT_POOLS_MAX);
 
-  LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index,
-           component_name(&reg->components, index));
+  /* LOG_INFO("Entity ID %d index %zu: add component %s)", e.id, e.index, */
+  /*          component_name(&reg->components, index)); */
 
   Pool *pool = registry_get_pool(reg, component_bit);
   if (!pool) {
@@ -323,7 +370,8 @@ void registry_update(Registry *reg, size_t frame_index) {
 #endif
       system->update_fn(reg, system, frame_index);
 #ifdef ENABLE_DEBUG_TIMERS
-      TimeT elapsed = time_elapsed_now(t0);
+      TimeT t1 = time_now();
+      TimeT elapsed = time_elapsed(t0, t1);
       LOG_INFO("System '%s' update time: %lu microsecs", system->name,
                time_to_microsecs(elapsed));
 #endif

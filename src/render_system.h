@@ -13,8 +13,6 @@
 
 #include <stdint.h>
 
-#define MAX_DRAW_INDIRECT_DRAW_COMMANDS 10000
-
 typedef struct {
   Vec program_ids;
   Vec material_ids;

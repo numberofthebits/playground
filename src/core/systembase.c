@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 
-#define SYSTEM_ENTITIES_DEFAULT_CAPACITY 1024
+#define SYSTEM_ENTITIES_DEFAULT_CAPACITY 64
 
 static EntityIndex find_entity_index(Vec *entities, Entity e) {
   Entity *iter = VEC_ITER_BEGIN_T(entities, Entity);

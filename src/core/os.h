@@ -5,9 +5,6 @@
 
 #define FILE_CALLBACK_RESULT_CONTINUE 0
 #define FILE_CALLBACK_RESULT_STOP 1
-#define WORKER_THREAD_COUNT 7
-
-#define ENABLE_DEBUG_TIMERS
 
 typedef struct {
   const char *file_path;
@@ -77,10 +74,17 @@ uint64_t time_to_nanosecs(TimeT timepoint);
   LOG_INFO("Timer '%s': %ld", timer_name_##name,                               \
            time_to_microsecs(elapsed_##name));
 
+#define FuncTimer(name, func)                                                  \
+  BeginScopedTimer(_##name);                                                   \
+  func;                                                                        \
+  AppendScopedTimer(_##name);                                                  \
+  PrintScopedTimer(_##name);
+
 #else // !ENABLE_DEBUG_TIMERS
 #define BeginScopedTimer(name)
 #define AppendScopedTimer(name)
 #define PrintScopedTimer(name)
+#define FuncTimer(name, func)
 #endif // ENABLE_DEBUG_TIMERS
 
 // TODO: _mm_sfence() and _mm_lfence() are actual instructions
@@ -100,19 +104,15 @@ typedef HANDLE SemaphoreHandle;
   _ReadBarrier();                                                              \
   _mm_lfence()
 
-#define MakeSemaphore()                                                        \
-  CreateSemaphoreEx(0, 0, WORKER_THREAD_COUNT, "WorkerThreadsSemaphore", 0,    \
+#define MakeSemaphore(worker_thread_count)                                     \
+  CreateSemaphoreEx(0, 0, (worker_thread_count), "WorkerThreadsSemaphore", 0,  \
                     SEMAPHORE_ALL_ACCESS)
 
 #define WaitForSemaphore(handle)                                               \
   WaitForSingleObjectEx((handle), INFINITE, FALSE)
 
-#define SignalSemaphore(handle)                                                \
-  LONG old_count = 0;                                                          \
-  if (!ReleaseSemaphore((handle), 1, &old_count)) {                            \
-    return;                                                                    \
-  }                                                                            \
-  LOG_INFO("Increased semaphore count to %d", old_count + 1)
+#define SignalSemaphore(handle, count) ReleaseSemaphore((handle), (count), NULL)
+
 #else
 #error "Not implemented for non-Win32 || non-MSVC"
 typedef WhateverLinuxUses SemaphoreHandle

@@ -35,4 +35,6 @@ void log_msg(const char *level, const char *file, int line,
 #define LOG_GL_NOTIFY(...)                                                     \
   log_msg("GL NOTIFICATION", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__);
 
+extern unsigned long long time_logging;
+
 #endif

@@ -19,13 +19,13 @@
 // #include <glad/glad.h>
 #include <stdio.h>
 
-#define MAX_ENTITIES 1024
+#define MAX_ENTITIES 100000
 
 // Try to define all the memory we will ever need up front.
 //
 // NOTE: There's quite a few dynamic arrays and hash maps
 //       left to remove.
-#define STATIC_ARENA_SIZE 1024 * 1024 * 32
+#define STATIC_ARENA_SIZE 1024 * 1024 * 64
 #define FRAME_ARENA_SIZE 1024 * 1024 * 16
 
 /* extern const struct Component component_table[]; */
@@ -36,6 +36,7 @@ typedef struct {
 } MapTile;
 
 struct Map_t {
+  Vec2u32 world_size;
   Vec2u8 map_size;
   Vec2u8 atlas_size;
   MapTile *tiles;
@@ -53,6 +54,7 @@ struct Game_t {
   struct Assets assets;
   Map map;
   struct EventBus event_bus;
+  struct WorkQueue work_queue;
 
   int state;
   size_t frame_counter;
@@ -250,7 +252,7 @@ Game *game_create() {
   arena_init(&frame_allocator, FRAME_ARENA_SIZE);
   Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
 
-  work_queue_init();
+  work_queue_init(&game->work_queue);
 
   game->state = 0;
   game->frame_counter = 0;
@@ -302,6 +304,7 @@ Game *game_create() {
   game->services.assets = &game->assets;
   game->services.registry = &game->registry;
   game->services.event_bus = &game->event_bus;
+  game->services.work_queue = &game->work_queue;
 
   GLFWmonitor *monitor = glfwGetPrimaryMonitor();
   const GLFWvidmode *mode = glfwGetVideoMode(monitor);
@@ -359,6 +362,8 @@ Game *game_create() {
 void map_init(Map *map) {
   // Hard code this for now, since we haven't defined a meta data
   // structure for maps yet
+  map->world_size.x = 10 * 25;
+  map->world_size.y = 10 * 20;
   map->map_size.x = 25;
   map->map_size.y = 20;
   map->atlas_size.x = 10;
@@ -372,22 +377,22 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
   const float atlas_cols_f = (float)map->atlas_size.x;
   const float atlas_rows_f = (float)map->atlas_size.y;
 
-  for (int row = 0; row < map->map_size.y; ++row) {
-    for (int col = 0; col < map->map_size.x; ++col) {
+  for (uint32_t row = 0; row < map->world_size.y; ++row) {
+    for (uint32_t col = 0; col < map->world_size.x; ++col) {
       Entity e = registry_entity_create(registry);
 
       TransformComponent tc = {0};
       tc.scale.x = 1.f;
       tc.scale.y = 1.f;
-
-      tc.pos.x = col * tc.scale.x;
-      tc.pos.y = row * tc.scale.y;
+      tc.pos.x = col;
+      tc.pos.y = row;
       tc.pos.z = 0.0f;
       tc.rotation = 0.0f;
 
       registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
-      MapTile tile = map_get_tile(map, col, row);
+      MapTile tile =
+          map_get_tile(map, col % map->map_size.x, row % map->map_size.y);
 
       RenderComponent rc;
       rc.render_layer = 0;
@@ -407,7 +412,7 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
 
       registry_entity_add(registry, e);
 
-      registry_entity_group(registry, e, "tiles");
+      //      registry_entity_group(registry, e, "tiles");
     }
   }
 }
@@ -584,7 +589,7 @@ void game_setup(Game *game) {
       (CameraMovementSystem *)registry_get_system(&game->registry,
                                                   CAMERA_MOVEMENT_SYSTEM_BIT);
   camera_movement_system_set_world_size(camera_movement_system,
-                                        game->map.map_size);
+                                        game->map.world_size);
 
   // Push our initial entities before entering main loop
   registry_entity_commit_entities(&game->registry);
@@ -621,7 +626,11 @@ void game_run(Game *game) {
 
     glfwPollEvents();
 
+    BeginScopedTimer(update_time);
     game_update(game);
+
+    AppendScopedTimer(update_time);
+    PrintScopedTimer(update_time);
 
     if (game->state & GAME_DEBUG_ENABLED) {
       RenderSystem *render_system = (RenderSystem *)registry_get_system(
@@ -629,12 +638,20 @@ void game_run(Game *game) {
       render_system_debug(render_system, &game->registry);
     }
 
+    BeginScopedTimer(swap_buffers);
     glfwSwapBuffers(game->window);
+    AppendScopedTimer(swap_buffers);
+    PrintScopedTimer(swap_buffers);
 
     game->frame_counter++;
 
     AppendScopedTimer(frame_time);
     PrintScopedTimer(frame_time);
+
+    // Last time checked, each logged line takes 20microsecs.
+    // That's alot.
+    //    LOG_INFO("Time spent logging %llu microsecs", time_logging);
+    time_logging = 0;
   }
 }
 

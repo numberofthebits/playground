@@ -22,6 +22,13 @@ struct EntityIdPool {
 };
 
 typedef struct {
+  Entity *to_add;
+  uint32_t count_to_add;
+
+  uint32_t counts[SYSTEMS_MAX];
+} StagedAdd;
+
+typedef struct {
   // Entity to const char*
   HashMap entity_tag_map;
   // const char* to Entity
@@ -47,8 +54,10 @@ struct Registry_t {
   size_t num_entities;
   size_t max_entities;
 
-  Entity *to_add;
-  size_t count_to_add;
+  /* Entity *to_add; */
+  /* size_t count_to_add; */
+
+  StagedAdd staged_add;
 
   Entity *to_remove;
   size_t count_to_remove;

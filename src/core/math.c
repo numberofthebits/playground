@@ -27,6 +27,11 @@ Vec3f scale(Vec3f *v, float scalar) {
   return result;
 }
 
+Vec2u32 mul_vec2u32(Vec2u32 *v, uint32_t factor) {
+  Vec2u32 ret = {.x = v->x * factor, .y = v->y * factor};
+  return ret;
+}
+
 float magnitude_squared_vec2f(Vec2f *v) { return v->x * v->x + v->y * v->y; }
 
 float magnitude_squared_vec3f(Vec3f *v) {
@@ -102,37 +107,19 @@ Mat4x4 zero(void) {
   return m;
 }
 
-Mat4x4 identity(void) {
-  Mat4x4 m;
-
-  m.data[0] = 1.0f;
-  m.data[1] = 0.0f;
-  m.data[2] = 0.0f;
-  m.data[3] = 0.0f;
-
-  m.data[4] = 0.0f;
-  m.data[5] = 1.0f;
-  m.data[6] = 0.0f;
-  m.data[7] = 0.0f;
-
-  m.data[8] = 0.0f;
-  m.data[9] = 0.0f;
-  m.data[10] = 1.0f;
-  m.data[11] = 0.0f;
-
-  m.data[12] = 0.0f;
-  m.data[13] = 0.0f;
-  m.data[14] = 0.0f;
-  m.data[15] = 1.0f;
-
-  return m;
+void mat4_identity(Mat4x4 *m) {
+  static float Mat4x4_Identity[] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+                                    0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+                                    0.0f, 0.0f, 0.0f, 1.0f};
+  memcpy(&m->data[0], Mat4x4_Identity, sizeof(Mat4x4));
 }
 
 Mat4x4 perspective(float near, float far, float fov, float aspect) {
   float scale = 1.0f / (aspect * (float)tan(fov * 0.5f * PI / 180.0f));
   float f_min_n = far - near;
 
-  Mat4x4 m = identity();
+  Mat4x4 m;
+  mat4_identity(&m);
 
   m.data[0] = scale;
   m.data[5] = scale;
@@ -145,27 +132,27 @@ Mat4x4 perspective(float near, float far, float fov, float aspect) {
 
 Mat4x4 ortho(float near, float far, float right, float left, float top,
              float bottom) {
-  Mat4x4 m = identity();
-  // TODO: Transpose assignments instead of calling transpose runtime
-  m.data[0] = 2.f / (right - left);
-  m.data[5] = 2.f / (top - bottom);
-  m.data[10] = -2.f / (far - near);
-  m.data[12] = -(right + left) / (right - left);
-  m.data[13] = -(top + bottom) / (top - bottom);
-  m.data[14] = -(far + near) / (far - near);
-  m.data[15] = 1.f;
+  Mat4x4 m;
+  mat4_identity(&m);
 
-  transpose(&m);
+  m.data[0] = 2.f / (right - left); // diagonal
+  m.data[5] = 2.f / (top - bottom); // diagonal
+  m.data[10] = -2.f / (far - near); // diagonal
+  m.data[3] = -(right + left) / (right - left);
+  m.data[7] = -(top + bottom) / (top - bottom);
+  m.data[11] = -(far + near) / (far - near);
+  m.data[15] = 1.f; // diagonal
+
   return m;
 }
 
-void translate(Mat4x4 *mat, Vec3f *v) {
+void mat4_translate(Mat4x4 *mat, Vec3f *v) {
   mat->data[12] += v->x;
   mat->data[13] += v->y;
   mat->data[14] += v->z;
 }
 
-void scale_mat4(Mat4x4 *mat, Vec3f *v) {
+void mat4_scale(Mat4x4 *mat, Vec3f *v) {
   mat->data[0] *= v->x;
   mat->data[5] *= v->y;
   mat->data[10] *= v->z;
@@ -195,7 +182,7 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians) {
   mat->data[10] = z2 * one_min_cos_r + cos_r;
 }
 
-void transpose(Mat4x4 *mat) {
+void mat4_transpose(Mat4x4 *mat) {
   float values[16] = {mat->data[0], mat->data[4], mat->data[8],  mat->data[12],
                       mat->data[1], mat->data[5], mat->data[9],  mat->data[13],
                       mat->data[2], mat->data[6], mat->data[10], mat->data[14],

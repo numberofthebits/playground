@@ -12,6 +12,7 @@
 #include "core/math.h"
 #include "core/renderer.h"
 #include "core/vec.h"
+#include "core/worker.h"
 
 #include <glad/glad.h>
 
@@ -268,27 +269,27 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
   render_batch(system, count_in_batch);
 }
 
-static void render_update(Registry *reg, struct SystemBase *sys,
-                          size_t frame_nr) {
-  (void)frame_nr;
+typedef struct {
+  Entity *entities;
+  Pool *transform_pool;
+  Pool *render_pool;
+  RenderData *render_data;
+  int begin;
+  int end;
+} RenderUpdateRangeArgs;
 
-  RenderSystem *render_sys = (RenderSystem *)sys;
-  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+static void render_update_range(void *job_params) {
+  RenderUpdateRangeArgs *range_args = job_params;
 
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+  //  LOG_INFO("Processing range [%d,%d>", range_args->begin, range_args->end);
+  for (int i = range_args->begin; i < range_args->end; ++i) {
+    Entity entity = range_args->entities[i];
+    TransformComponent *tc = PoolGetComponent(range_args->transform_pool,
+                                              TransformComponent, entity.index);
+    RenderComponent *rc = PoolGetComponent(range_args->render_pool,
+                                           RenderComponent, entity.index);
 
-  RenderData *render_data =
-      ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
-
-  for (int i = 0; i < sys->entities.size; ++i) {
-    Entity entity = entities[i];
-    TransformComponent *tc =
-        PoolGetComponent(transform_pool, TransformComponent, entity.index);
-    RenderComponent *rc =
-        PoolGetComponent(render_pool, RenderComponent, entity.index);
-
-    RenderData *rd = &render_data[i];
+    RenderData *rd = &range_args->render_data[i];
 
     rd->render_layer = rc->render_layer;
 
@@ -306,15 +307,21 @@ static void render_update(Registry *reg, struct SystemBase *sys,
     rd->tex_coord_scale = rc->tex_coord_scale;
 
     Vec3f axis = {0.f, 0.f, 1.f};
-    Mat4x4 matrix_scale = identity();
-    Mat4x4 matrix_translate = identity();
-    Mat4x4 matrix_rotate = identity();
+    Mat4x4 matrix_scale;
+    mat4_identity(&matrix_scale);
+
+    Mat4x4 matrix_translate;
+    mat4_identity(&matrix_translate);
+
+    Mat4x4 matrix_rotate;
+    mat4_identity(&matrix_rotate);
 
     mat4_rotate(&matrix_rotate, &axis, tc->rotation);
-    scale_mat4(&matrix_scale, &scale);
-    translate(&matrix_translate, &pos);
+    mat4_scale(&matrix_scale, &scale);
+    mat4_translate(&matrix_translate, &pos);
 
-    Mat4x4 m = identity();
+    Mat4x4 m;
+    mat4_identity(&m);
     m = mul(&m, &matrix_rotate);
     m = mul(&m, &matrix_scale);
     m = mul(&m, &matrix_translate);
@@ -323,8 +330,61 @@ static void render_update(Registry *reg, struct SystemBase *sys,
     rd->material_id = rc->material_id;
     rd->program_id = rc->pipeline_id;
   }
+}
 
+static void render_update(Registry *reg, struct SystemBase *sys,
+                          size_t frame_nr) {
+  BeginScopedTimer(render_update);
+  (void)frame_nr;
+
+  RenderSystem *render_sys = (RenderSystem *)sys;
+  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+
+  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+
+  RenderData *render_data =
+      ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
+
+  int batch_size = sys->entities.size / NUM_THREADS;
+  for (int i = 0; i < NUM_THREADS; ++i) {
+    RenderUpdateRangeArgs *job_args =
+        ArenaAlloc(&frame_allocator, 1, RenderUpdateRangeArgs);
+    job_args->entities = entities;
+    job_args->transform_pool = transform_pool;
+    job_args->render_data = render_data;
+    job_args->render_pool = render_pool;
+    int begin = i * batch_size;
+    int end = begin + batch_size;
+    job_args->begin = begin;
+    job_args->end = end;
+
+    work_queue_push(sys->services.work_queue, render_update_range, job_args);
+  }
+
+  int job_batch_remainder = sys->entities.size % NUM_THREADS;
+  if (job_batch_remainder) {
+    RenderUpdateRangeArgs *job_args =
+        ArenaAlloc(&frame_allocator, 1, RenderUpdateRangeArgs);
+    job_args->entities = entities;
+    job_args->transform_pool = transform_pool;
+    job_args->render_data = render_data;
+    job_args->render_pool = render_pool;
+    job_args->begin = NUM_THREADS * batch_size;
+    job_args->end = job_args->begin + job_batch_remainder;
+
+    work_queue_push(sys->services.work_queue, &render_update_range, job_args);
+  }
+
+  work_queue_sync(sys->services.work_queue);
+
+  AppendScopedTimer(render_update);
+  PrintScopedTimer(render_update);
+
+  BeginScopedTimer(render_entities);
   render_entities(render_sys, render_data, sys->entities.size);
+  AppendScopedTimer(render_entities);
+  PrintScopedTimer(render_entities);
 }
 
 void render_system_create_program(RenderSystem *system, AssetId program_id) {
@@ -511,8 +571,8 @@ static void recalc_camera(struct OrthoCamera *camera, int width, int height,
       0.01f, 10.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
       camera->rect.pos.y + camera->rect.height, camera->rect.pos.y);
 
-  camera->view = identity();
-  translate(&camera->view, center);
+  mat4_identity(&camera->view);
+  mat4_translate(&camera->view, center);
 }
 
 RenderSystem *render_system_create(Services *services, int window_w,
@@ -708,13 +768,14 @@ void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e) {
   struct RenderSystem *render_sys = (struct RenderSystem *)system;
   CameraUpdated *pos_changed_event = e.event_data;
-  Mat4x4 t = identity();
+  Mat4x4 t;
+  mat4_identity(&t);
   Vec3f neg_pos = {-pos_changed_event->pos.x, -pos_changed_event->pos.y,
                    -pos_changed_event->pos.z};
 
-  translate(&t, &neg_pos);
-  float x = pos_changed_event->size.x / 2.f;
-  float y = pos_changed_event->size.y / 2.f;
+  mat4_translate(&t, &neg_pos);
+  float x = pos_changed_event->size.x / 1.f;
+  float y = pos_changed_event->size.y / 1.f;
   render_sys->camera.projection = ortho(0.1f, 10.f, x, -x, y, -y);
   render_sys->camera.view = t;
 }
@@ -771,11 +832,12 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
       /* // If it does have a transform component, we build that into the vertex
        */
       /* // data and just issue the draw call for the hardcoded vertex data */
-      Mat4x4 model = identity();
+      Mat4x4 model;
+      mat4_identity(&model);
       if (registry_entity_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
         TransformComponent *tc =
             PoolGetComponent(transform_pool, TransformComponent, e.index);
-        translate(&model, &tc->pos);
+        mat4_translate(&model, &tc->pos);
       }
 
       glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0], 0,

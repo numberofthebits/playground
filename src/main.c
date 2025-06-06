@@ -6,8 +6,8 @@
 #include <stdio.h>
 
 int main(void) {
-  if (!log_init(NULL)) {
-    //    if (!log_init("log.txt")) {
+  // if (!log_init(NULL)) {
+  if (!log_init("log.txt")) {
     printf("Failed to initialize logger");
     return -1;
   }
@@ -19,7 +19,7 @@ int main(void) {
     return -1;
   }
 
-  game_setup(game);
+  FuncTimer(setup, game_setup(game));
 
   game_run(game);
 

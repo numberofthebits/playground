@@ -16,10 +16,10 @@
 typedef struct {
   struct SystemBase base;
   Vec2f camera_area;
-  Vec2u8 world_size;
+  Vec2u32 world_size;
 } CameraMovementSystem;
 
-static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u8 world_size,
+static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u32 world_size,
                                      Vec2f *area) {
   float area_w_half = area->x / 2.f;
   float area_h_half = area->y / 2.f;
@@ -43,9 +43,6 @@ static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u8 world_size,
 static inline void camera_movement_system_update(Registry *reg,
                                                  struct SystemBase *base,
                                                  size_t frame_nr) {
-
-  (void)reg;
-  (void)base;
   (void)frame_nr;
   Entity *ptr = base->entities.storage.ptr;
   Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
@@ -86,7 +83,7 @@ camera_movement_system_create(Services *services, Vec2f *camera_area) {
 
 static inline void
 camera_movement_system_set_world_size(CameraMovementSystem *self,
-                                      Vec2u8 world_size) {
+                                      Vec2u32 world_size) {
   self->world_size = world_size;
 }
 

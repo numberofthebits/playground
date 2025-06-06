@@ -29,6 +29,11 @@ typedef struct {
 } Vec2u8;
 
 typedef struct {
+  uint32_t x;
+  uint32_t y;
+} Vec2u32;
+
+typedef struct {
   uint8_t r;
   uint8_t g;
   uint8_t b;
@@ -64,6 +69,8 @@ float dot_vec3f(Vec3f *a, Vec3f *b);
 Vec3f cross(Vec3f *a, Vec3f *b);
 Vec3f scale(Vec3f *v, float scalar);
 
+Vec2u32 mul_vec2u32(Vec2u32 *v, uint32_t factor);
+
 float magnitude_squared_vec2f(Vec2f *v);
 float magnitude_squared_vec3f(Vec3f *v);
 
@@ -81,14 +88,15 @@ Vec3f sub(Vec3f *a, Vec3f *b);
 Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up);
 Mat4x4 zero(void);
 
-Mat4x4 identity(void);
+void mat4_identity(Mat4x4 *m);
+
 Mat4x4 perspective(float near, float far, float fov, float aspect);
 Mat4x4 ortho(float near, float far, float right, float left, float top,
              float bottom);
 
-void translate(Mat4x4 *mat, Vec3f *v);
-void scale_mat4(Mat4x4 *mat, Vec3f *v);
-void transpose(Mat4x4 *mat);
+void mat4_translate(Mat4x4 *mat, Vec3f *v);
+void mat4_scale(Mat4x4 *mat, Vec3f *v);
+void mat4_transpose(Mat4x4 *mat);
 // 'axis' should be normalized
 void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
 Mat4x4 mul(Mat4x4 *a, Mat4x4 *b);
