@@ -6,7 +6,8 @@ project(pikuma_2d_game_engine C)
 # leave it on so i never have to specify this manually again
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(BUILD_TESTS "Compile test functions" ON)
+option(BUILD_TESTS "Compile test functions" OFF)
+option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
 
 add_executable(game)
 
@@ -107,6 +108,10 @@ endif()
 
 if(BUILD_TESTS) 
   target_compile_options(game PRIVATE -DBUILD_TESTS)
+endif()
+
+if(ENABLE_DEBUG_TIMERS)
+  target_compile_options(game PRIVATE -DENABLE_DEBUG_TIMERS)
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang") 
