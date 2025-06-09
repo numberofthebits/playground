@@ -7,12 +7,22 @@
 #define Min(a, b) (((a) <= (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 
-// TODO: __debug_brk and equivalents for non-MSVC
+#ifdef _WIN32
 #define Assert(expr)                                                           \
   if (!(expr)) {                                                               \
     printf("Assertion failed %s:%d", __FILE__, __LINE__);                      \
-    exit(-1);                                                                  \
+    __debugbreak();                                                            \
   }
+
+#elif defined(__linux__)
+
+#include <signal.h>
+#define Assert(expr)                                                           \
+  if (!(expr)) {                                                               \
+    printf("Assertion failed %s:%d", __FILE__, __LINE__);                      \
+    raise(SIGTRAP);
+}
+#endif
 
 unsigned char *file_read_all(const char *file_path);
 
