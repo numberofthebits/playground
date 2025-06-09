@@ -32,13 +32,13 @@ struct WorkQueue {
   WorkerThread worker_threads[WORKER_THREAD_COUNT];
 
   // Producer writes (resets to zero). Consumers read and write.
-  alignas(64) volatile uint32_t work_queue_next;
+  volatile uint32_t work_queue_next;
 
   // Procuder writes and reads. Consumers read
-  alignas(64) volatile uint32_t work_queue_count;
+  volatile uint32_t work_queue_count;
 
   // Producer reads. Consumers write.
-  alignas(64) volatile uint32_t work_queue_completed;
+  volatile uint32_t work_queue_completed;
 };
 
 // Returns 0 on failure
