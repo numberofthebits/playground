@@ -5,12 +5,20 @@
 
 #include <stdio.h>
 
+#ifdef BUILD_TESTS
+#include "core/tests.h"
+#endif
+
 int main(void) {
   // if (!log_init(NULL)) {
   if (!log_init("log.txt")) {
     printf("Failed to initialize logger");
     return -1;
   }
+
+#ifdef BUILD_TESTS
+  run_tests();
+#endif
 
   Game *game = game_create();
 
