@@ -4,8 +4,8 @@
 #include "componentbase.h"
 #include "log.h"
 #include "types.h"
+#include "util.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -113,7 +113,7 @@ void pool_test() {
   pool_init(&p, &c, max_entities);
 
   for (int i = 0; i < max_entities; ++i) {
-    assert(p.sparse[i] == ENTITY_INVALID_INDEX);
+    Assert(p.sparse[i] == ENTITY_INVALID_INDEX);
   }
 
   Entity e1;
@@ -137,14 +137,14 @@ void pool_test() {
   pool_insert(&p, e2, &entity_2_data);
   pool_insert(&p, e3, &entity_3_data);
 
-  assert(p.count == 3);
-  assert(p.sparse[e1.index] == 0);
-  assert(p.sparse[e2.index] == 1);
-  assert(p.sparse[e3.index] == 2);
+  Assert(p.count == 3);
+  Assert(p.sparse[e1.index] == 0);
+  Assert(p.sparse[e2.index] == 1);
+  Assert(p.sparse[e3.index] == 2);
 
-  assert(p.packed[0] == e1.index);
-  assert(p.packed[1] == e2.index);
-  assert(p.packed[2] == e3.index);
+  Assert(p.packed[0] == e1.index);
+  Assert(p.packed[1] == e2.index);
+  Assert(p.packed[2] == e3.index);
 
   PoolTestComponentData *e1_data =
       PoolGetComponent(&p, PoolTestComponentData, e1.index);
@@ -153,45 +153,45 @@ void pool_test() {
   PoolTestComponentData *e3_data =
       PoolGetComponent(&p, PoolTestComponentData, e3.index);
 
-  assert(e1_data->a == entity_1_data.a);
-  assert(e2_data->a == entity_2_data.a);
-  assert(e3_data->a == entity_3_data.a);
+  Assert(e1_data->a == entity_1_data.a);
+  Assert(e2_data->a == entity_2_data.a);
+  Assert(e3_data->a == entity_3_data.a);
 
   pool_remove(&p, e1);
 
-  assert(p.count == 2);
-  assert(p.sparse[e1.index] == ENTITY_INVALID_INDEX);
-  assert(p.sparse[e2.index] == 1);
-  assert(p.sparse[e3.index] == 0);
-  assert(p.packed[0] == e3.index);
-  assert(p.packed[1] == e2.index);
+  Assert(p.count == 2);
+  Assert(p.sparse[e1.index] == ENTITY_INVALID_INDEX);
+  Assert(p.sparse[e2.index] == 1);
+  Assert(p.sparse[e3.index] == 0);
+  Assert(p.packed[0] == e3.index);
+  Assert(p.packed[1] == e2.index);
 
   e1_data = PoolGetComponent(&p, PoolTestComponentData, e1.index);
-  assert(e1_data == 0);
+  Assert(e1_data == 0);
 
   e2_data = PoolGetComponent(&p, PoolTestComponentData, e2.index);
-  assert(e2_data->a == entity_2_data.a);
+  Assert(e2_data->a == entity_2_data.a);
 
   e3_data = PoolGetComponent(&p, PoolTestComponentData, e3.index);
-  assert(e3_data->a == entity_3_data.a);
+  Assert(e3_data->a == entity_3_data.a);
 
   pool_insert(&p, e1, &entity_1_data);
-  assert(p.count == 3);
-  assert(p.sparse[e1.index] == 2);
-  assert(p.sparse[e2.index] == 1);
-  assert(p.sparse[e3.index] == 0);
+  Assert(p.count == 3);
+  Assert(p.sparse[e1.index] == 2);
+  Assert(p.sparse[e2.index] == 1);
+  Assert(p.sparse[e3.index] == 0);
 
-  assert(p.packed[0] == e3.index);
-  assert(p.packed[1] == e2.index);
-  assert(p.packed[2] == e1.index);
+  Assert(p.packed[0] == e3.index);
+  Assert(p.packed[1] == e2.index);
+  Assert(p.packed[2] == e1.index);
 
   e1_data = PoolGetComponent(&p, PoolTestComponentData, e1.index);
-  assert(e1_data->a == entity_1_data.a);
+  Assert(e1_data->a == entity_1_data.a);
 
   e2_data = PoolGetComponent(&p, PoolTestComponentData, e2.index);
-  assert(e2_data->a == entity_2_data.a);
+  Assert(e2_data->a == entity_2_data.a);
 
   e3_data = PoolGetComponent(&p, PoolTestComponentData, e3.index);
-  assert(e3_data->a == entity_3_data.a);
+  Assert(e3_data->a == entity_3_data.a);
 }
 #endif
