@@ -42,6 +42,10 @@ void arena_init(struct ArenaAllocator *allocator, size_t capacity) {
     return;
   }
 
+  if (allocator->used != 0) {
+    LOG_EXIT("Can't (re-)initialize arena with non-null usage");
+  }
+
   if (!capacity) {
     LOG_EXIT("Allocating size 0 is forbidden");
     return;
@@ -104,6 +108,7 @@ void arena_dealloc_all(struct ArenaAllocator *allocator) {
 
 void arena_free(struct ArenaAllocator *allocator) {
   free(allocator->base);
+  allocator->base = 0;
   allocator->capacity = 0;
   allocator->used = 0;
 }
