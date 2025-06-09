@@ -1,7 +1,7 @@
 #include "allocators.h"
 #include "log.h"
+#include "util.h"
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -209,7 +209,7 @@ static void test_offset_to_align() {
   for (size_t i = 0; i < alignment; ++i) {
     uintptr_t offset = (uintptr_t)offset_to_aligned(ptr, i);
     uintptr_t expected = (uintptr_t)((alignment - i) % alignment);
-    assert(offset == expected);
+    Assert(offset == expected);
   }
 }
 
@@ -225,8 +225,8 @@ void stack_test() {
   stack_init(&stack, &arena, 1024 * 1024 * 16);
 
   int *int_ptr = stack_alloc(&stack, sizeof(int));
-  assert((uintptr_t)int_ptr % alignof(int) == 0);
-  assert(stack.used == 4);
+  Assert((uintptr_t)int_ptr % alignof(int) == 0);
+  Assert(stack.used == 4);
 
   *int_ptr = 0xf0e0d0c0;
   TestStructPadded *ts = stack_alloc(&stack, sizeof(TestStructPadded));
@@ -235,30 +235,30 @@ void stack_test() {
   int alignof_ts = alignof(TestStructPadded);
   int res = ts_value % alignof_ts;
   (void)res;
-  assert(ts_value % alignof_ts == 0);
+  Assert(ts_value % alignof_ts == 0);
   // should be aligned to eight and we lose 4 bytes because of previous
   // allocation of int when allocating TestStructPadded
-  assert(stack.used == 4 + 4 + sizeof(TestStructPadded));
-  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 0);
-  assert(stack_dealloc_checked(&stack, ts, sizeof(*ts)) == 1);
-  assert(*int_ptr == test_int);
+  Assert(stack.used == 4 + 4 + sizeof(TestStructPadded));
+  Assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 0);
+  Assert(stack_dealloc_checked(&stack, ts, sizeof(*ts)) == 1);
+  Assert(*int_ptr == test_int);
 
-  assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 1);
-  assert(stack.used == 0);
+  Assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 1);
+  Assert(stack.used == 0);
 
   int *int_ptr_2 = stack_alloc(&stack, sizeof(int));
   TestStructPadded *ts2 = stack_alloc(&stack, sizeof(TestStructPadded));
   TestStructLarge *tsl = stack_alloc(&stack, sizeof(TestStructLarge));
-  assert((uintptr_t)int_ptr_2 % alignof(int) == 0);
+  Assert((uintptr_t)int_ptr_2 % alignof(int) == 0);
   *int_ptr_2 = 1;
 
-  assert(*int_ptr == *int_ptr_2);
+  Assert(*int_ptr == *int_ptr_2);
 
-  assert(stack_dealloc_checked(&stack, tsl, sizeof(TestStructLarge)) == 1);
-  assert(stack_dealloc_checked(&stack, ts2, sizeof(TestStructPadded)) == 1);
-  assert(stack_dealloc_checked(&stack, int_ptr_2, sizeof(int)) == 1);
+  Assert(stack_dealloc_checked(&stack, tsl, sizeof(TestStructLarge)) == 1);
+  Assert(stack_dealloc_checked(&stack, ts2, sizeof(TestStructPadded)) == 1);
+  Assert(stack_dealloc_checked(&stack, int_ptr_2, sizeof(int)) == 1);
 
-  assert(stack.used == 0);
+  Assert(stack.used == 0);
 
   arena_free(&arena);
 }
