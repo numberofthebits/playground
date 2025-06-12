@@ -103,6 +103,7 @@ if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     -Wall
     -Wextra
     -Werror
+    -Wshadow
   )
 endif()
 
