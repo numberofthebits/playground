@@ -2,6 +2,7 @@
 #include "log.h"
 #include "util.h"
 
+#include <memory.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -98,6 +99,10 @@ void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
   /*          return_ptr, */
   /*          allocator->used, */
   /*          allocator->capacity); */
+
+  // TODO: Make this an optional flag if it ends up taking more
+  // time than we want.
+  memset(return_ptr, 0x0, total_bytes);
 
   return return_ptr;
 }
