@@ -12,6 +12,8 @@
 #define PI_DIV_4 PI / 4.f
 #define PI_7_DIV_4 7.f / 4.f * PI
 
+#define MESH_INVALID_VERTEX_INDEX 0xffffffff
+
 typedef struct {
   float x;
   float y;
@@ -54,6 +56,10 @@ typedef struct {
 } Vec4u32;
 
 typedef struct {
+  float data[12];
+} Mat3x3;
+
+typedef struct {
   float data[16];
 } Mat4x4;
 
@@ -63,8 +69,45 @@ typedef struct {
   float height;
 } Rectf;
 
-float dot_vec2f(Vec2f *a, Vec2f *b);
-float dot_vec3f(Vec3f *a, Vec3f *b);
+typedef struct {
+  Vec3f origin;
+  Vec3f direction;
+} Ray3f;
+
+typedef Vec3f Vertex3f;
+
+typedef struct {
+  uint32_t a;
+  uint32_t b;
+} Edge;
+
+typedef struct {
+  uint32_t index_edge_ab;
+  uint32_t index_edge_bc;
+  uint32_t index_edge_ca;
+  uint32_t index_v0;
+  uint32_t index_v1;
+  uint32_t index_v2;
+} Triangle;
+
+typedef struct {
+  Vertex3f *vertices;
+  uint32_t num_vertices;
+  uint32_t size_vertices;
+
+  Edge *edges;
+  uint32_t num_edges;
+  uint32_t size_edges;
+
+  Triangle *triangles;
+  uint32_t num_triangles;
+  uint32_t size_triangles;
+} Mesh;
+
+int vec3f_cmp_eq(Vec3f *a, Vec3f *b);
+
+float vec2f_dot(Vec2f *a, Vec2f *b);
+float vec3f_dot(Vec3f *a, Vec3f *b);
 
 Vec3f cross(Vec3f *a, Vec3f *b);
 Vec3f scale(Vec3f *v, float scalar);
@@ -84,24 +127,40 @@ Vec2f normalize_with_len_vec2f(Vec2f *v, float len);
 Vec3f normalize_with_len_vec3f(Vec3f *v, float len);
 
 // Subtract "b" from "a"
-Vec3f sub(Vec3f *a, Vec3f *b);
+Vec3f vec3f_sub(Vec3f *a, Vec3f *b);
 Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up);
 Mat4x4 zero(void);
-
-void mat4_identity(Mat4x4 *m);
 
 Mat4x4 perspective(float near, float far, float fov, float aspect);
 Mat4x4 ortho(float near, float far, float right, float left, float top,
              float bottom);
+
+float mat3_determinant(Mat3x3 *m);
+
+void mat4_identity(Mat4x4 *m);
 
 void mat4_translate(Mat4x4 *mat, Vec3f *v);
 void mat4_scale(Mat4x4 *mat, Vec3f *v);
 void mat4_transpose(Mat4x4 *mat);
 // 'axis' should be normalized
 void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
+
 Mat4x4 mul(Mat4x4 *a, Mat4x4 *b);
 
 int intersect_rectf(Rectf *a, Rectf *b);
+int mesh_intersect_ray(Mesh *mesh, Ray3f *ray, Vec3f *intersect_out);
+
+void mesh_init(Mesh *mesh, uint32_t size_vertices, uint32_t size_edges,
+               uint32_t size_triangles);
+
+void mesh_add_triangle(Mesh *mesh, Vertex3f *a, Vertex3f *b, Vertex3f *c);
+
+void mesh_extrude_edge_v(Mesh *mesh, Vertex3f *a, Vertex3f *b,
+                         Vertex3f *new_vertex);
+
+#ifdef BUILD_TESTS
+void math_test();
+#endif
 
 // #[derive(Default)]
 //  struct SphericalCoord {
