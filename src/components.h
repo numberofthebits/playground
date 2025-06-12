@@ -41,16 +41,6 @@ typedef struct {
   uint8_t render_layer;
 } RenderComponent;
 
-// inline void render_component_flags_set(RenderComponent* component,
-// RenderComponentFlags flags) {
-//     component->flags |= flags;
-// }
-
-// inline void render_component_flags_clear(RenderComponent* component,
-// RenderComponentFlags flags) {
-//     component->flags &= ~(flags);
-// }
-
 struct Physics_Component_t {
   // TODO: Replace this with two scalars:
   //       angle and velocity.
