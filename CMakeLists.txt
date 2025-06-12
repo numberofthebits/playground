@@ -58,6 +58,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/events.h
   ${PROJECT_SOURCE_DIR}/src/game.c
   ${PROJECT_SOURCE_DIR}/src/game.h
+  ${PROJECT_SOURCE_DIR}/src/hit_detection_system.c
+  ${PROJECT_SOURCE_DIR}/src/hit_detection_system.h  
   ${PROJECT_SOURCE_DIR}/src/input_system.c
   ${PROJECT_SOURCE_DIR}/src/input_system.h
   ${PROJECT_SOURCE_DIR}/src/main.c

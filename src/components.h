@@ -19,7 +19,8 @@ enum ComponentBit {
   CAMERA_MOVEMENT_COMPONENT_BIT = (1U << 7),
   PROJECTILE_EMITTER_COMPONENT_BIT = (1U << 8),
   PROJECTILE_COMPONENT_BIT = (1U << 9),
-  HEALTH_COMPONENT_BIT = (1U << 10)
+  HEALTH_COMPONENT_BIT = (1U << 10),
+  MESH_COMPONENT_BIT = (1U << 11)
 };
 typedef enum ComponentBit ComponentBit;
 
@@ -95,6 +96,10 @@ typedef struct {
 typedef struct {
   int32_t health;
 } HealthComponent;
+
+typedef struct {
+  Mesh mesh;
+} MeshComponent;
 
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way

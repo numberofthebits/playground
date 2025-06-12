@@ -65,6 +65,9 @@ void render_system_frame_buffer_size_changed(RenderSystem *render_system,
 void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e);
 
+void render_system_handle_hit_detection(struct SystemBase *base,
+                                        struct Event e);
+
 void render_system_debug(struct RenderSystem *system, Registry *registry);
 
 #endif

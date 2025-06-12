@@ -68,6 +68,7 @@ struct Game_t {
   struct CollisionSystem *collision_system;
   struct AnimationSystem *animation_system;
   struct TimeSystem *time_system;
+  HitDetectionSystem *hit_detection_system;
   CameraMovementSystem *camera_movement_system;
   ProjectileEmitterSystem *projectile_emitter_system;
   struct RenderSystem *render_system;
@@ -317,6 +318,7 @@ Game *game_create() {
   glfwGetWindowSize(game->window, &window_width, &window_height);
 
   game->input_system = input_system_create(&game->services);
+  game->hit_detection_system = hit_detection_system_create(&game->services);
   game->player_system = player_system_create(&game->services);
   game->movement_system = movement_system_create(&game->services);
   game->collision_system = collision_system_create(&game->services);
@@ -609,6 +611,9 @@ void game_update(Game *game) {
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,
       CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
+  event_bus_subscribe(
+      &game->event_bus, (struct SystemBase *)game->render_system,
+      HitDetectionSystem_MeshHit, render_system_handle_hit_detection);
 
   registry_update(&game->registry, game->frame_counter);
 

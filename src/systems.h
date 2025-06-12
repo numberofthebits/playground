@@ -16,8 +16,8 @@ typedef enum {
   CAMERA_MOVEMENT_SYSTEM_BIT = (1U << 7),
   PROJECTILE_EMITTER_SYSTEM_BIT = (1U << 8),
   DAMAGE_SYSTEM_BIT = (1U << 9),
-
-  SYSTEM_BIT_ITER_END = (1U << 10),
+  HIT_DETECTION_SYSTEM_BIT = (1U << 10),
+  SYSTEM_BIT_ITER_END = (1U << 11),
 
   INVALID_SYSTEM_BIT = (1U << 30)
 } SystemBit;
@@ -26,6 +26,7 @@ typedef enum {
 #include "camera_movement_system.h"
 #include "collision_system.h"
 #include "damage_system.h"
+#include "hit_detection_system.h"
 #include "input_system.h"
 #include "movement_system.h"
 #include "player_system.h"

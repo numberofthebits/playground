@@ -8,7 +8,8 @@ enum EventType {
   CollisionSystem_Detected,
   KeyboardInput_Update,
   DebugEvent_StateChanged,
-  CameraSystem_CameraChanged
+  CameraSystem_CameraChanged,
+  HitDetectionSystem_MeshHit
 };
 
 struct KeyboardInputUpdate {
@@ -23,6 +24,11 @@ struct CollisionDetectedEvent {
 struct DebugEventStateChangedEvent {
   int debug_enabled;
 };
+
+typedef struct HitDetectionEvent {
+  Entity mesh;
+  MeshRayIntersection intersection;
+} HitDetectionEvent;
 
 typedef struct {
   Vec3f pos;

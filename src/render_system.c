@@ -780,6 +780,12 @@ void render_system_handle_camera_position_changed(struct SystemBase *system,
   render_sys->camera.view = t;
 }
 
+void render_system_handle_hit_detection(struct SystemBase *base,
+                                        struct Event e) {
+  (void)base;
+  (void)e;
+}
+
 void render_system_debug(struct RenderSystem *system, Registry *registry) {
   CHECK_GL_ERROR();
 
