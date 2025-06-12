@@ -30,15 +30,6 @@ struct Transform_Component_t {
 };
 typedef struct Transform_Component_t TransformComponent;
 
-typedef enum RenderComponentFlags_t {
-  Position = (1 << 0),
-  UV = (1 << 1),
-  Normal = (1 << 2),
-  Color = (1 << 3),
-  Texture = (1 << 4),
-  TileMap = (1 << 5),
-} RenderComponentFlags;
-
 typedef struct {
   // Normalized texture coordinate modifier
   // Remember. In GL, positive Y is up. In image
