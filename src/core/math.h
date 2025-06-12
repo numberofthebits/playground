@@ -104,6 +104,11 @@ typedef struct {
   uint32_t size_triangles;
 } Mesh;
 
+typedef struct {
+  Vec3f tuv;
+  uint32_t triangle_index;
+} MeshRayIntersection;
+
 int vec3f_cmp_eq(Vec3f *a, Vec3f *b);
 
 float vec2f_dot(Vec2f *a, Vec2f *b);
@@ -148,7 +153,8 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
 Mat4x4 mul(Mat4x4 *a, Mat4x4 *b);
 
 int intersect_rectf(Rectf *a, Rectf *b);
-int mesh_intersect_ray(Mesh *mesh, Ray3f *ray, Vec3f *intersect_out);
+int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
+                       MeshRayIntersection *intersect_out);
 
 void mesh_init(Mesh *mesh, uint32_t size_vertices, uint32_t size_edges,
                uint32_t size_triangles);

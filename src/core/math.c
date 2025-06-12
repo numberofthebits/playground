@@ -238,7 +238,8 @@ int intersect_rectf(Rectf *a, Rectf *b) {
   return 1;
 }
 
-int mesh_intersect_ray(Mesh *mesh, Ray3f *ray, Vec3f *intersect_out) {
+int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
+                       MeshRayIntersection *intersect_out) {
   float epsilon = 0.01f;
   for (size_t i = 0; i < mesh->num_triangles; ++i) {
     Vec3f p0 = mesh->vertices[mesh->triangles[i].index_v0];
@@ -275,9 +276,10 @@ int mesh_intersect_ray(Mesh *mesh, Ray3f *ray, Vec3f *intersect_out) {
 
     float t = factor * vec3f_dot(&r, &e2);
 
-    intersect_out->x = t;
-    intersect_out->y = u;
-    intersect_out->z = v;
+    intersect_out->triangle_index = i;
+    intersect_out->tuv.x = t;
+    intersect_out->tuv.y = u;
+    intersect_out->tuv.z = v;
 
     return 1;
   }
@@ -442,7 +444,7 @@ static void math_test_mesh_ray_intersect() {
   Ray3f ray2 = {.origin = {1.f, -1.f, -1.f}, .direction = {0.f, 0.f, 1.f}};
   Ray3f ray3 = {.origin = {1.f, -1.f, 1.f}, .direction = {0.f, 0.f, -1.f}};
 
-  Vec3f out = {0};
+  MeshRayIntersection out = {0};
   Assert(mesh_intersect_ray(&mesh, &ray0, &out));
   Assert(mesh_intersect_ray(&mesh, &ray1, &out));
   Assert(mesh_intersect_ray(&mesh, &ray2, &out));
@@ -452,7 +454,6 @@ static void math_test_mesh_ray_intersect() {
   Ray3f ray4 = {.origin = {-1.f, -1.f, 1.f}, .direction = {-1.f, 0.f, -1.f}};
   Assert(!mesh_intersect_ray(&mesh, &ray4, &out));
 
-  // TODO: This one seems to fail
   // Top down
   Ray3f ray5 = {.origin = {0.f, 10.f, 0.f}, .direction = {0.f, -1.f, 0.f}};
   Assert(mesh_intersect_ray(&mesh, &ray5, &out));
