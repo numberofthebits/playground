@@ -55,6 +55,7 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/camera_movement_system.h
   ${PROJECT_SOURCE_DIR}/src/damage_system.c
   ${PROJECT_SOURCE_DIR}/src/damage_system.h
+  ${PROJECT_SOURCE_DIR}/src/events.c
   ${PROJECT_SOURCE_DIR}/src/events.h
   ${PROJECT_SOURCE_DIR}/src/game.c
   ${PROJECT_SOURCE_DIR}/src/game.h

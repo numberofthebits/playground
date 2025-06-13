@@ -7,10 +7,18 @@
 enum EventType {
   CollisionSystem_Detected,
   KeyboardInput_Update,
-  DebugEvent_StateChanged,
+  DebugEvent_StateChanged, // This is a piss poor name
   CameraSystem_CameraChanged,
-  HitDetectionSystem_MeshHit
+  HitDetectionSystem_MeshHit,
+  EventTypeCount
 };
+
+typedef struct EventTypeName {
+  enum EventType type;
+  const char *name;
+} EventTypeName;
+
+extern EventTypeName event_type_names[EventTypeCount];
 
 struct KeyboardInputUpdate {
   int code;
