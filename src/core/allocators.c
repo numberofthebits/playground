@@ -8,13 +8,18 @@
 #include <stdlib.h>
 #include <threads.h>
 
+typedef struct AllocImplResult {
+  void *ptr;
+  size_t used;
+} AllocImplResult;
+
 struct ArenaAllocator global_static_allocator;
 
 struct ArenaAllocator frame_allocator;
 
 thread_local struct StackAllocator stack_allocator;
 
-static size_t calc_alignment_bump(size_t s, size_t alignment) {
+static inline size_t calc_alignment_bump(size_t s, size_t alignment) {
   size_t alignment_bump = 0;
   if (alignment != 1) {
     alignment_bump = (alignment - s) % alignment;
@@ -22,14 +27,31 @@ static size_t calc_alignment_bump(size_t s, size_t alignment) {
   return alignment_bump;
 }
 
-static ptrdiff_t offset_to_aligned(void *ptr, size_t s) {
-  uintptr_t res = (uintptr_t)(ptr + s) % alignof(max_align_t);
+static inline ptrdiff_t offset_to_aligned(void *ptr, size_t s,
+                                          size_t alignment) {
+  uintptr_t res = (uintptr_t)(ptr + s) % alignment;
 
   if (!res) {
     return res;
   }
 
-  return alignof(max_align_t) - res;
+  return alignment - res;
+}
+
+static inline AllocImplResult alloc_impl(void *ptr, size_t s,
+                                         size_t alignment) {
+  AllocImplResult res = {.ptr = 0, .used = s};
+
+  if ((uintptr_t)ptr % alignment == 0) {
+    res.ptr = ptr;
+    return res;
+  }
+
+  ptrdiff_t offset = offset_to_aligned(ptr, s, alignment);
+  res.ptr += offset;
+  res.used += offset;
+
+  return res;
 }
 
 void arena_init(struct ArenaAllocator *allocator, size_t capacity) {
@@ -118,6 +140,41 @@ void arena_free(struct ArenaAllocator *allocator) {
   allocator->used = 0;
 }
 
+SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
+                                        size_t s) {
+  if (s > allocator->capacity - allocator->used) {
+    LOG_EXIT("Failed to allocate sub arena: asked for %zu. Parent allocator "
+             "%zu / %zu used",
+             s, allocator->capacity - allocator->used);
+  }
+
+  SubArenaAllocator sub_arena;
+  sub_arena.base = arena_alloc(allocator, 1, s, alignof(max_align_t));
+  sub_arena.capacity = s;
+  sub_arena.used = 0;
+
+  return sub_arena;
+}
+
+void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
+                           size_t alignment) {
+  AllocImplResult res = alloc_impl(allocator->base, s, alignment);
+
+  size_t total_used = allocator->used + res.used;
+  if (total_used > allocator->capacity) {
+    LOG_EXIT("Failed to allocate sub arena: asked for %zu, available %zu", s,
+             total_used);
+  }
+
+  allocator->used += res.used;
+
+  return res.ptr;
+}
+
+void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator) {
+  allocator->used = 0;
+}
+
 void stack_init(struct StackAllocator *stack, struct ArenaAllocator *arena,
                 size_t s) {
   // NOTE: Ask for 16 Mi times 1 byte, but align this to max_align_t
@@ -149,7 +206,7 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s) {
     return ptr;
   }
 
-  ptrdiff_t offset = offset_to_aligned(ptr, s);
+  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
   ptr += offset;
 
   allocator->used += offset + s;
@@ -170,7 +227,7 @@ int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
 }
 
 void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s);
+  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
 
   if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
     allocator->used -= s + offset;
@@ -181,7 +238,7 @@ void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
 
 int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
                           size_t s) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s);
+  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
 
   if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
     allocator->used -= s + offset;
@@ -212,7 +269,8 @@ static void test_offset_to_align() {
   char *ptr = 0;
 
   for (size_t i = 0; i < alignment; ++i) {
-    uintptr_t offset = (uintptr_t)offset_to_aligned(ptr, i);
+    uintptr_t offset =
+        (uintptr_t)offset_to_aligned(ptr, i, alignof(max_align_t));
     uintptr_t expected = (uintptr_t)((alignment - i) % alignment);
     Assert(offset == expected);
   }

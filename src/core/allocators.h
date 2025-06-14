@@ -12,6 +12,12 @@ struct ArenaAllocator {
   size_t used;
 };
 
+typedef struct SubArenaAllocator {
+  uint8_t *base;
+  size_t capacity;
+  size_t used;
+} SubArenaAllocator;
+
 void arena_init(struct ArenaAllocator *allocator, size_t s);
 
 void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
@@ -24,6 +30,14 @@ void arena_free(struct ArenaAllocator *allocator);
 // Allocate memory for for 'count' objects of size sizeof('type')
 #define ArenaAlloc(allocator, count, type)                                     \
   arena_alloc(allocator, sizeof(type), count, alignof(type));
+
+SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
+                                        size_t s);
+
+void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
+                           size_t alignment);
+
+void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator);
 
 // NOTE: We lose potential bytes used to align the allocation here
 // because we do not know what alignment the allocation required
