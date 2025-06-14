@@ -42,3 +42,26 @@ HitDetectionSystem *hit_detection_system_create(Services *services) {
 
   return system;
 }
+
+void hit_detection_system_handle_cursor_moved(struct SystemBase *base,
+                                              Event e) {
+  (void)base;
+  if (!is_expected_event_id(InputSystem_CursorMoved, e.id)) {
+    return;
+  }
+
+  // TODO: Map from screen space to view space? Model space? World space?
+}
+
+void hit_detection_system_handle_framebuffer_size_changed(
+    struct SystemBase *base, struct Event e) {
+
+  if (!is_expected_event_id(OS_FramebufferSizeChanged, e.id)) {
+    return;
+  }
+
+  OSFramebufferSizeChanged *ev = e.event_data;
+
+  HitDetectionSystem *system = (HitDetectionSystem *)base;
+  system->framebuffer_size = ev->size;
+}

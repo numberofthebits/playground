@@ -233,7 +233,20 @@ static void framebuffer_size_callback(GLFWwindow *window, int width,
   }
 
   Game *game = glfwGetWindowUserPointer(window);
-  game_frame_buffer_size_changed(game, width, height);
+
+  if (width <= 0 || height <= 0 || width >= 0xffff || height > 0xffff) {
+    LOG_ERROR("Invalid framebuffer size %d %d", width, height);
+    return;
+  }
+
+  OSFramebufferSizeChanged event_data = {
+      .size = {(uint16_t)width, (uint16_t)height}};
+
+  Event e = {.id = OS_FramebufferSizeChanged,
+             .event_data = &event_data,
+             .event_data_size = sizeof(OSFramebufferSizeChanged)};
+
+  event_bus_defer(&game->event_bus, &e);
 }
 
 static void window_size_callback(GLFWwindow *window, int width, int height) {
@@ -600,6 +613,20 @@ void game_setup(Game *game) {
 void game_update(Game *game) {
   arena_dealloc_all(&frame_allocator);
 
+  double x, y;
+  glfwGetCursorPos(game->window, &x, &y);
+
+  input_system_set_cursor_pos(game->input_system, (uint16_t)x, (uint16_t)y);
+
+  event_bus_subscribe(
+      &game->event_bus, (struct SystemBase *)game->render_system,
+      OS_FramebufferSizeChanged, render_system_handle_framebuffer_size_changed);
+
+  event_bus_subscribe(&game->event_bus,
+                      (struct SystemBase *)game->hit_detection_system,
+                      OS_FramebufferSizeChanged,
+                      hit_detection_system_handle_framebuffer_size_changed);
+
   event_bus_subscribe(&game->event_bus,
                       (struct SystemBase *)game->player_system,
                       KeyboardInput_Update, &player_system_handle_event);
@@ -611,9 +638,16 @@ void game_update(Game *game) {
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,
       CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
+
+  event_bus_subscribe(&game->event_bus, (struct SystemBase *)game->input_system,
+                      InputSystem_CursorMoved,
+                      hit_detection_system_handle_cursor_moved);
+
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,
       HitDetectionSystem_MeshHit, render_system_handle_hit_detection);
+
+  event_bus_process_deferred(&game->event_bus);
 
   registry_update(&game->registry, game->frame_counter);
 
@@ -665,18 +699,6 @@ void game_destroy(Game *game) {
     glfwDestroyWindow(game->window);
   }
   glfwTerminate();
-}
-
-void game_frame_buffer_size_changed(Game *game, int width, int height) {
-  LOG_INFO("Framebuffer size changed: (%d, %d)", width, height);
-  RenderSystem *render_system =
-      (RenderSystem *)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
-  if (!render_system) {
-    LOG_ERROR("Failed to resize frame buffer: System not found");
-    return;
-  }
-
-  render_system_frame_buffer_size_changed(render_system, width, height);
 }
 
 void game_window_size_changed(Game *game, int width, int height) {

@@ -1,7 +1,10 @@
 #ifndef EVENT_BUS_H
 #define EVENT_BUS_H
 
-#define MAX_SUBSCRIBERS 1024
+#define EVENT_BUS_SUBSCRIBER_COUNT_MAX 1024
+#define EVENT_BUS_DEFERRED_EVENT_COUNT_MAX 1024
+
+#include "allocators.h"
 
 // Forward declare as systembase needs to know about
 // EventBus impl
@@ -27,10 +30,17 @@ struct Subscriber {
 };
 typedef struct Subscriber Subscriber;
 
-struct EventBus {
+// TODO: Introduce an allocator for the event bus so we can avoid allocating
+//       events on the stack when emitting them. We know when to clear this
+//       memory because the events are delivered synchronously.
+//       Is the StackAllocator a good fit here?
+typedef struct EventBus {
   size_t num_subscribers;
   struct Subscriber *subscribers;
-};
+  SubArenaAllocator deferred_events_allocator;
+  size_t num_deferred_events;
+  struct Event deferred_events[EVENT_BUS_DEFERRED_EVENT_COUNT_MAX];
+} EventBus;
 
 void event_bus_init(struct EventBus *bus);
 
@@ -42,5 +52,9 @@ void event_bus_subscribe(struct EventBus *bus, struct SystemBase *system,
                          int event_id, EventCallback callback);
 
 void event_bus_emit(struct EventBus *bus, struct Event *event);
+
+void event_bus_defer(struct EventBus *bus, struct Event *event);
+
+void event_bus_process_deferred(struct EventBus *bus);
 
 #endif

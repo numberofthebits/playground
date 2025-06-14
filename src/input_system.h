@@ -29,6 +29,10 @@ struct AggregatedKeyboardEvents {
   struct KeyStateEventData *events;
 };
 
+typedef struct {
+  Vec2u16 pos; // Position in screen pixels
+} Cursor;
+
 struct InputSystem {
   struct SystemBase base;
 
@@ -37,12 +41,17 @@ struct InputSystem {
 
   // Processed list of keystrokes for event_bus
   struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
+
+  Cursor cursor;
 };
 
 struct InputSystem *input_system_create(Services *services);
 
 void input_system_handle_keyboard_input(struct InputSystem *input_system,
                                         int key, int action);
+
+void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
+                                 uint16_t y);
 
 void input_system_update(Registry *registry, struct SystemBase *sys,
                          size_t frame_nr);

@@ -15,9 +15,19 @@
 #define MESH_INVALID_VERTEX_INDEX 0xffffffff
 
 typedef struct {
+  uint16_t x;
+  uint16_t y;
+} Vec2u16;
+
+typedef struct {
   float x;
   float y;
 } Vec2f;
+
+typedef struct {
+  double x;
+  double y;
+} Vec2d;
 
 typedef struct {
   float x;

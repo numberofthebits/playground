@@ -55,6 +55,24 @@ void input_system_handle_keyboard_input(struct InputSystem *system, int key,
   }
 }
 
+void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
+                                 uint16_t y) {
+  if (x == input_system->cursor.pos.x && y == input_system->cursor.pos.y) {
+    return;
+  }
+
+  LOG_INFO("Mouse cursor (px) %hu %hu", x, y);
+
+  EventBus *bus = input_system->base.services.event_bus;
+
+  InputSystemCursorMoved cursor_moved_event = {.pos = {x, y}};
+  Event event = {.id = InputSystem_CursorMoved,
+                 .event_data = &cursor_moved_event,
+                 .event_data_size = sizeof(InputSystemCursorMoved)};
+
+  event_bus_emit(bus, &event);
+}
+
 void input_system_update(Registry *registry, struct SystemBase *sys,
                          size_t frame_nr) {
   (void)registry;

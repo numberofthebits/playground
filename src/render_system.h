@@ -59,8 +59,12 @@ void render_system_prepare_resources(RenderSystem *system,
 uint64_t render_system_create_texture(RenderSystem *system, void *data,
                                       ImageMeta *meta);
 
-void render_system_frame_buffer_size_changed(RenderSystem *render_system,
-                                             int width, int height);
+void render_system_framebuffer_size_changed(RenderSystem *render_system,
+                                            uint16_t width_px,
+                                            uint16_t height_px);
+
+void render_system_handle_framebuffer_size_changed(struct SystemBase *base,
+                                                   struct Event e);
 
 void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e);

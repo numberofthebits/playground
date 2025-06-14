@@ -13,11 +13,17 @@ typedef struct {
   struct SystemBase base;
   Ray3f *rays;
   size_t num_rays;
+  Vec2u16 framebuffer_size;
 } HitDetectionSystem;
 
 HitDetectionSystem *hit_detection_system_create(Services *services);
 
 void hit_detection_system_ray_cast_query(HitDetectionSystem *system,
                                          Ray3f *ray);
+
+void hit_detection_system_handle_cursor_moved(struct SystemBase *base, Event e);
+
+void hit_detection_system_handle_framebuffer_size_changed(
+    struct SystemBase *base, struct Event e);
 
 #endif

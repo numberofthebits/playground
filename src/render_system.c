@@ -613,7 +613,8 @@ RenderSystem *render_system_create(Services *services, int window_w,
   recalc_camera(&system->camera, system->main_framebuffer.width,
                 system->main_framebuffer.height, 25.f, &center);
 
-  render_system_frame_buffer_size_changed(system, window_w, window_h);
+  render_system_framebuffer_size_changed(system, system->main_framebuffer.width,
+                                         system->main_framebuffer.height);
 
   LOG_INFO("Created render system implementation");
 
@@ -633,7 +634,8 @@ static void render_system_create_material(RenderSystem *system,
   int found_texture_handle =
       (GLuint64)(uintptr_t)hash_map_get(&system->textures, &mat->texture_id,
                                         sizeof(AssetId), &texture_handle_ptr);
-  // Careful. Don't know if it's valid before testing hash_map_get return value
+  // Careful. Don't know if it's valid before testing hash_map_get return
+  // value
   GLuint64 texture_handle = (GLuint64)texture_handle_ptr;
   if (!found_texture_handle) {
 
@@ -643,8 +645,8 @@ static void render_system_create_material(RenderSystem *system,
       LOG_EXIT("Failed to load texture asset '%d'", mat->texture_id);
     }
 
-    // Store the new handle as a void* in the hash map to avoid allocating just
-    // for a pointer sized type
+    // Store the new handle as a void* in the hash map to avoid allocating
+    // just for a pointer sized type
     GLuint64 new_handle = render_system_create_texture(system, data, &meta);
     uintptr_t new_handle_ptr = (uintptr_t)new_handle;
 
@@ -738,30 +740,43 @@ uint64_t render_system_create_texture(RenderSystem *system, void *data,
   return bindless_handle;
 }
 
-void render_system_frame_buffer_size_changed(RenderSystem *render_system,
-                                             int width, int height) {
+void render_system_framebuffer_size_changed(RenderSystem *render_system,
+                                            uint16_t width_px,
+                                            uint16_t height_px) {
   glClearColor(0.f, 0.0f, 0.0f, 255.f);
   glDisable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  render_system->main_framebuffer.width = width;
-  render_system->main_framebuffer.height = height;
+  render_system->main_framebuffer.width = width_px;
+  render_system->main_framebuffer.height = height_px;
 
-  int w = width;
-  int h = height;
+  uint16_t w = width_px;
+  uint16_t h = height_px;
 
-  if (width >= height) {
+  if (width_px >= height_px) {
     // height is the limiting factor
-    w = height;
+    w = height_px;
   } else {
     // width is the limiting factor
-    h = width;
+    h = width_px;
   }
 
-  int offset_x = (int)(((float)width - (float)w) / 2.f);
-  int offset_y = (int)(((float)height - (float)h) / 2.f);
+  uint16_t offset_x = (uint16_t)(((float)width_px - (float)w) / 2.f);
+  uint16_t offset_y = (uint16_t)(((float)width_px - (float)h) / 2.f);
 
   glViewport(offset_x, offset_y, w, h);
+}
+
+void render_system_handle_framebuffer_size_changed(struct SystemBase *base,
+                                                   struct Event e) {
+  if (!is_expected_event_id(OS_FramebufferSizeChanged, e.id)) {
+    return;
+  }
+
+  OSFramebufferSizeChanged *ev = e.event_data;
+
+  render_system_framebuffer_size_changed((RenderSystem *)base, ev->size.x,
+                                         ev->size.y);
 }
 
 void render_system_handle_camera_position_changed(struct SystemBase *system,
@@ -784,6 +799,28 @@ void render_system_handle_hit_detection(struct SystemBase *base,
                                         struct Event e) {
   (void)base;
   (void)e;
+  if (e.id != HitDetectionSystem_MeshHit) {
+    LOG_ERROR("Incorrect event type %s expected %s", event_type_names[e.id],
+              event_type_names[HitDetectionSystem_MeshHit]);
+    return;
+  }
+
+  /*
+    We have the entity index for the mesh we hit: Entity mesh;
+
+    We have the index of the triangle we hit: triangle_index
+
+    We have the [t,u,v] (barycentric?) coordinates
+    of the triangle we hit.
+
+    This must map to a GPU buffer where write a color value,
+    (e.g. red) for this triangle.
+
+    Let's assume we use a color vertex attribute for now.
+
+    f(mesh, triangle_index) = [GL buffer object, offset]
+
+   */
 }
 
 void render_system_debug(struct RenderSystem *system, Registry *registry) {
@@ -835,7 +872,8 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
       pos[3].y = cc->aabr.pos.y + height;
       pos[3].z = 0.f;
 
-      /* // If it does have a transform component, we build that into the vertex
+      /* // If it does have a transform component, we build that into the
+       * vertex
        */
       /* // data and just issue the draw call for the hardcoded vertex data */
       Mat4x4 model;
