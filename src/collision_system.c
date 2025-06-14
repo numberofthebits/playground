@@ -52,6 +52,7 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
         struct Event e;
         e.id = CollisionSystem_Detected;
         e.event_data = &event;
+        e.event_data_size = sizeof(struct CollisionDetectedEvent);
 
         /* // Queue both entities for removal */
         /* registry_entity_remove(reg, self); */

@@ -24,6 +24,7 @@ static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
         struct Event e;
         e.id = HitDetectionSystem_MeshHit;
         e.event_data = &hit_event;
+        e.event_data_size = sizeof(HitDetectionEvent);
 
         event_bus_emit(event_bus, &e);
       }

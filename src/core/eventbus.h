@@ -7,13 +7,16 @@
 // EventBus impl
 struct SystemBase;
 
-// General event type
+// General event type header
 // The producer and consumer needs to know the meaning
-// of both the type of event and its data
-struct Event {
+// of both the type of event, its type. The size size
+// of the event data is required for the event bus
+// to work with it, without caring about its actual type
+typedef struct Event {
   int id;
   void *event_data;
-};
+  size_t event_data_size;
+} Event;
 
 typedef void (*EventCallback)(struct SystemBase *system, struct Event e);
 

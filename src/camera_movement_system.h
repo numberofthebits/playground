@@ -61,6 +61,7 @@ static inline void camera_movement_system_update(Registry *reg,
     ev.id = CameraSystem_CameraChanged;
 
     ev.event_data = &data;
+    ev.event_data_size = sizeof(CameraUpdated);
 
     event_bus_emit(base->services.event_bus, &ev);
   }

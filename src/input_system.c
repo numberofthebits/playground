@@ -83,6 +83,7 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
     struct Event events;
     events.id = KeyboardInput_Update;
     events.event_data = &aggregated;
+    events.event_data_size = sizeof(AggregatedKeyboardEvents);
 
     event_bus_emit(bus, &events);
   }
