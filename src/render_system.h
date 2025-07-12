@@ -53,8 +53,8 @@ void render_system_global_init();
 RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h);
 
-void render_system_prepare_resources(RenderSystem *system,
-                                     PreparedResources *resources);
+void render_system_load_assets(RenderSystem *system, Asset *assets,
+                               size_t asset_count);
 
 uint64_t render_system_create_texture(RenderSystem *system, void *data,
                                       ImageMeta *meta);

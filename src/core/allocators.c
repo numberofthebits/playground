@@ -145,7 +145,7 @@ SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
   if (s > allocator->capacity - allocator->used) {
     LOG_EXIT("Failed to allocate sub arena: asked for %zu. Parent allocator "
              "%zu / %zu used",
-             s, allocator->capacity - allocator->used);
+             s, allocator->capacity - allocator->used, allocator->capacity);
   }
 
   SubArenaAllocator sub_arena;

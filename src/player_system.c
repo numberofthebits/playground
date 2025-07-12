@@ -48,8 +48,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   tc.pos.x = player_pos.x + projectile_dir.x;
   tc.pos.y = player_pos.y + projectile_dir.y;
   tc.pos.z = 0.0f;
-  tc.scale.x = 0.1f;
-  tc.scale.y = 0.1f;
+  tc.scale = 0.1f;
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};
@@ -74,8 +73,8 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   CollisionComponent cc;
   cc.aabr.pos.x = 0.f;
   cc.aabr.pos.y = 0.f;
-  cc.aabr.width = 1.f * tc.scale.x;
-  cc.aabr.height = 1.f * tc.scale.y;
+  cc.aabr.width = 1.f * tc.scale;
+  cc.aabr.height = 1.f * tc.scale;
 
   ProjectileComponent prc;
   prc.damage = 50;

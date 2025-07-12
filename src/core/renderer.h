@@ -61,6 +61,13 @@ typedef struct {
   char padding[12];
 } DrawCommandDataTiled;
 
+typedef struct DrawCommandData {
+  Mat4x4 model;
+  Vec2u32 tile_tex_index;
+  Vec2u32 tile_tex_size;
+  unsigned int material_index;
+} DrawCommandData;
+
 struct Framebuffer {
   uint16_t width;
   uint16_t height;

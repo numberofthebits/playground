@@ -8,6 +8,8 @@
 #include <memory.h>
 #include <stdint.h>
 
+#define MESH_INTERSECT_RAY_EPSILON 0.01f
+
 float vec2f_dot(Vec2f *a, Vec2f *b) { return a->x * b->x + a->y * b->y; }
 
 float vec3f_dot(Vec3f *a, Vec3f *b) {
@@ -185,6 +187,30 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians) {
   mat->data[10] = z2 * one_min_cos_r + cos_r;
 }
 
+void mat4_transform(Mat4x4 *mat, Vec3f *axis, float angle, float scale,
+                    Vec3f *pos) {
+
+  mat4_identity(mat);
+
+  Mat4x4 matrix_scale;
+  mat4_identity(&matrix_scale);
+
+  Mat4x4 matrix_translate;
+  mat4_identity(&matrix_translate);
+
+  Mat4x4 matrix_rotate;
+  mat4_identity(&matrix_rotate);
+
+  mat4_rotate(&matrix_rotate, axis, angle);
+  Vec3f s = {.x = scale, .y = scale, .z = scale};
+  mat4_scale(&matrix_scale, &s);
+  mat4_translate(&matrix_translate, pos);
+
+  *mat = mat4_mul(mat, &matrix_rotate);
+  *mat = mat4_mul(mat, &matrix_scale);
+  *mat = mat4_mul(mat, &matrix_translate);
+}
+
 void mat4_transpose(Mat4x4 *mat) {
   float values[16] = {mat->data[0], mat->data[4], mat->data[8],  mat->data[12],
                       mat->data[1], mat->data[5], mat->data[9],  mat->data[13],
@@ -211,7 +237,7 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
-Mat4x4 mul(Mat4x4 *a, Mat4x4 *b) {
+Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
 
   Mat4x4 m = zero();
   int index = 0;
@@ -229,6 +255,22 @@ Mat4x4 mul(Mat4x4 *a, Mat4x4 *b) {
   return m;
 }
 
+Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
+  Vec4f result = {0};
+  /* for (int i = 0; i < 4; ++i) { */
+  /*   for (int j = 0; j < 4; ++j) { */
+  result.x = m->data[0] * v->x + m->data[1] * v->y + m->data[2] * v->z +
+             m->data[3] * v->w;
+  result.y = m->data[4] * v->x + m->data[5] * v->y + m->data[6] * v->z +
+             m->data[7] * v->w;
+  result.x = m->data[8] * v->x + m->data[9] * v->y + m->data[10] * v->z +
+             m->data[11] * v->w;
+  result.y = m->data[12] * v->x + m->data[13] * v->y + m->data[14] * v->z +
+             m->data[15] * v->w;
+
+  return result;
+}
+
 int intersect_rectf(Rectf *a, Rectf *b) {
   if (a->pos.x + a->width < b->pos.x || a->pos.x >= b->pos.x + b->width ||
       a->pos.y + a->height < b->pos.y || a->pos.y >= b->pos.y + b->height) {
@@ -238,52 +280,131 @@ int intersect_rectf(Rectf *a, Rectf *b) {
   return 1;
 }
 
-int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
-                       MeshRayIntersection *intersect_out) {
-  float epsilon = 0.01f;
-  for (size_t i = 0; i < mesh->num_triangles; ++i) {
-    Vec3f p0 = mesh->vertices[mesh->triangles[i].index_v0];
-    Vec3f p1 = mesh->vertices[mesh->triangles[i].index_v1];
-    Vec3f p2 = mesh->vertices[mesh->triangles[i].index_v2];
+static inline int mesh_intersect_ray_impl(Vec3f *p0, Vec3f *p1, Vec3f *p2,
+                                          Ray3f *ray,
+                                          MeshRayIntersection *out) {
 
-    Vec3f o = ray->origin;
-    Vec3f d = ray->direction;
-    Vec3f e1 = vec3f_sub(&p1, &p0);
-    Vec3f e2 = vec3f_sub(&p2, &p0);
-    Vec3f s = vec3f_sub(&o, &p0);
+  Vec3f o = ray->origin;
+  Vec3f d = ray->direction;
+  Vec3f e1 = vec3f_sub(p1, p0);
+  Vec3f e2 = vec3f_sub(p2, p0);
+  Vec3f s = vec3f_sub(&o, p0);
 
-    // Optimization. Consolidate computation
-    Vec3f q = cross(&d, &e2);
-    Vec3f r = cross(&s, &e1);
+  // Optimization. Consolidate computation
+  Vec3f q = cross(&d, &e2);
+  Vec3f r = cross(&s, &e1);
 
-    float a = vec3f_dot(&q, &e1);
+  float a = vec3f_dot(&q, &e1);
 
-    if (a > -epsilon && a < epsilon) {
-      continue;
-    }
-
-    float factor = 1.f / vec3f_dot(&q, &e1);
-
-    float u = factor * vec3f_dot(&q, &s);
-    if (u < 0.f) {
-      continue;
-    }
-
-    float v = factor * vec3f_dot(&r, &d);
-    if (v < 0.f || u + v > 1.f) {
-      continue;
-    }
-
-    float t = factor * vec3f_dot(&r, &e2);
-
-    intersect_out->triangle_index = i;
-    intersect_out->tuv.x = t;
-    intersect_out->tuv.y = u;
-    intersect_out->tuv.z = v;
-
-    return 1;
+  if (a > -MESH_INTERSECT_RAY_EPSILON && a < MESH_INTERSECT_RAY_EPSILON) {
+    return 0;
   }
 
+  float factor = 1.f / vec3f_dot(&q, &e1);
+
+  float u = factor * vec3f_dot(&q, &s);
+  if (u < 0.f) {
+    return 0;
+  }
+
+  float v = factor * vec3f_dot(&r, &d);
+  if (v < 0.f || u + v > 1.f) {
+    return 0;
+  }
+
+  float t = factor * vec3f_dot(&r, &e2);
+
+  out->tuv.x = t;
+  out->tuv.y = u;
+  out->tuv.z = v;
+
+  return 1;
+}
+
+int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
+                       MeshRayIntersection *intersect_out) {
+  for (size_t i = 0; i < mesh->num_triangles; ++i) {
+    Vec3f *p0 = &mesh->vertices[mesh->triangles[i].index_v0];
+    Vec3f *p1 = &mesh->vertices[mesh->triangles[i].index_v1];
+    Vec3f *p2 = &mesh->vertices[mesh->triangles[i].index_v2];
+
+    if (mesh_intersect_ray_impl(p0, p1, p2, ray, intersect_out)) {
+      intersect_out->triangle_index = i;
+      return 1;
+    }
+
+    /* Vec3f p0 = mesh->vertices[mesh->triangles[i].index_v0]; */
+    /* Vec3f p1 = mesh->vertices[mesh->triangles[i].index_v1]; */
+    /* Vec3f p2 = mesh->vertices[mesh->triangles[i].index_v2]; */
+
+    /* Vec3f o = ray->origin; */
+    /* Vec3f d = ray->direction; */
+    /* Vec3f e1 = vec3f_sub(&p1, &p0); */
+    /* Vec3f e2 = vec3f_sub(&p2, &p0); */
+    /* Vec3f s = vec3f_sub(&o, &p0); */
+
+    /* // Optimization. Consolidate computation */
+    /* Vec3f q = cross(&d, &e2); */
+    /* Vec3f r = cross(&s, &e1); */
+
+    /* float a = vec3f_dot(&q, &e1); */
+
+    /* if (a > -MESH_INTERSECT_RAY_EPSILON && a < MESH_INTERSECT_RAY_EPSILON) {
+     */
+    /*   continue; */
+    /* } */
+
+    /* float factor = 1.f / vec3f_dot(&q, &e1); */
+
+    /* float u = factor * vec3f_dot(&q, &s); */
+    /* if (u < 0.f) { */
+    /*   continue; */
+    /* } */
+
+    /* float v = factor * vec3f_dot(&r, &d); */
+    /* if (v < 0.f || u + v > 1.f) { */
+    /*   continue; */
+    /* } */
+
+    /* float t = factor * vec3f_dot(&r, &e2); */
+
+    /* intersect_out->triangle_index = i; */
+    /* intersect_out->tuv.x = t; */
+    /* intersect_out->tuv.y = u; */
+    /* intersect_out->tuv.z = v; */
+
+    /* return 1; */
+  }
+
+  return 0;
+}
+
+int mesh_transform_intersect_ray(Mesh *mesh, Ray3f *ray, Mat4x4 *transform,
+                                 MeshRayIntersection *intersect_out) {
+  for (size_t i = 0; i < mesh->num_triangles; ++i) {
+    Vec3f *p0 = &mesh->vertices[mesh->triangles[i].index_v0];
+    Vec3f *p1 = &mesh->vertices[mesh->triangles[i].index_v1];
+    Vec3f *p2 = &mesh->vertices[mesh->triangles[i].index_v2];
+
+    // Ugh... so much copying.
+    Vec4f p0_ = {.x = p0->x, .y = p0->y, .z = p0->z, 1.f};
+    Vec4f p1_ = {.x = p1->x, .y = p1->y, .z = p1->z, 1.f};
+    Vec4f p2_ = {.x = p2->x, .y = p2->y, .z = p2->z, 1.f};
+
+    p0_ = mat4_mul_vec(transform, &p0_);
+    p1_ = mat4_mul_vec(transform, &p1_);
+    p2_ = mat4_mul_vec(transform, &p2_);
+
+    // To satisfy ray_impl. Needs Vec3f :(
+    Vec3f p0__ = {.x = p0_.x, .y = p0_.y, .z = p0_.z};
+    Vec3f p1__ = {.x = p1_.x, .y = p1_.y, .z = p1_.z};
+    Vec3f p2__ = {.x = p2_.x, .y = p2_.y, .z = p2_.z};
+
+    if (mesh_intersect_ray_impl(&p0__, &p1__, &p2__, ray, intersect_out)) {
+      intersect_out->triangle_index = i;
+      return 1;
+    }
+  }
   return 0;
 }
 
@@ -352,7 +473,7 @@ int vec3f_cmp_eq(Vec3f *a, Vec3f *b) {
   return a->x == b->x && a->y == b->y && a->z == b->z;
 }
 
-inline uint32_t mesh_find_vertex_index(Mesh *mesh, Vertex3f *v) {
+static inline uint32_t mesh_find_vertex_index(Mesh *mesh, Vertex3f *v) {
   for (uint32_t i = 0; i < mesh->num_vertices; ++i) {
     if (vec3f_cmp_eq(&mesh->vertices[i], v)) {
       return i;

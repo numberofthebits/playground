@@ -56,21 +56,27 @@ void input_system_handle_keyboard_input(struct InputSystem *system, int key,
 }
 
 void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
-                                 uint16_t y) {
+                                 uint16_t y, uint16_t framebuffer_width,
+                                 uint16_t framebuffer_height) {
   if (x == input_system->cursor.pos.x && y == input_system->cursor.pos.y) {
     return;
   }
 
-  LOG_INFO("Mouse cursor (px) %hu %hu", x, y);
+  LOG_INFO("Mouse cursor (px) %hu %hu framebuffer size (px) %hu %hu", x, y,
+           framebuffer_width, framebuffer_height);
 
   EventBus *bus = input_system->base.services.event_bus;
 
-  InputSystemCursorMoved cursor_moved_event = {.pos = {x, y}};
+  // Normalize coordinates to [-1, 1]
+  InputSystemCursorMoved cursor_moved_event = {
+      .pos = {((float)x / (float)framebuffer_width - 0.5f) * 2.f,
+              ((float)y / (float)framebuffer_height - 0.5f) * 2.f}};
+
   Event event = {.id = InputSystem_CursorMoved,
                  .event_data = &cursor_moved_event,
                  .event_data_size = sizeof(InputSystemCursorMoved)};
 
-  event_bus_emit(bus, &event);
+  event_bus_defer(bus, &event);
 }
 
 void input_system_update(Registry *registry, struct SystemBase *sys,
@@ -101,7 +107,7 @@ void input_system_update(Registry *registry, struct SystemBase *sys,
     struct Event events;
     events.id = KeyboardInput_Update;
     events.event_data = &aggregated;
-    events.event_data_size = sizeof(AggregatedKeyboardEvents);
+    events.event_data_size = sizeof(struct AggregatedKeyboardEvents);
 
     event_bus_emit(bus, &events);
   }

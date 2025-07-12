@@ -15,7 +15,7 @@ typedef struct {
   int channels;
 } ImageMeta;
 
-typedef uint32_t AssetId;
+typedef size_t AssetId;
 typedef uint32_t SignatureT;
 typedef int EntityId;
 typedef size_t EntityIndex;

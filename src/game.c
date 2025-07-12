@@ -25,7 +25,7 @@
 //
 // NOTE: There's quite a few dynamic arrays and hash maps
 //       left to remove.
-#define STATIC_ARENA_SIZE 1024 * 1024 * 64
+#define STATIC_ARENA_SIZE 1024ULL * 1024ULL * 256ULL
 #define FRAME_ARENA_SIZE 1024 * 1024 * 16
 
 /* extern const struct Component component_table[]; */
@@ -43,16 +43,12 @@ struct Map_t {
 };
 typedef struct Map_t Map;
 
-enum GameState {
-  GAME_RUNNING = 0x1,
-  GAME_DEBUG_ENABLED = 0x2,
-};
+enum GameState { GAME_RUNNING = 0x1, GAME_DEBUG_ENABLED = 0x2 };
 
 struct Game_t {
   Registry registry;
   GLFWwindow *window;
   struct Assets assets;
-  Map map;
   struct EventBus event_bus;
   struct WorkQueue work_queue;
 
@@ -74,6 +70,65 @@ struct Game_t {
   struct RenderSystem *render_system;
   DamageSystem *damage_system;
 };
+
+/* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap")); */
+/* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("unit")); */
+/* VEC_PUSH_T(&prep.program_ids, AssetId,
+ * assets_make_id_str("collision_debug"));
+
+VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("truck-blue-mat"));
+VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
+VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
+VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
+VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("plain-red"));
+
+*/
+
+const char *level_0_programs[] = {"tilemap.prog", "unit.prog",
+                                  "collision_debug.prog"};
+
+const char *level_0_materials[] = {"truck.mat", "jungle.mat", "chopper.mat",
+                                   "plain-red.mat", "bullet.mat"};
+
+const char *level_0_textures[] = {"bullet.png", "chopper-spritesheet.png",
+                                  "jungle.png", "white-pixel.png",
+                                  "truck-ford-right.png"};
+
+const char *level_0_maps[] = {"jungle.meta"};
+
+typedef struct LevelAssets {
+  const char **textures;
+  size_t textures_count;
+
+  const char **materials;
+  size_t materials_count;
+
+  const char **programs;
+  size_t programs_count;
+
+  const char **maps;
+  size_t maps_count;
+} LevelAssets;
+
+/* const char *level_0[][] = { */
+/*     // Shaders */
+/*     {"tilemap.prog"}, */
+/*     {"unit.prog"}, */
+/*     {"collision_debug.prog"}, */
+/*     // Materials */
+/*     {"truck.mat"}, */
+/*     {"jungle.mat"}, */
+/*     {"chopper.mat"}, */
+/*     {"plain-red.mat"}, */
+/*     {"bullet.mat"}, */
+/*     // Textures */
+/*     {"bullet.png"}, */
+/*     {"chopper-spritesheet.png"}, */
+/*     {"jungle.png"}, */
+/*     {"white-pixel.png"}, */
+/*     {"truck-ford-right.png"}, */
+/*     // Map */
+/*     {"jungle.meta"}}; */
 
 enum ReadlineResult {
   READLINE_DONE = 0,
@@ -262,8 +317,13 @@ static void window_size_callback(GLFWwindow *window, int width, int height) {
 
 Game *game_create() {
   LOG_INFO("max_align_t == %d", alignof(max_align_t));
+
   arena_init(&global_static_allocator, STATIC_ARENA_SIZE);
   arena_init(&frame_allocator, FRAME_ARENA_SIZE);
+
+  stack_init(&stack_allocator, &global_static_allocator,
+             STACK_ALLOCATOR_DEFAULT_THREAD_LOCAL_STACK_SIZE);
+
   Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
 
   work_queue_init(&game->work_queue);
@@ -363,22 +423,36 @@ Game *game_create() {
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->camera_movement_system);
   registry_add_system(&game->registry,
+                      (struct SystemBase *)game->hit_detection_system);
+  registry_add_system(&game->registry,
                       (struct SystemBase *)game->render_system);
 
-#ifdef BUILD_TESTS
-  stack_test();
-  pool_test();
-  registry_test();
-  work_queue_test();
-#endif
   return game;
+}
+
+void map_write_meta(Map *map, const char *filepath) {
+  FILE *handle = fopen(filepath, "w+b");
+  int bytes_to_write = offsetof(Map, tiles);
+
+  int res = fwrite(map, 1, bytes_to_write, handle);
+  if (res != bytes_to_write) {
+    LOG_EXIT("Failed to write map meta");
+  }
+  fclose(handle);
+}
+
+void map_read_meta(Map *map, const char *filepath) {
+  FILE *handle = fopen(filepath, "r+b");
+  int bytes_to_read = offsetof(Map, tiles);
+  fread(map, 1, bytes_to_read, handle);
+  fclose(handle);
 }
 
 void map_init(Map *map) {
   // Hard code this for now, since we haven't defined a meta data
   // structure for maps yet
-  map->world_size.x = 10 * 25;
-  map->world_size.y = 10 * 20;
+  map->world_size.x = 2 * 25;
+  map->world_size.y = 2 * 20;
   map->map_size.x = 25;
   map->map_size.y = 20;
   map->atlas_size.x = 10;
@@ -387,49 +461,198 @@ void map_init(Map *map) {
                           map->map_size.x * map->map_size.y, MapTile);
 }
 
+/* void map_load(Map *map, Registry *registry, struct Assets *assets) { */
+/*   (void)assets; */
+/*   const float atlas_cols_f = (float)map->atlas_size.x; */
+/*   const float atlas_rows_f = (float)map->atlas_size.y; */
+
+/*   for (uint32_t row = 0; row < map->world_size.y; ++row) { */
+/*     for (uint32_t col = 0; col < map->world_size.x; ++col) { */
+/*       Entity e = registry_entity_create(registry); */
+
+/*       TransformComponent tc = {0}; */
+/*       tc.scale = 1.f; */
+/*       tc.pos.x = col; */
+/*       tc.pos.y = row; */
+/*       tc.pos.z = 0.0f; */
+/*       tc.rotation = 0.0f; */
+
+/*       registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT,
+ * &tc); */
+
+/*       MapTile tile = */
+/*           map_get_tile(map, col % map->map_size.x, row % map->map_size.y); */
+
+/*       RenderComponent rc; */
+/*       rc.render_layer = 0; */
+
+/*       // In map space, tile starts at the upper left */
+/*       // In GL texture coord space, tile starts at lower left */
+/*       // Offset.y must be the bottom of the texture rect. */
+/*       rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f; */
+/*       rc.tex_coord_offset.y = */
+/*           (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f; */
+/*       rc.tex_coord_scale.x = 1.f / (atlas_cols_f); */
+/*       rc.tex_coord_scale.y = 1.f / (atlas_rows_f); */
+/*       rc.material_id = assets_make_id_str("jungle-mat"); */
+/*       rc.pipeline_id = assets_make_id_str("tilemap"); */
+
+/*       registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
+ */
+
+/*       registry_entity_add(registry, e); */
+
+/*       //      registry_entity_group(registry, e, "tiles"); */
+/*     } */
+/*   } */
+/* } */
+
 void map_load(Map *map, Registry *registry, struct Assets *assets) {
+  (void)registry;
   (void)assets;
   const float atlas_cols_f = (float)map->atlas_size.x;
   const float atlas_rows_f = (float)map->atlas_size.y;
 
+  Entity e = registry_entity_create(registry);
+
+  const uint32_t total_number_of_vertices =
+      map->world_size.x * map->world_size.y * 6;
+
+  Vec2f tex_coord_scale = {.x = 1.f / atlas_cols_f, .y = 1.f / atlas_rows_f};
+
+  MeshComponent mc = {0};
+  mc.mesh.vertices = (Vertex3f *)ArenaAlloc(&global_static_allocator,
+                                            total_number_of_vertices, Vertex3f);
+  mc.mesh.num_vertices = total_number_of_vertices;
+  mc.mesh.size_vertices = total_number_of_vertices;
+
+  // Skip edges for now
+  const uint32_t total_number_of_triangles =
+      map->world_size.x * map->world_size.y * 2;
+  mc.mesh.triangles = (Triangle *)ArenaAlloc(
+      &global_static_allocator, total_number_of_triangles, Triangle);
+  mc.mesh.num_triangles = total_number_of_triangles;
+  mc.mesh.size_triangles = total_number_of_triangles;
+
+  mc.mesh.uv_coords = (Vec2f *)ArenaAlloc(&global_static_allocator,
+                                          total_number_of_vertices, Vec2f);
+  mc.mesh.num_uv_coords = total_number_of_vertices;
+  mc.mesh.size_uv_coords = total_number_of_vertices;
+
+  uint32_t vertices_counter = 0;
+  uint32_t triangle_counter = 0;
+
+  /*
+    The UV coord problem:
+
+    Problem statement:
+    UV coordinates as vertex attributes cannot be shared in instanced
+    rendering.. Unless... No. It can't. Why? Because the same vertex
+    will have more than one UV coordinate when reused.
+
+    Conclusions: - Indexed rendering will not work.
+                 - glMultiDrawELEMENTSIndirect will not work.
+                   Use glMultiDrawArraysIndirect instead.
+                 - Tile renderer is special because it is not continous
+                   in UV space?
+                 - Cannot iterate across a single row first to generate
+                   vertices. Must do two rows at a time to form triangles?
+                 - Let renderer test for null pointer in indices to know which
+                   gl draw call to use.
+   */
+
+  Vertex3f quad[4] = {0};
+
+  // These are constant for each triangle
+  Vec2f uv[4] = {{0.f, 0.f}, {1.f, 0.f}, {0.f, 1.f}, {1.f, 1.f}};
+
   for (uint32_t row = 0; row < map->world_size.y; ++row) {
     for (uint32_t col = 0; col < map->world_size.x; ++col) {
-      Entity e = registry_entity_create(registry);
-
-      TransformComponent tc = {0};
-      tc.scale.x = 1.f;
-      tc.scale.y = 1.f;
-      tc.pos.x = col;
-      tc.pos.y = row;
-      tc.pos.z = 0.0f;
-      tc.rotation = 0.0f;
-
-      registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
       MapTile tile =
           map_get_tile(map, col % map->map_size.x, row % map->map_size.y);
+      quad[0].x = (float)col;
+      quad[0].y = (float)row;
 
-      RenderComponent rc;
-      rc.render_layer = 0;
+      quad[1].x = (float)(col + 1);
+      quad[1].y = (float)row;
+
+      quad[2].x = (float)col;
+      quad[2].y = (float)(row + 1);
+
+      quad[3].x = (float)(col + 1);
+      quad[3].y = (float)(row + 1);
+
+      /*
+       |\
+       | \
+       ---
+       */
+      mc.mesh.vertices[vertices_counter + 0] = quad[0];
+      mc.mesh.vertices[vertices_counter + 1] = quad[1];
+      mc.mesh.vertices[vertices_counter + 2] = quad[2];
+
+      /*
+       \---
+        \ |
+         \|
+      */
+      mc.mesh.vertices[vertices_counter + 3] = quad[2];
+      mc.mesh.vertices[vertices_counter + 4] = quad[3];
+      mc.mesh.vertices[vertices_counter + 5] = quad[1];
 
       // In map space, tile starts at the upper left
       // In GL texture coord space, tile starts at lower left
       // Offset.y must be the bottom of the texture rect.
-      rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f;
-      rc.tex_coord_offset.y =
+      Vec2f tex_coord_offset;
+
+      tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f;
+      tex_coord_offset.y =
           (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f;
-      rc.tex_coord_scale.x = 1.f / (atlas_cols_f);
-      rc.tex_coord_scale.y = 1.f / (atlas_rows_f);
-      rc.material_id = assets_make_id_str("jungle-mat");
-      rc.pipeline_id = assets_make_id_str("tilemap");
 
-      registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
+      mc.mesh.uv_coords[vertices_counter + 0] =
+          vec2f_add(vec2f_mul(uv[0], tex_coord_scale), tex_coord_offset);
 
-      registry_entity_add(registry, e);
+      mc.mesh.uv_coords[vertices_counter + 1] =
+          vec2f_add(vec2f_mul(uv[1], tex_coord_scale), tex_coord_offset);
 
-      //      registry_entity_group(registry, e, "tiles");
+      mc.mesh.uv_coords[vertices_counter + 2] =
+          vec2f_add(vec2f_mul(uv[2], tex_coord_scale), tex_coord_offset);
+
+      mc.mesh.uv_coords[vertices_counter + 2] =
+          vec2f_add(vec2f_mul(uv[2], tex_coord_scale), tex_coord_offset);
+
+      mc.mesh.uv_coords[vertices_counter + 3] =
+          vec2f_add(vec2f_mul(uv[3], tex_coord_scale), tex_coord_offset);
+
+      mc.mesh.uv_coords[vertices_counter + 1] =
+          vec2f_add(vec2f_mul(uv[2], tex_coord_scale), tex_coord_offset);
+
+      Triangle *ta = &mc.mesh.triangles[triangle_counter++];
+      ta->index_v0 = vertices_counter + 0;
+      ta->index_v1 = vertices_counter + 1;
+      ta->index_v2 = vertices_counter + 2;
+
+      Triangle *tb = &mc.mesh.triangles[triangle_counter++];
+      tb->index_v0 = vertices_counter + 3;
+      tb->index_v1 = vertices_counter + 4;
+      tb->index_v2 = vertices_counter + 5;
+
+      vertices_counter += 6;
     }
   }
+
+  registry_entity_component_add(registry, e, MESH_COMPONENT_BIT, &mc);
+
+  RenderComponent rc;
+  rc.render_layer = 0;
+
+  rc.material_id = assets_make_id_str("jungle-mat");
+  rc.pipeline_id = assets_make_id_str("tilemap");
+
+  registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
+
+  registry_entity_add(registry, e);
 }
 
 void load_units(Registry *registry, struct Assets *assets) {
@@ -446,8 +669,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     tc.pos.x = 0.5;
     tc.pos.y = 4.0;
     tc.pos.z = 0.0f;
-    tc.scale.x = 1.0f;
-    tc.scale.y = 1.0f;
+    tc.scale = 1.0f;
     tc.rotation = 0.f;
 
     RenderComponent rc;
@@ -516,8 +738,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     tc.pos.x = 0.0f;
     tc.pos.y = 5.0f;
     tc.pos.z = 0.1f;
-    tc.scale.x = 1.f;
-    tc.scale.y = 1.f;
+    tc.scale = 1.f;
     tc.rotation = 0.f;
 
     RenderComponent rc;
@@ -573,38 +794,96 @@ void load_units(Registry *registry, struct Assets *assets) {
   }
 }
 
+static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
+  size_t total_asset_count =
+      level_assets->textures_count + level_assets->programs_count +
+      level_assets->materials_count + level_assets->maps_count;
+  size_t total_asset_bytes = total_asset_count * sizeof(Asset);
+  Asset *assets = stack_alloc(&stack_allocator, total_asset_bytes);
+
+  size_t asset_index = 0;
+  for (size_t i = 0; i < level_assets->textures_count; ++i) {
+    assets[asset_index].id = assets_make_id_str(level_assets->textures[i]);
+    assets[asset_index].type = AssetTypeTexture;
+    ++asset_index;
+  }
+
+  for (size_t i = 0; i < level_assets->programs_count; ++i) {
+    assets[asset_index].id = assets_make_id_str(level_assets->programs[i]);
+    assets[asset_index].type = AssetTypeShaderProgram;
+    ++asset_index;
+  }
+
+  for (size_t i = 0; i < level_assets->materials_count; ++i) {
+    assets[asset_index].id = assets_make_id_str(level_assets->materials[i]);
+    assets[asset_index].type = AssetTypeMaterial;
+    ++asset_index;
+  }
+
+  for (size_t i = 0; i < level_assets->maps_count; ++i) {
+    assets[asset_index].id = assets_make_id_str(level_assets->maps[i]);
+    assets[asset_index].type = AssetTypeMap;
+    ++asset_index;
+  }
+
+  render_system_load_assets(game->render_system, assets, total_asset_count);
+
+  stack_dealloc(&stack_allocator, assets, total_asset_bytes);
+}
+
 void game_setup(Game *game) {
-  (void)game;
   LOG_INFO("Setup");
 
-  map_init(&game->map);
-  load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map);
-  map_load(&game->map, &game->registry, &game->assets);
-  map_print(&game->map);
+  LevelAssets level_assets = {
+      .textures = level_0_textures,
+      .textures_count = sizeof(level_0_textures) / sizeof(const char *),
+      .materials = level_0_materials,
+      .materials_count = sizeof(level_0_materials) / sizeof(const char *),
+      .programs = level_0_programs,
+      .programs_count = sizeof(level_0_programs) / sizeof(const char *),
+      .maps = level_0_maps,
+      .maps_count = sizeof(level_0_maps) / sizeof(const char *)};
 
-  load_units(&game->registry, &game->assets);
+  game_load_level_assets(game, &level_assets);
 
-  PreparedResources prep;
-  prep.program_ids = vec_create();
-  prep.material_ids = vec_create();
-  VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap"));
-  VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("unit"));
-  VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("collision_debug"));
+  /* map_init(&game->map); */
+  /* /\* map_write_meta(&game->map, "./assets/tilemaps/jungle.meta"); *\/ */
+  /* /\* Map lol = {0}; *\/ */
+  /* /\* map_read_meta(&lol, "./assets/tilemaps/jungle.meta"); *\/ */
 
-  VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("truck-blue-mat"));
-  VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
-  VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("chopper-udlr"));
-  VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
+  /* load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map); */
+  /* map_load(&game->map, &game->registry, &game->assets); */
 
-  RenderSystem *render_system =
-      (RenderSystem *)registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
-  render_system_prepare_resources(render_system, &prep);
+  /* load_units(&game->registry, &game->assets); */
 
-  CameraMovementSystem *camera_movement_system =
-      (CameraMovementSystem *)registry_get_system(&game->registry,
-                                                  CAMERA_MOVEMENT_SYSTEM_BIT);
-  camera_movement_system_set_world_size(camera_movement_system,
-                                        game->map.world_size);
+  /* PreparedResources prep; */
+  /* prep.program_ids = vec_create(); */
+  /* prep.material_ids = vec_create(); */
+
+  /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap")); */
+  /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("unit")); */
+  /* VEC_PUSH_T(&prep.program_ids, AssetId,
+   * assets_make_id_str("collision_debug")); */
+
+  /* VEC_PUSH_T(&prep.material_ids, AssetId,
+   * assets_make_id_str("truck-blue-mat")); */
+  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
+   */
+  /* VEC_PUSH_T(&prep.material_ids, AssetId,
+   * assets_make_id_str("chopper-udlr")); */
+  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
+   */
+  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("plain-red"));
+   */
+
+  /* render_system_prepare_resources(game->render_system, &prep); */
+
+  /* CameraMovementSystem *camera_movement_system = */
+  /*     (CameraMovementSystem *)registry_get_system(&game->registry, */
+  /*                                                 CAMERA_MOVEMENT_SYSTEM_BIT);
+   */
+  /* camera_movement_system_set_world_size(camera_movement_system, */
+  /*                                       game->map.world_size); */
 
   // Push our initial entities before entering main loop
   registry_entity_commit_entities(&game->registry);
@@ -614,18 +893,23 @@ void game_update(Game *game) {
   arena_dealloc_all(&frame_allocator);
 
   double x, y;
+  int fb_width, fb_height;
   glfwGetCursorPos(game->window, &x, &y);
+  glfwGetFramebufferSize(game->window, &fb_width, &fb_height);
 
-  input_system_set_cursor_pos(game->input_system, (uint16_t)x, (uint16_t)y);
+  // NOTE: Apparently one of these can be < 0 in some cases. Can't reproduce
+  // but it is UB, so don't do anything in that case
+  if (fb_width > 0 && fb_height > 0 && x > 0 && y > 0) {
+    input_system_set_cursor_pos(game->input_system, (uint16_t)x, (uint16_t)y,
+                                (uint16_t)fb_width, (uint16_t)fb_height);
+  } else {
+    LOG_WARN("fb.x %d fb.y %d mouse.x %f mouse.y %f", fb_width, fb_height, x,
+             y);
+  }
 
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,
       OS_FramebufferSizeChanged, render_system_handle_framebuffer_size_changed);
-
-  event_bus_subscribe(&game->event_bus,
-                      (struct SystemBase *)game->hit_detection_system,
-                      OS_FramebufferSizeChanged,
-                      hit_detection_system_handle_framebuffer_size_changed);
 
   event_bus_subscribe(&game->event_bus,
                       (struct SystemBase *)game->player_system,
@@ -639,9 +923,9 @@ void game_update(Game *game) {
       &game->event_bus, (struct SystemBase *)game->render_system,
       CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
 
-  event_bus_subscribe(&game->event_bus, (struct SystemBase *)game->input_system,
-                      InputSystem_CursorMoved,
-                      hit_detection_system_handle_cursor_moved);
+  event_bus_subscribe(
+      &game->event_bus, (struct SystemBase *)game->hit_detection_system,
+      InputSystem_CursorMoved, hit_detection_system_handle_cursor_moved);
 
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,

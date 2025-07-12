@@ -398,8 +398,8 @@ void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
     return;
   }
 
-  hash_map_insert_value(&reg->entity_tags.entity_tag_map, &entity,
-                        sizeof(entity), tag);
+  hash_map_insert(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity),
+                  tag);
   // It's nasty, but whatever
   Entity *e = malloc(sizeof(Entity));
   *e = entity;
@@ -436,8 +436,8 @@ void registry_entity_group(Registry *reg, Entity entity, char *group) {
   }
 
   unsigned long long len = strlen(group);
-  hash_map_insert_value(&reg->entity_groups.entity_group_map, &entity,
-                        sizeof(entity), group);
+  hash_map_insert(&reg->entity_groups.entity_group_map, &entity, sizeof(entity),
+                  group);
 
   void *entity_vec_ptr;
   // Check if we already have a group with this name

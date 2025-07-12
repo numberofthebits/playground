@@ -52,6 +52,8 @@ static int worker_thread_main(void *arg) {
   }
 
   LOG_INFO("Thread %d done", args.thread_index);
+
+  return 0;
 }
 
 static void work_queue_reset(struct WorkQueue *queue) {

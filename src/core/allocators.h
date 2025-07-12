@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <threads.h>
 
+#define STACK_ALLOCATOR_DEFAULT_THREAD_LOCAL_STACK_SIZE 1024ULL * 1024ULL * 8ULL
+
 struct ArenaAllocator {
   uint8_t *base;
   size_t capacity;

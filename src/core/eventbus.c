@@ -2,6 +2,7 @@
 
 #include "log.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #define EVENT_BUS_DEFERRED_EVENTS_BYTES_MAX 1024 * 1024

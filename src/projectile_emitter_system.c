@@ -32,8 +32,7 @@ void create_projectile(ProjectileEmitterComponent *component,
   TransformComponent tc = {0};
   tc.pos.x = origin.x + dir.x;
   tc.pos.y = origin.y + dir.y;
-  tc.scale.x = 0.1f;
-  tc.scale.y = 0.1f;
+  tc.scale = 0.1f;
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};

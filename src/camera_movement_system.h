@@ -48,7 +48,7 @@ static inline void camera_movement_system_update(Registry *reg,
   Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
   CameraMovementSystem *camera_movement_system = (CameraMovementSystem *)base;
 
-  for (int i = 0; i < base->entities.size || i < 1; ++i) {
+  for (int i = 0; i < base->entities.size && i < 1; ++i) {
     Entity e = *(ptr + i);
     TransformComponent *tc =
         PoolGetComponent(pool, TransformComponent, e.index);

@@ -51,11 +51,10 @@ void input_system_handle_keyboard_input(struct InputSystem *input_system,
                                         int key, int action);
 
 void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
-                                 uint16_t y);
+                                 uint16_t y, uint16_t framebuffer_width,
+                                 uint16_t framebuffer_height);
 
 void input_system_update(Registry *registry, struct SystemBase *sys,
                          size_t frame_nr);
-
-void input_system_reset(struct InputSystem *input_system);
 
 #endif

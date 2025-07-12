@@ -46,11 +46,11 @@ typedef struct {
 } CameraUpdated;
 
 typedef struct InputSystemCursorMoved {
-  Vec2d pos;
+  Vec2f pos;
 } InputSystemCursorMoved;
 
 typedef struct OSFramebufferSizeChanged {
-  Vec2u16 size;
+  Vec2f size;
 } OSFramebufferSizeChanged;
 
 int is_expected_event_id(enum EventType expected, enum EventType actual);

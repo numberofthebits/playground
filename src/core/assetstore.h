@@ -1,30 +1,40 @@
 #ifndef ASSETSTORE_H
 #define ASSETSTORE_H
 
-#define ASSET_NAME_MAX_LEN 64
-#define ASSET_FILE_PATH_MAX 256
+/* Why 62? Leave room for \0 terminator and uint8_t len
+   in the same cacheline*/
+#define ASSET_NAME_MAX_LEN 62
+#define ASSET_NAME_ARRAY_MAX_LEN ASSET_NAME_MAX_LEN + 1
+#define ASSET_FILE_PATH_MAX 251
 
+#include "allocators.h"
 #include "hashmap.h"
 #include "math.h"
-#include "types.h"
-#include "vec.h"
 #include "os.h"
+#include "types.h"
+#include "util.h"
+#include "vec.h"
 
+#include <stdalign.h>
 #include <stdint.h>
 
 typedef struct {
   char path[ASSET_FILE_PATH_MAX];
+  uint32_t len;
 } AssetFilePath;
 
-AssetId asset_hash_name(const char *name, size_t len);
-
-typedef struct {
-  char name[ASSET_NAME_MAX_LEN];
+typedef struct AssetName {
+  char name[ASSET_NAME_ARRAY_MAX_LEN];
   uint8_t len;
 } AssetName;
 
+// typedef alignas(64) struct AssetName AssetName;
+
 AssetName assets_make_asset_name(const char *name, size_t len);
 AssetName assets_make_asset_name_str(const char *name);
+
+AssetId assets_make_id(const char *name, size_t len);
+AssetId assets_make_id_str(const char *name);
 
 AssetFilePath assets_make_asset_file_path(const char *file_path);
 
@@ -32,28 +42,36 @@ int assets_asset_name_eq(AssetName *lhs, AssetName *rhs);
 
 // TODO: Nuke this. Type type should be implicit from its existence
 // in container for a given asset type
-typedef enum {
+typedef enum AssetType {
   AssetTypeTexture,
   AssetTypeTextureTiled,
-  AssetTypeShaderProgram
+  AssetTypeShader,
+  AssetTypeShaderProgram,
+  AssetTypeMaterial,
+  AssetTypeMap,
+  AssetTypeMesh,
 } AssetType;
 
-typedef struct {
+static const char *AssetTypeNames[] = {
+    "Texture",  "TextureTiled", "Shader", "ShaderProgram",
+    "Material", "Map",          "Mesh"};
+
+typedef struct Asset {
   AssetType type;
-  AssetName name;
-  char file_path[ASSET_FILE_PATH_MAX];
+  AssetId id;
 } Asset;
 
-typedef struct {
+typedef struct AssetMeta {
+  AssetId id;
+  AssetType type;
   AssetName name;
-  ImageMeta meta;
-} AssetTexture;
+  AssetFilePath file_path;
+} AssetMeta;
 
 typedef struct {
-  AssetTexture base;
-  uint16_t tiles_x;
-  uint16_t tiles_y;
-} AssetTiledTexture;
+  AssetId id;
+  ImageMeta meta;
+} AssetTexture;
 
 typedef struct {
   AssetId id;
@@ -61,62 +79,95 @@ typedef struct {
   AssetId texture_id;
 } AssetMaterial;
 
+typedef enum AssetShaderType {
+  AssetShaderTypeVertex = 0,
+  AssetShaderTypeTessCtrl = 1,
+  AssetShaderTypeTessEval = 2,
+  AssetShaderTypeGeometry = 3,
+  AssetShaderTypeFragment = 4,
+  AssetShaderTypeTypeCount = 5,
+  AssetShaderTypeProgram = 16,
+
+  AssetShaderTypeUnknown = 0xFF,
+  AssetShaderTypeNone = 0xFF
+} AssetShaderType;
+
 typedef struct {
   AssetId id;
-  AssetName name;
-
-  // Note shader owns this source ptr
-  const char *shader_src;
-  AssetFilePath file_path;
+  AssetShaderType shader_type;
+  Buffer source_buffer;
 } AssetShader;
 
-typedef enum {
-  AssetShaderUnknown = 0x0,
-  AssetShaderVertex = 0x1,
-  AssetShaderFragment = 0x2
-} AssetProgramShaderFlag;
-
-typedef struct {
+typedef struct AssetShaderProgram {
   AssetId id;
-  AssetName name;
 
   // There are only 6 types of shaders in openGL.
-  // Let's assume we're in OpenGL land
-  AssetId shader_ids[6];
+  // Let's assume we're in OpenGL land for now
+  AssetId shader_ids[AssetShaderTypeTypeCount];
   int has_shader;
 } AssetShaderProgram;
+
+static inline void assets_shader_program_set_shader(AssetShaderProgram *prog,
+                                                    AssetShaderType type,
+                                                    AssetId id) {
+  prog->shader_ids[type] = id;
+  prog->has_shader |= (0x1 << (int)type);
+}
+
+typedef struct AssetMesh {
+  AssetId id;
+  Mesh mesh;
+} AssetMesh;
+
+typedef struct AssetMap {
+  AssetId id;
+  Vec2u32 size_world;
+  Vec2u32 size_tilemap;
+} AssetMap;
 
 int assets_shader_program_has_shader(AssetShaderProgram *program, size_t index);
 
 struct Assets {
-  // Map of AssetId, Asset
-  HashMap textures;
+  Vec textures;
   Vec programs;
   Vec shaders;
   Vec materials;
-  Vec tiled_textures;
+  Vec meshes;
+  Vec maps;
+  Vec asset_meta;
 };
 
 void assets_init(struct Assets *assets);
 
-AssetId assets_make_id(const char *name, size_t len);
-AssetId assets_make_id_str(const char *name);
+AssetName *assets_asset_name_get_by_id(struct Assets *assets, AssetId id);
+AssetMeta *assets_asset_meta_get(struct Assets *assets, AssetId id);
 
-int assets_load_asset(struct Assets *assets, AssetId id, void **data,
-                      void *meta);
+int assets_load_texture(struct Assets *assets, AssetId id,
+                        AssetTexture *texture, void **texture_data);
+
+int assets_load_shader(struct Assets *assets, AssetId id, AssetShader *shader);
+
+int assets_load_shader_program(struct Assets *assets, AssetId asset_id,
+                               AssetShaderProgram *program);
+
+int assets_load_material(struct Assets *assets, AssetId id,
+                         AssetMaterial *material);
+
+int assets_load_map(struct Assets *assets, AssetId id, AssetMap *map);
 
 AssetMaterial *assets_get_material(struct Assets *assets, AssetId material_id);
 
-void assets_load_texture(struct Assets *assets, const char *name,
-                         ImageMeta *meta);
+void assets_add_mesh(struct Assets *assets, Mesh *mesh, const char *name);
 
-void assets_load_tiled_texture(struct Assets *assets, const char *name,
-                               ImageMeta *meta, uint16_t tiles_x,
-                               uint16_t tiles_y);
+Mesh *assets_get_mesh(struct Assets *assets, AssetId mesh_id);
 
 AssetShaderProgram *assets_get_program(struct Assets *assets,
                                        AssetId program_id);
 
 AssetShader *assets_get_shader(struct Assets *assets, AssetId shader_id);
+
+#ifdef BUILD_TESTS
+void assetstore_test();
+#endif
 
 #endif // ASSETSTORE_H

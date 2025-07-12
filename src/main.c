@@ -9,7 +9,9 @@
 #include "core/tests.h"
 #endif
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  (void)argv;
+  (void)argc;
   // if (!log_init(NULL)) {
   if (!log_init("log.txt")) {
     printf("Failed to initialize logger");

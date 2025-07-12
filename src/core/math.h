@@ -36,6 +36,13 @@ typedef struct {
 } Vec3f;
 
 typedef struct {
+  float x;
+  float y;
+  float z;
+  float w;
+} Vec4f;
+
+typedef struct {
   uint8_t x;
   uint8_t y;
 } Vec2u8;
@@ -112,6 +119,13 @@ typedef struct {
   Triangle *triangles;
   uint32_t num_triangles;
   uint32_t size_triangles;
+
+  Vec2f *uv_coords;
+  uint32_t num_uv_coords;
+  uint32_t size_uv_coords;
+
+  uint32_t num_indices;
+  uint32_t *indices;
 } Mesh;
 
 typedef struct {
@@ -121,7 +135,16 @@ typedef struct {
 
 int vec3f_cmp_eq(Vec3f *a, Vec3f *b);
 
+static inline Vec2f vec2f_add(Vec2f a, Vec2f b) {
+  return (Vec2f){.x = a.x + b.x, .y = a.y + b.y};
+}
+
+static inline Vec2f vec2f_mul(Vec2f a, Vec2f b) {
+  return (Vec2f){.x = a.x * b.x, .y = a.y * b.y};
+}
+
 float vec2f_dot(Vec2f *a, Vec2f *b);
+
 float vec3f_dot(Vec3f *a, Vec3f *b);
 
 Vec3f cross(Vec3f *a, Vec3f *b);
@@ -160,11 +183,19 @@ void mat4_transpose(Mat4x4 *mat);
 // 'axis' should be normalized
 void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
 
-Mat4x4 mul(Mat4x4 *a, Mat4x4 *b);
+void mat4_transform(Mat4x4 *mat, Vec3f *axis, float angle, float scale,
+                    Vec3f *pos);
+
+Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b);
+Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v);
 
 int intersect_rectf(Rectf *a, Rectf *b);
+
 int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
                        MeshRayIntersection *intersect_out);
+
+int mesh_transform_intersect_ray(Mesh *mesh, Ray3f *ray, Mat4x4 *transform,
+                                 MeshRayIntersection *intersect_out);
 
 void mesh_init(Mesh *mesh, uint32_t size_vertices, uint32_t size_edges,
                uint32_t size_triangles);
@@ -198,8 +229,8 @@ void math_test();
 
 // impl Display for SphericalCoord {
 //      fmt(&self, f: &mut Formatter<'_>) -> Result {
-//         write!(f, "r={}, \u{03C6}={}, \u{03B8}={}", self.radius, self.theta,
-//         self.phi)
+//         write!(f, "r={}, \u{03C6}={}, \u{03B8}={}", self.radius,
+//         self.theta, self.phi)
 //     }
 // }
 
@@ -233,8 +264,8 @@ void math_test();
 //         };
 
 //         let q = float::sqrt(self.scalar * self.scalar +
-//         vec_neg.magnitude_squared()); let inv_q = 1.0 / q; let inv_q_squared
-//         = inv_q * inv_q;
+//         vec_neg.magnitude_squared()); let inv_q = 1.0 / q; let
+//         inv_q_squared = inv_q * inv_q;
 
 //         Quaternion {
 //             scalar: inv_q_squared * self.scalar,

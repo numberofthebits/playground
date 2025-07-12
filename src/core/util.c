@@ -4,8 +4,57 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-unsigned char *file_read_all(const char *file_path) {
+size_t file_read_all_buffer_binary(const char *file_path, unsigned char *buffer,
+                                   size_t buffer_size) {
+  FILE *fp = fopen(file_path, "r+b");
+  if (!fp) {
+    return 0;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  int file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  LOG_INFO("File size %d bytes", file_size);
+  if ((size_t)file_size > buffer_size) {
+    LOG_ERROR("File size %d does not fit in buffer size %zu", file_size,
+              buffer_size);
+    return 0;
+  }
+
+  int bytes_read = fread(buffer, 1, file_size, fp);
+  fclose(fp);
+
+  return (size_t)bytes_read;
+}
+
+size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer) {
+  FILE *fp = fopen(file_path, "r");
+  if (!fp) {
+    return 0;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  int file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  LOG_INFO("File size %d bytes", file_size);
+  if ((size_t)file_size >= buffer->len) {
+    LOG_ERROR("File size %d does not fit in buffer size %zu", file_size,
+              buffer->len);
+    return 0;
+  }
+
+  int bytes_read = fread(buffer->data, 1, file_size, fp);
+  fclose(fp);
+  buffer->data[bytes_read] = 0;
+
+  return (size_t)bytes_read;
+}
+
+int file_read_all(const char *file_path, Buffer *buffer) {
   FILE *fp = fopen(file_path, "r+b");
   if (!fp) {
     return 0;
@@ -16,13 +65,14 @@ unsigned char *file_read_all(const char *file_path) {
   fseek(fp, 0, SEEK_SET);
 
   LOG_INFO("File size %d bytes", size);
-  unsigned char *data = malloc(size + 1);
-  data[size] = 0;
+  buffer->data = malloc(size + 1);
+  buffer->len = size >= 0 ? (size_t)size : 0;
+  buffer->data[size] = 0;
 
-  fread(data, size, 1, fp);
+  fread(buffer->data, size, 1, fp);
   fclose(fp);
 
-  return data;
+  return 1;
 }
 
 int get_msb_set(uint64_t value) {
@@ -32,4 +82,15 @@ int get_msb_set(uint64_t value) {
     }
   }
   return -1;
+}
+
+size_t offset_to_character(const char *str, size_t len, char c) {
+  const char *ptr = str;
+  size_t offset = 0;
+
+  while (offset < len && *(ptr + offset) != c) {
+    ++offset;
+  }
+
+  return offset;
 }

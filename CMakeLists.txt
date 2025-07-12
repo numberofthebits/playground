@@ -1,15 +1,19 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(pikuma_2d_game_engine C)
+#set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/toolchain.cmake")
 
 # This is apparently ignored for non make/ninja generators so
 # leave it on so i never have to specify this manually again
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
+project(pikuma_2d_game_engine C)
+
 option(BUILD_TESTS "Compile test functions" OFF)
 option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
 
 add_executable(game)
+#target_compile_options(game PRIVATE -fsanitize=addresss,leak,undefined -fno-omit-frame-pointer)
 
 target_sources(game
   PRIVATE
@@ -32,6 +36,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/eventbus.h
   ${PROJECT_SOURCE_DIR}/src/core/hashmap.c
   ${PROJECT_SOURCE_DIR}/src/core/hashmap.h
+  ${PROJECT_SOURCE_DIR}/src/core/keyvalueparser.c
+  ${PROJECT_SOURCE_DIR}/src/core/keyvalueparser.h
   ${PROJECT_SOURCE_DIR}/src/core/log.c
   ${PROJECT_SOURCE_DIR}/src/core/log.h
   ${PROJECT_SOURCE_DIR}/src/core/math.c
@@ -101,6 +107,7 @@ target_compile_features(game
 )
 
 if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  message("Compiler ID == Clang")
   target_compile_options(game
     PRIVATE
     -Wall
@@ -118,11 +125,12 @@ if(ENABLE_DEBUG_TIMERS)
   target_compile_options(game PRIVATE -DENABLE_DEBUG_TIMERS)
 endif()
 
-if (CMAKE_C_COMPILER_ID STREQUAL "Clang") 
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+  message("Clang")
   if (ENABLE_SANITIZERS)
      message(STATUS "Enabling sanitizers")
-     target_compile_options(game PRIVATE -fsanitize=address,undefined,leak)
-     target_link_libraries(game PRIVATE ubsan asan)
+     target_compile_options(game PRIVATE -fsanitize=undefined)
+     target_link_libraries(game PRIVATE clang_rt.ubsan_standalone-x86_64.lib)
   else()
      message(STATUS "No sanitizers enabled")
    endif()
@@ -135,6 +143,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
 endif()
   
 if ( MSVC )
+  message("MSVC")
   target_compile_options(game
     PRIVATE
      /D_CRT_SECURE_NO_WARNINGS

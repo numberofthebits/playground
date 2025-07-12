@@ -294,8 +294,8 @@ static void render_update_range(void *job_params) {
     rd->render_layer = rc->render_layer;
 
     Vec3f scale;
-    scale.x = tc->scale.x;
-    scale.y = tc->scale.y;
+    scale.x = tc->scale;
+    scale.y = tc->scale;
     scale.z = 1.0f;
 
     Vec3f pos;
@@ -322,9 +322,9 @@ static void render_update_range(void *job_params) {
 
     Mat4x4 m;
     mat4_identity(&m);
-    m = mul(&m, &matrix_rotate);
-    m = mul(&m, &matrix_scale);
-    m = mul(&m, &matrix_translate);
+    m = mat4_mul(&m, &matrix_rotate);
+    m = mat4_mul(&m, &matrix_scale);
+    m = mat4_mul(&m, &matrix_translate);
 
     rd->model_matrix = m;
     rd->material_id = rc->material_id;
@@ -388,9 +388,15 @@ static void render_update(Registry *reg, struct SystemBase *sys,
 }
 
 void render_system_create_program(RenderSystem *system, AssetId program_id) {
-  AssetShaderProgram *program_asset =
-      assets_get_program(system->assets, program_id);
-  if (!program_asset) {
+
+  void *prog_ptr = 0;
+  if (hash_map_get(&system->programs, &program_id, sizeof(program_id),
+                   prog_ptr)) {
+    return;
+  }
+
+  AssetShaderProgram program;
+  if (!assets_load_shader_program(system->assets, program_id, &program)) {
     LOG_EXIT("Failed to create program with id '%d': Program asset not found",
              program_id);
   }
@@ -398,35 +404,53 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
   int num_shaders_in_program = 0;
   GLuint shader_handles[6];
 
-  for (size_t i = 0; i < sizeof(program_asset->shader_ids) / sizeof(AssetId);
-       ++i) {
-    if (assets_shader_program_has_shader(program_asset, i)) {
-      AssetShader *shader_asset =
-          assets_get_shader(system->assets, program_asset->shader_ids[i]);
+  for (size_t i = 0; i < sizeof(program.shader_ids) / sizeof(AssetId); ++i) {
+    if (assets_shader_program_has_shader(&program, i)) {
+
+      size_t buffer_size = 1024 * 1024;
+
+      AssetShader shader_asset;
+      shader_asset.source_buffer =
+          (Buffer){.data = stack_alloc(&stack_allocator, buffer_size),
+                   .len = buffer_size};
+
+      if (!assets_load_shader(system->assets, program.shader_ids[i],
+                              &shader_asset)) {
+        LOG_EXIT(
+            "Failed to create program with id '%d': Program asset not found",
+            program.shader_ids[i]);
+      }
 
       GLenum gl_shader_type = 0;
-      switch (0x1 << i) {
-      case AssetShaderVertex:
+      switch (shader_asset.shader_type) {
+      case AssetShaderTypeVertex:
         gl_shader_type = GL_VERTEX_SHADER;
         break;
-      case AssetShaderFragment:
+      case AssetShaderTypeFragment:
         gl_shader_type = GL_FRAGMENT_SHADER;
         break;
       default:
         LOG_EXIT("Unhandled shader type");
       }
 
-      LOG_INFO("Compiling shader '%s'", shader_asset->file_path.path);
-      shader_handles[num_shaders_in_program++] =
-          compile_shader(shader_asset->shader_src, gl_shader_type);
+      LOG_INFO("Compiling shader '%s'", shader_asset.source_buffer.data);
+
+      shader_handles[num_shaders_in_program++] = compile_shader(
+          (const char *)shader_asset.source_buffer.data, gl_shader_type);
+
+      stack_dealloc(&stack_allocator, (void *)shader_asset.source_buffer.data,
+                    shader_asset.source_buffer.len);
+
+      shader_asset.source_buffer.data = 0;
+      shader_asset.source_buffer.len = 0;
     }
   }
 
   GLuint program_handle =
       create_program(shader_handles, num_shaders_in_program);
-  hash_map_insert_value(&system->programs, &program_asset->id,
-                        sizeof(program_asset->id),
-                        (void *)(uintptr_t)program_handle);
+
+  hash_map_insert(&system->programs, &program_id, sizeof(program_id),
+                  (void *)(uintptr_t)program_handle);
 }
 
 void render_system_global_init() {
@@ -624,34 +648,39 @@ RenderSystem *render_system_create(Services *services, int window_w,
 static void render_system_create_material(RenderSystem *system,
                                           AssetId material_id) {
   Material new_material;
-  AssetMaterial *mat = assets_get_material(system->assets, material_id);
-  if (!mat) {
-    LOG_EXIT("Failed to find material with id %u", material_id);
+  AssetMaterial material_asset;
+
+  if (!assets_load_material(system->assets, material_id, &material_asset)) {
+    LOG_EXIT("Material id %u not found: '%s", material_id);
   }
-  new_material.color = mat->color;
+
+  new_material.color = material_asset.color;
 
   void *texture_handle_ptr = 0;
-  int found_texture_handle =
-      (GLuint64)(uintptr_t)hash_map_get(&system->textures, &mat->texture_id,
-                                        sizeof(AssetId), &texture_handle_ptr);
+  int found_texture_handle = (GLuint64)(uintptr_t)hash_map_get(
+      &system->textures, &material_asset.texture_id, sizeof(AssetId),
+      &texture_handle_ptr);
   // Careful. Don't know if it's valid before testing hash_map_get return
   // value
   GLuint64 texture_handle = (GLuint64)texture_handle_ptr;
   if (!found_texture_handle) {
 
-    ImageMeta meta;
     void *data = 0;
-    if (!assets_load_asset(system->assets, mat->texture_id, &data, &meta)) {
-      LOG_EXIT("Failed to load texture asset '%d'", mat->texture_id);
+
+    AssetTexture texture = {0};
+    if (!assets_load_texture(system->assets, material_asset.texture_id,
+                             &texture, &data)) {
+      LOG_EXIT("Failed to load texture asset '%d'", material_asset.texture_id);
     }
 
     // Store the new handle as a void* in the hash map to avoid allocating
     // just for a pointer sized type
-    GLuint64 new_handle = render_system_create_texture(system, data, &meta);
+    GLuint64 new_handle =
+        render_system_create_texture(system, data, &texture.meta);
     uintptr_t new_handle_ptr = (uintptr_t)new_handle;
 
-    hash_map_insert_value(&system->textures, &mat->texture_id, sizeof(AssetId),
-                          (void *)new_handle_ptr);
+    hash_map_insert(&system->textures, &material_asset.texture_id,
+                    sizeof(AssetId), (void *)(uintptr_t)new_handle_ptr);
 
     if (data) {
       free(data);
@@ -664,23 +693,10 @@ static void render_system_create_material(RenderSystem *system,
   }
 
   unsigned int new_material_index = system->materials.size;
-  hash_map_insert_value(&system->material_asset_index_mapping, &material_id,
-                        sizeof(AssetId), (void *)(uintptr_t)new_material_index);
+  hash_map_insert(&system->material_asset_index_mapping, &material_id,
+                  sizeof(AssetId), (void *)(uintptr_t)new_material_index);
 
   VEC_PUSH_T(&system->materials, Material, new_material);
-}
-
-void render_system_prepare_resources(RenderSystem *system,
-                                     PreparedResources *resources) {
-  for (int i = 0; i < resources->program_ids.size; ++i) {
-    AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i);
-    render_system_create_program(system, program_id);
-  }
-
-  for (int i = 0; i < resources->material_ids.size; ++i) {
-    AssetId material_id = VEC_GET_T(&resources->material_ids, AssetId, i);
-    render_system_create_material(system, material_id);
-  }
 }
 
 uint64_t render_system_create_texture(RenderSystem *system, void *data,
@@ -738,6 +754,70 @@ uint64_t render_system_create_texture(RenderSystem *system, void *data,
   CHECK_GL_ERROR();
 
   return bindless_handle;
+}
+
+void render_system_load_texture(RenderSystem *system, AssetId asset_id) {
+
+  void *texture_handle_ptr = 0;
+  int found_texture_handle = (GLuint64)(uintptr_t)hash_map_get(
+      &system->textures, &asset_id, sizeof(AssetId), &texture_handle_ptr);
+  if (found_texture_handle) {
+    return;
+  }
+
+  void *texture_data = 0;
+  AssetTexture texture;
+  assets_load_texture(system->assets, asset_id, &texture, &texture_data);
+
+  // just for a pointer sized type
+  GLuint64 new_handle =
+      render_system_create_texture(system, texture_data, &texture.meta);
+  uintptr_t new_handle_ptr = (uintptr_t)new_handle;
+
+  hash_map_insert(&system->textures, &asset_id, sizeof(AssetId),
+                  (void *)(uintptr_t)new_handle_ptr);
+
+  if (texture_data) {
+    free(texture_data);
+  }
+}
+
+static void render_system_create_map_mesh(RenderSystem *system,
+                                          AssetId asset_id) {
+  (void)system;
+  (void)asset_id;
+}
+
+void render_system_load_assets(RenderSystem *system, Asset *assets,
+                               size_t asset_count) {
+  for (size_t i = 0; i < asset_count; ++i) {
+    switch (assets[i].type) {
+    case AssetTypeTexture:
+      render_system_load_texture(system, assets[i].id);
+      break;
+    case AssetTypeShaderProgram:
+      render_system_create_program(system, assets[i].id);
+      break;
+    case AssetTypeMaterial:
+      render_system_create_material(system, assets[i].id);
+      break;
+    case AssetTypeMap:
+      render_system_create_map_mesh(system, assets[i].id);
+      break;
+    default:
+      continue;
+    }
+  }
+  /* for (int i = 0; i < resources->program_ids.size; ++i) { */
+  /*   AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i); */
+  /*   render_system_create_program(system, program_id); */
+  /* } */
+
+  /* for (int i = 0; i < resources->material_ids.size; ++i) { */
+  /*   AssetId material_id = VEC_GET_T(&resources->material_ids, AssetId, i);
+   */
+  /*   render_system_create_material(system, material_id); */
+  /* } */
 }
 
 void render_system_framebuffer_size_changed(RenderSystem *render_system,
@@ -805,22 +885,25 @@ void render_system_handle_hit_detection(struct SystemBase *base,
     return;
   }
 
-  /*
-    We have the entity index for the mesh we hit: Entity mesh;
+  HitDetectionEvent *event = (HitDetectionEvent *)e.event_data;
+  uint32_t material_index = event->intersection.triangle_index;
 
-    We have the index of the triangle we hit: triangle_index
+  LOG_INFO("Hit on triangle index %d", material_index);
 
-    We have the [t,u,v] (barycentric?) coordinates
-    of the triangle we hit.
+  RenderSystem *system = (RenderSystem *)base;
+  Material *material =
+      VEC_GET_T_PTR(&system->materials, Material, material_index);
 
-    This must map to a GPU buffer where write a color value,
-    (e.g. red) for this triangle.
+  material->color.r = 255;
+  material->color.g = 0;
+  material->color.b = 0;
+  material->color.a = 255;
 
-    Let's assume we use a color vertex attribute for now.
-
-    f(mesh, triangle_index) = [GL buffer object, offset]
-
-   */
+  /* glNamedBufferSubData( */
+  /*     system->tile_renderer->shader_storage_buffer_objects.buffer_object[1],
+   * 0, */
+  /*     sizeof(Material) * system->materials.size, */
+  /*     VEC_ITER_BEGIN_T(&system->materials, Material)); */
 }
 
 void render_system_debug(struct RenderSystem *system, Registry *registry) {

@@ -24,12 +24,11 @@ enum ComponentBit {
 };
 typedef enum ComponentBit ComponentBit;
 
-struct Transform_Component_t {
+typedef struct TransformComponent {
   Vec3f pos;
-  Vec2f scale;
-  float rotation; // x/y-plane rotation for now
-};
-typedef struct Transform_Component_t TransformComponent;
+  float scale;    // DON'T support shearing.
+  float rotation; // Single axis. You pick one for now.
+} TransformComponent;
 
 typedef struct {
   // Normalized texture coordinate modifier
@@ -39,6 +38,7 @@ typedef struct {
   Vec2f tex_coord_scale;
   AssetId material_id;
   AssetId pipeline_id;
+  // AssetId mesh_id;
   uint8_t render_layer;
 } RenderComponent;
 
@@ -157,7 +157,11 @@ static const struct Component component_table[] = {
      .name = "ProjectileComponent"},
     {.flag = HEALTH_COMPONENT_BIT,
      .size = sizeof(HealthComponent),
-     .alignment = sizeof(HealthComponent),
-     .name = "HealthComponent"}};
+     .alignment = alignof(HealthComponent),
+     .name = "HealthComponent"},
+    {.flag = MESH_COMPONENT_BIT,
+     .size = sizeof(MeshComponent),
+     .alignment = alignof(MeshComponent),
+     .name = "MeshComponent"}};
 
 #endif // COMPONENTS_H

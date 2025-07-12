@@ -27,7 +27,7 @@ Chunk chunk_create() {
 Chunk chunk_alloc(int s) {
   void *ptr = malloc(s);
   if (!ptr) {
-    LOG_INFO("malloc() %d bytes failed", s);
+    LOG_EXIT("malloc() %d bytes failed", s);
   }
 
   Chunk c;
@@ -36,6 +36,22 @@ Chunk chunk_alloc(int s) {
 
   LOG_INFO("chunk alloc: %d bytes @ %p", s, c.ptr);
   return c;
+}
+
+Chunk chunk_realloc(Chunk *c, size_t s) {
+  if (!c->ptr) {
+    LOG_EXIT("Can't realloc null pointer)");
+  }
+
+  void *ptr = realloc(c->ptr, s);
+
+  if (!ptr) {
+    LOG_EXIT("realloc() failed");
+  }
+
+  Chunk new_chunk = {.ptr = ptr, .size = s};
+
+  return new_chunk;
 }
 
 int chunk_is_allocated(Chunk *c) { return c->ptr != 0; }
@@ -55,10 +71,10 @@ void chunk_dealloc(Chunk *c) {
   c->ptr = 0;
 }
 
-void vec_init(Vec* v) {
+void vec_init(Vec *v) {
   v->size = 0;
   v->capacity = 0;
-  v->storage = chunk_create();  
+  v->storage = chunk_create();
 }
 
 Vec vec_create(void) {
@@ -70,29 +86,26 @@ Vec vec_create(void) {
 void vec_reserve(Vec *v, int s) {
   LOG_INFO("Reserve: current %d, new %d", v->storage.size, s);
   if (s > v->storage.size) {
-    Chunk new_chunk = chunk_alloc(s);
     if (chunk_is_allocated(&v->storage)) {
-      LOG_INFO("Dealloc old chunk (%d bytes @ %p to %p", v->storage.size,
-               v->storage.ptr, new_chunk.ptr);
-      Chunk old_chunk = v->storage;
-      memcpy(new_chunk.ptr, v->storage.ptr, v->storage.size);
-      chunk_dealloc(&old_chunk);
+      v->storage = chunk_realloc(&v->storage, s);
+    } else {
+      v->storage = chunk_alloc(s);
     }
-    v->storage = new_chunk;
+
+    v->capacity = s;
   }
 }
 
 void vec_resize(Vec *v, int s) {
   LOG_INFO("Resize: current %d, new %d", v->storage.size, s);
-  Chunk new_chunk = chunk_alloc(s);
   if (chunk_is_allocated(&v->storage)) {
-    LOG_INFO("Dealloc old chunk (%d bytes @ %p to %p", v->storage.size,
-             v->storage.ptr, new_chunk.ptr);
-    Chunk old_chunk = v->storage;
-    memcpy(new_chunk.ptr, v->storage.ptr, v->storage.size);
-    chunk_dealloc(&old_chunk);
+    v->storage = chunk_realloc(&v->storage, s);
+    v->size = s;
+  } else {
+    v->storage = chunk_alloc(s);
   }
-  v->storage = new_chunk;
+
+  v->capacity = s;
 }
 
 void vec_destroy(Vec *v) {
