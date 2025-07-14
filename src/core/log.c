@@ -67,7 +67,6 @@ int log_init(const char *file_path) {
 
 void log_destroy(void) {
   if (fp) {
-    fflush(fp);
     fclose(fp);
   }
 }

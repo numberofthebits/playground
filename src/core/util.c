@@ -16,10 +16,11 @@ size_t file_read_all_buffer_binary(const char *file_path, unsigned char *buffer,
   fseek(fp, 0, SEEK_END);
   int file_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
+  size_t lol = (size_t)file_size;
 
   LOG_INFO("File size %d bytes", file_size);
-  if ((size_t)file_size > buffer_size) {
-    LOG_ERROR("File size %d does not fit in buffer size %zu", file_size,
+  if (lol > buffer_size) {
+    LOG_ERROR("File size %zu does not fit in buffer size %zu", file_size,
               buffer_size);
     return 0;
   }
@@ -41,15 +42,16 @@ size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer) {
   fseek(fp, 0, SEEK_SET);
 
   LOG_INFO("File size %d bytes", file_size);
-  if ((size_t)file_size >= buffer->len) {
+  if ((size_t)file_size >= buffer->capacity) {
     LOG_ERROR("File size %d does not fit in buffer size %zu", file_size,
-              buffer->len);
+              buffer->capacity);
     return 0;
   }
 
   int bytes_read = fread(buffer->data, 1, file_size, fp);
   fclose(fp);
   buffer->data[bytes_read] = 0;
+  buffer->used = (size_t)bytes_read;
 
   return (size_t)bytes_read;
 }
@@ -61,15 +63,15 @@ int file_read_all(const char *file_path, Buffer *buffer) {
   }
 
   fseek(fp, 0, SEEK_END);
-  int size = ftell(fp);
+  int file_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  LOG_INFO("File size %d bytes", size);
-  buffer->data = malloc(size + 1);
-  buffer->len = size >= 0 ? (size_t)size : 0;
-  buffer->data[size] = 0;
+  LOG_INFO("File size %d bytes", file_size);
+  buffer->data = malloc(file_size + 1);
+  buffer->capacity = file_size >= 0 ? (size_t)file_size : 0;
+  buffer->data[file_size] = 0;
 
-  fread(buffer->data, size, 1, fp);
+  fread(buffer->data, file_size, 1, fp);
   fclose(fp);
 
   return 1;

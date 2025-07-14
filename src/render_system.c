@@ -412,7 +412,8 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
       AssetShader shader_asset;
       shader_asset.source_buffer =
           (Buffer){.data = stack_alloc(&stack_allocator, buffer_size),
-                   .len = buffer_size};
+                   .capacity = buffer_size,
+                   .used = 0};
 
       if (!assets_load_shader(system->assets, program.shader_ids[i],
                               &shader_asset)) {
@@ -439,10 +440,7 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
           (const char *)shader_asset.source_buffer.data, gl_shader_type);
 
       stack_dealloc(&stack_allocator, (void *)shader_asset.source_buffer.data,
-                    shader_asset.source_buffer.len);
-
-      shader_asset.source_buffer.data = 0;
-      shader_asset.source_buffer.len = 0;
+                    shader_asset.source_buffer.capacity);
     }
   }
 

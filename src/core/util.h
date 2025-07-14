@@ -26,7 +26,8 @@
 
 typedef struct Buffer {
   uint8_t *data;
-  size_t len;
+  size_t capacity;
+  size_t used;
 } Buffer;
 
 // Mallocs for you

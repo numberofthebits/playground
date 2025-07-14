@@ -1,5 +1,6 @@
 #include "assetstore.h"
 
+#include "keyvalueparser.h"
 #include "log.h"
 #include "util.h"
 
@@ -233,7 +234,8 @@ static AssetShaderProgram parse_shader_program(const char *file_path) {
   size_t buffer_size = 1024 * 1024;
 
   Buffer buffer = {.data = stack_alloc(&stack_allocator, buffer_size),
-                   .len = buffer_size};
+                   .capacity = buffer_size,
+                   .used = 0};
 
   // The returned file size should never be greater than buffer size
   size_t file_size = file_read_all_buffer_text(file_path, &buffer);
@@ -274,7 +276,7 @@ static AssetShaderProgram parse_shader_program(const char *file_path) {
   parse_shader_program_entry(&program, buffer.data + pos_begin, buffer.data + i,
                              buffer.data + ext_begin);
 
-  stack_dealloc(&stack_allocator, buffer.data, buffer.len);
+  stack_dealloc(&stack_allocator, buffer.data, buffer.capacity);
   return program;
 }
 
@@ -516,60 +518,37 @@ int assets_load_shader_program(struct Assets *assets, AssetId asset_id,
 
 #define PARSE_MATERIAL_BUFFER_SIZE 128
 static int parse_material(Buffer *buffer, AssetMaterial *material) {
-
-  size_t offset = 0;
   int ret = 0;
+  ParseState state = {.buffer = buffer, .offset = 0};
+  while (!parse_is_done(&state)) {
+    KeyValueRaw raw = {0};
 
-  while (offset < buffer->len) {
-    const char *line_begin = (const char *)buffer->data + offset;
-    const size_t line_end = offset_to_character(line_begin, buffer->len, '\n');
-    const size_t key_len = offset_to_character(line_begin, buffer->len, '=');
-
-    char key_buffer[PARSE_MATERIAL_BUFFER_SIZE] = {0};
-    memcpy(key_buffer, line_begin, key_len);
-
-    size_t value_begin = key_len + 1;
-    size_t value_len = line_end - value_begin;
-    char value_buffer[PARSE_MATERIAL_BUFFER_SIZE] = {0};
-    memcpy(value_buffer, line_begin + value_begin, value_len);
-
-    if (strcmp(key_buffer, "texture") == 0) {
-      AssetId texture_id = assets_make_id(value_buffer, value_len);
-      material->texture_id = texture_id;
-      ++ret;
-    } else if (strcmp(key_buffer, "color") == 0) {
-
-      uint8_t rgba[4] = {0};
-      size_t offset_value_begin = 0;
-      for (int i = 0; i < 4; ++i) {
-
-        size_t value_num_chars = offset_to_character(
-            value_buffer + offset_value_begin, value_len, ',');
-        int value = atoi(value_buffer + offset_value_begin);
-
-        if (value < 0 || value > 255) {
-          LOG_ERROR("Expected uint8_t in string '%s'", value_buffer);
-          return ret;
+    int status = get_next_key_value_raw(&state, &raw);
+    switch (status) {
+    case PARSER_ERROR:
+      return 0;
+    case PARSER_DONE:
+      return 1;
+    case PARSER_OK:
+      if (strncmp(raw.key_begin, "color", strlen("color")) == 0) {
+        if (!parse_array_u8(raw.value_begin, raw.value_len, 4,
+                            &material->color.r)) {
+          return 0;
         }
 
-        rgba[i] = (uint8_t)value;
-        offset_value_begin += value_num_chars + 1;
+        ++ret;
+
+      } else if (strncmp(raw.key_begin, "texture", strlen("texture")) == 0) {
+        material->texture_id = assets_make_id(raw.value_begin, raw.value_len);
+        ++ret;
       }
 
-      material->color.r = rgba[0];
-      material->color.g = rgba[1];
-      material->color.b = rgba[2];
-      material->color.a = rgba[3];
-      ++ret;
-    }
-
-    offset += line_end + 1;
-
-    if (ret == 2) {
+      break;
+    default:
+      LOG_ERROR("Unhandled key value raw status %d", status);
       break;
     }
   }
-
   return ret == 2;
 }
 
@@ -577,7 +556,7 @@ static int load_material(const char *file_path, AssetMaterial *material) {
   size_t buffer_size = 1024 * 1024;
   Buffer buffer = {0};
   buffer.data = stack_alloc(&stack_allocator, buffer_size);
-  buffer.len = 1024 * 1024;
+  buffer.capacity = 1024 * 1024;
 
   if (!file_read_all_buffer_text(file_path, &buffer)) {
     return 0;
@@ -606,7 +585,8 @@ int assets_load_material(struct Assets *assets, AssetId asset_id,
 
 /* static int parse_map_meta(Buffer *buffer, AssetMap *map) { */
 /*   const char *line_begin = (const char *)buffer->data + offset; */
-/*   const size_t line_end = offset_to_character(line_begin, buffer->len, '\n');
+/*   const size_t line_end = offset_to_character(line_begin, buffer->len,
+ * '\n');
  */
 /*   const size_t key_len = offset_to_character(line_begin, buffer->len, '=');
  */
@@ -622,9 +602,11 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
   size_t buffer_size = 1024 * 1024;
   Buffer buffer = {0};
   buffer.data = stack_alloc(&stack_allocator, buffer_size);
-  buffer.len = buffer_size;
+  buffer.capacity = buffer_size;
 
-  if (!file_read_all_buffer_text(asset_meta->file_path.path, &buffer)) {
+  buffer.used = file_read_all_buffer_text(asset_meta->file_path.path, &buffer);
+
+  if (!buffer.used) {
     LOG_WARN("Failed to read %s", asset_meta->file_path.path);
     return 0;
   }
@@ -633,7 +615,7 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
   /*   return 0; */
   /* } */
 
-  stack_dealloc(&stack_allocator, buffer.data, buffer.len);
+  stack_dealloc(&stack_allocator, buffer.data, buffer.capacity);
 
   return 1;
 }
@@ -669,7 +651,8 @@ void parse_material_test() {
   Buffer buffer;
   buffer.data = (unsigned char *)material_str;
   AssetMaterial material = {0};
-  buffer.len = strlen(material_str);
+  buffer.capacity = strlen(material_str);
+  buffer.used = buffer.capacity;
 
   Assert(parse_material(&buffer, &material));
   AssetId expected_texture_id = assets_make_id_str("truck-ford-right.png");
