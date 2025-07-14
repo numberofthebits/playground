@@ -24,8 +24,6 @@ typedef struct ParseState {
   size_t offset;
 } ParseState;
 
-typedef int (*ParseCallback)(KeyValueRaw *, void *user_pointer);
-
 // Returns PARSER_DONE, PARSER_ERROR or PARSER_OK
 int get_next_key_value_raw(ParseState *state, KeyValueRaw *raw);
 
@@ -41,7 +39,6 @@ int parse_array_u8(const char *str_val, size_t str_len, size_t expected_count,
                    uint8_t *values_out);
 
 #ifdef BUILD_TESTS
-int test_parser_callback(KeyValueRaw *raw);
 void test_parser();
 #endif
 
