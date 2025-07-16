@@ -782,8 +782,13 @@ void render_system_load_texture(RenderSystem *system, AssetId asset_id) {
 
 static void render_system_create_map_mesh(RenderSystem *system,
                                           AssetId asset_id) {
-  (void)system;
-  (void)asset_id;
+  AssetMap map_asset = {0};
+  if (!assets_load_map(system->assets, asset_id, &map_asset)) {
+    LOG_ERROR("Failed to create map mesh");
+    return;
+  }
+
+  assets_clear_temp_data(system->assets);
 }
 
 void render_system_load_assets(RenderSystem *system, Asset *assets,
@@ -802,20 +807,12 @@ void render_system_load_assets(RenderSystem *system, Asset *assets,
     case AssetTypeMap:
       render_system_create_map_mesh(system, assets[i].id);
       break;
+    case AssetTypeMesh:
+      break;
     default:
       continue;
     }
   }
-  /* for (int i = 0; i < resources->program_ids.size; ++i) { */
-  /*   AssetId program_id = VEC_GET_T(&resources->program_ids, AssetId, i); */
-  /*   render_system_create_program(system, program_id); */
-  /* } */
-
-  /* for (int i = 0; i < resources->material_ids.size; ++i) { */
-  /*   AssetId material_id = VEC_GET_T(&resources->material_ids, AssetId, i);
-   */
-  /*   render_system_create_material(system, material_id); */
-  /* } */
 }
 
 void render_system_framebuffer_size_changed(RenderSystem *render_system,

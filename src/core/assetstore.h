@@ -28,8 +28,6 @@ typedef struct AssetName {
   uint8_t len;
 } AssetName;
 
-// typedef alignas(64) struct AssetName AssetName;
-
 AssetName assets_make_asset_name(const char *name, size_t len);
 AssetName assets_make_asset_name_str(const char *name);
 
@@ -123,6 +121,9 @@ typedef struct AssetMap {
   AssetId id;
   Vec2u32 size_world;
   Vec2u32 size_tilemap;
+  AssetId tilemap_texture_id;
+  size_t num_indices;
+  Vec2u8 *indices; // Size world x*y encodes how big this should be
 } AssetMap;
 
 int assets_shader_program_has_shader(AssetShaderProgram *program, size_t index);
@@ -135,9 +136,15 @@ struct Assets {
   Vec meshes;
   Vec maps;
   Vec asset_meta;
+
+  // For assets with dynamic size. User must know
+  // its data and call 'assets_clear_temp_asset_data'
+  SubArenaAllocator temp_data;
 };
 
 void assets_init(struct Assets *assets);
+
+void assets_clear_temp_data(struct Assets *assets);
 
 AssetName *assets_asset_name_get_by_id(struct Assets *assets, AssetId id);
 AssetMeta *assets_asset_meta_get(struct Assets *assets, AssetId id);

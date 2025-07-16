@@ -646,7 +646,6 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
 
   RenderComponent rc;
   rc.render_layer = 0;
-
   rc.material_id = assets_make_id_str("jungle-mat");
   rc.pipeline_id = assets_make_id_str("tilemap");
 

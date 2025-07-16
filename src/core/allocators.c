@@ -38,6 +38,11 @@ static inline ptrdiff_t offset_to_aligned(void *ptr, size_t s,
   return alignment - res;
 }
 
+static inline size_t round_to_aligned(size_t s, size_t alignment) {
+  size_t a = alignment - 1;
+  return (s + a) & ~a;
+}
+
 static inline AllocImplResult alloc_impl(void *ptr, size_t s,
                                          size_t alignment) {
   AllocImplResult res = {.ptr = 0, .used = s};
@@ -199,38 +204,26 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s) {
     return 0;
   }
 
-  void *ptr = allocator->base + allocator->used;
+  size_t size_rounded_up = round_to_aligned(s, alignof(max_align_t));
 
-  if ((uintptr_t)ptr % alignof(max_align_t) == 0) {
-    allocator->used += s;
-    return ptr;
-  }
+  // Assume 'base' is always aligned and 'used' will always
+  // be rounded up to a valid alignment
+  void *allocated_ptr = allocator->base + allocator->used;
+  allocator->used += size_rounded_up;
 
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
-  ptr += offset;
-
-  allocator->used += offset + s;
-
-  LOG_INFO("allocated %zu bytes + %zu alignment @ %p", s, offset, ptr);
-  return ptr;
+  return allocated_ptr;
 }
 
 int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
-                                    size_t s,
-
-                                    ptrdiff_t offset) {
-  if (ptr + s + offset == allocator->base + allocator->used) {
-    return 1;
-  }
-
-  return 0;
+                                    size_t size_rounded_up) {
+  return ptr + size_rounded_up == allocator->base + allocator->used;
 }
 
 void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
+  size_t size_rounded_up = round_to_aligned(s, alignof(max_align_t));
 
-  if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
-    allocator->used -= s + offset;
+  if (stack_is_most_recent_allocation(allocator, ptr, size_rounded_up)) {
+    allocator->used -= size_rounded_up;
   } else {
     LOG_EXIT("Failed to deallocate %x of size %zu", ptr);
   }
@@ -238,10 +231,10 @@ void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
 
 int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
                           size_t s) {
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignof(max_align_t));
+  size_t size_rounded_up = round_to_aligned(s, alignof(max_align_t));
 
-  if (stack_is_most_recent_allocation(allocator, ptr, s, offset)) {
-    allocator->used -= s + offset;
+  if (stack_is_most_recent_allocation(allocator, ptr, size_rounded_up)) {
+    allocator->used -= size_rounded_up;
   } else {
     LOG_ERROR("Failed to deallocate %x of size %zu", ptr, s);
     return 0;
@@ -289,7 +282,7 @@ void stack_test() {
 
   int *int_ptr = stack_alloc(&stack, sizeof(int));
   Assert((uintptr_t)int_ptr % alignof(int) == 0);
-  Assert(stack.used == 4);
+  Assert(stack.used == 8); // compulsive alignment to 8
 
   *int_ptr = 0xf0e0d0c0;
   TestStructPadded *ts = stack_alloc(&stack, sizeof(TestStructPadded));
@@ -301,7 +294,8 @@ void stack_test() {
   Assert(ts_value % alignof_ts == 0);
   // should be aligned to eight and we lose 4 bytes because of previous
   // allocation of int when allocating TestStructPadded
-  Assert(stack.used == 4 + 4 + sizeof(TestStructPadded));
+  size_t size_tsp = sizeof(TestStructPadded);
+  Assert(stack.used == 4 + 4 + size_tsp);
   Assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 0);
   Assert(stack_dealloc_checked(&stack, ts, sizeof(*ts)) == 1);
   Assert(*int_ptr == test_int);

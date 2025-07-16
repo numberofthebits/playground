@@ -390,7 +390,8 @@ void assets_enumerate(struct Assets *assets) {
 }
 
 void assets_init(struct Assets *assets) {
-  arena_subarena_create(&global_static_allocator, ASSETS_ALLOCATOR_MAX_SIZE);
+  assets->temp_data = arena_subarena_create(&global_static_allocator,
+                                            ASSETS_ALLOCATOR_MAX_SIZE);
 
   assets->textures = vec_create();
   assets->shaders = vec_create();
@@ -401,6 +402,10 @@ void assets_init(struct Assets *assets) {
   assets->asset_meta = vec_create();
 
   assets_enumerate(assets);
+}
+
+void assets_clear_temp_data(struct Assets *assets) {
+  arena_subarena_dealloc_all(&assets->temp_data);
 }
 
 AssetId assets_make_id(const char *name, size_t len) { return hash(name, len); }
@@ -583,14 +588,73 @@ int assets_load_material(struct Assets *assets, AssetId asset_id,
   return 1;
 }
 
-/* static int parse_map_meta(Buffer *buffer, AssetMap *map) { */
-/*   const char *line_begin = (const char *)buffer->data + offset; */
-/*   const size_t line_end = offset_to_character(line_begin, buffer->len,
- * '\n');
- */
-/*   const size_t key_len = offset_to_character(line_begin, buffer->len, '=');
- */
-/* } */
+static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
+                          AssetMap *map) {
+  ParseState parser = {.buffer = buffer, .offset = 0};
+  size_t num_parsed = 0;
+  while (!parse_is_done(&parser)) {
+    KeyValueRaw raw = {0};
+    int status = get_next_key_value_raw(&parser, &raw);
+    switch (status) {
+    case PARSER_OK:
+      if (strncmp(raw.key_begin, "size_world", strlen("size_world")) == 0) {
+        if (!parse_array_u32(raw.value_begin, raw.value_len, 2,
+                             &map->size_world.x)) {
+          return 0;
+        }
+        ++num_parsed;
+      } else if (strncmp(raw.key_begin, "size_tile_map",
+                         strlen("size_tile_map")) == 0) {
+        if (!parse_array_u32(raw.value_begin, raw.value_len, 2,
+                             &map->size_tilemap.x)) {
+          return 0;
+        }
+        ++num_parsed;
+      } else if (strncmp(raw.key_begin, "tilemap_texture",
+                         strlen("tilemap_texture")) == 0) {
+        map->tilemap_texture_id =
+            assets_make_id(raw.value_begin, raw.value_len);
+        ++num_parsed;
+      } else if (strncmp(raw.key_begin, "tilemap_indices",
+                         strlen("tilemap_indices")) == 0) {
+        map->num_indices = map->size_world.x * map->size_world.y;
+        map->indices = SubArenaAlloc(sub_arena, map->num_indices, Vec2u8);
+
+        uint8_t *packed_tilemap_coords =
+            stack_alloc(&stack_allocator, map->num_indices);
+        if (!parse_array_u8(raw.value_begin, raw.value_len, map->num_indices,
+                            packed_tilemap_coords)) {
+          return 0;
+        }
+
+        for (size_t i = 0; i < map->num_indices; ++i) {
+          uint8_t x = packed_tilemap_coords[i] % 10;
+          uint8_t y = packed_tilemap_coords[i] / 10;
+
+          map->indices[i].x = x;
+          map->indices[i].y = y;
+        }
+
+        /* #error \ */
+        /*     "this fails because stack_dealloc uses an incorrect alignment.
+         * Alignment of uint8_t is 4? It sort of makes sense..." */
+        stack_dealloc(&stack_allocator, packed_tilemap_coords,
+                      map->num_indices);
+
+        ++num_parsed;
+      }
+      break;
+    case PARSER_DONE:
+      return num_parsed == 4;
+    case PARSER_ERROR:
+      return 0;
+    default:
+      return num_parsed == 4;
+    }
+  }
+
+  return num_parsed == 4;
+}
 
 int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
   (void)map;
@@ -611,9 +675,11 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
     return 0;
   }
 
-  /* if (!parse_map_meta(&buffer, map)) { */
-  /*   return 0; */
-  /* } */
+  if (!parse_map_meta(&buffer, &assets->temp_data, map)) {
+    return 0;
+  }
+
+  buffer.used = 0; // reuse our buffer
 
   stack_dealloc(&stack_allocator, buffer.data, buffer.capacity);
 

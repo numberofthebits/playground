@@ -14,6 +14,7 @@ static inline void run_tests() {
   arena_init(&global_static_allocator, 1024 * 1024 * 32);
   stack_init(&stack_allocator, &global_static_allocator, 1024 * 1024 * 8);
   test_parser();
+  stack_test();
   //  assetstore_test();
   /* registry_test(); */
   /* work_queue_test(); */

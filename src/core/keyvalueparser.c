@@ -96,6 +96,30 @@ int parse_array_u8(const char *string_val, size_t string_len,
   return count == expected_count;
 }
 
+int parse_array_u32(const char *string_val, size_t string_len,
+                    size_t expected_count, uint32_t *values_out) {
+  size_t offset_begin = 0;
+  size_t offset_end = 0;
+  size_t count = 0;
+
+  while (count < expected_count && offset_begin < string_len) {
+    if (!offset_to_char(string_val + offset_begin, string_len - offset_begin,
+                        PARSER_DELIMITER_VALUE, &offset_end)) {
+      return 0;
+    }
+
+    long long tmp = atoll(string_val + offset_begin);
+    if (tmp < 0 || tmp > UINT32_MAX) {
+      LOG_WARN("Value %d does not fit in u8", tmp);
+      return 0;
+    }
+    values_out[count++] = (uint32_t)tmp;
+    offset_begin += offset_end + 1; // skip delimiter
+  }
+
+  return count == expected_count;
+}
+
 void test_parser() {
   const char *data =
       "size_world=25,20,\nsize_tile_map=10,3,\ntilemap_texture=jungle.png\n";

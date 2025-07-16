@@ -39,6 +39,9 @@ SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
 void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
                            size_t alignment);
 
+#define SubArenaAlloc(allocator, count, type)                                  \
+  arena_subarena_alloc(allocator, sizeof(type) * count, alignof(type));
+
 void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator);
 
 // NOTE: We lose potential bytes used to align the allocation here
@@ -66,7 +69,7 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s);
 
 // Returns non-null if true
 int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
-                                    size_t s, ptrdiff_t offset);
+                                    size_t s);
 
 void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s);
 

@@ -38,6 +38,9 @@ int parse_array_int(const char *string_val, size_t string_len,
 int parse_array_u8(const char *str_val, size_t str_len, size_t expected_count,
                    uint8_t *values_out);
 
+int parse_array_u32(const char *str_val, size_t str_len, size_t expected_count,
+                    uint32_t *values_out);
+
 #ifdef BUILD_TESTS
 void test_parser();
 #endif
