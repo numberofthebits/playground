@@ -163,7 +163,8 @@ SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
 
 void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
                            size_t alignment) {
-  AllocImplResult res = alloc_impl(allocator->base, s, alignment);
+  AllocImplResult res =
+      alloc_impl(allocator->base + allocator->used, s, alignment);
 
   size_t total_used = allocator->used + res.used;
   if (total_used > allocator->capacity) {
@@ -181,19 +182,15 @@ void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator) {
 }
 
 void stack_init(struct StackAllocator *stack, struct ArenaAllocator *arena,
-                size_t s) {
-  // NOTE: Ask for 16 Mi times 1 byte, but align this to max_align_t
-  // since we don't know what type of alignments the client might
-  // ask for down the road. Maybe this is bad. We will see?
-  void *base_ptr =
-      arena_alloc(arena, 1, 1024 * 1024 * 16, alignof(max_align_t));
+                size_t capacity) {
+  void *base_ptr = arena_alloc(arena, 1, capacity, alignof(max_align_t));
   if (!base_ptr) {
-    LOG_EXIT("Failed to allocate %zu bytes for stack", s);
+    LOG_EXIT("Failed to allocate %zu bytes for stack", capacity);
     return;
   }
 
   stack->base = base_ptr;
-  stack->capacity = s;
+  stack->capacity = capacity;
   stack->used = 0;
 }
 
