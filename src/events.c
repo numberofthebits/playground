@@ -19,3 +19,13 @@ int is_expected_event_id(enum EventType expected, enum EventType actual) {
   }
   return 1;
 }
+
+const char *event_type_name(enum EventType type) {
+  for (size_t i = 0; i < EventTypeCount; ++i) {
+    if (event_type_names[i].type == type) {
+      return event_type_names[i].name;
+    }
+  }
+
+  return "UNKNOWN EVENT TYPE";
+}

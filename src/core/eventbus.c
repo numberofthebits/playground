@@ -3,6 +3,7 @@
 #include "log.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #define EVENT_BUS_DEFERRED_EVENTS_BYTES_MAX 1024 * 1024
@@ -48,9 +49,8 @@ void event_bus_emit(struct EventBus *bus, struct Event *event) {
 }
 
 void event_bus_defer(struct EventBus *bus, struct Event *event) {
-  void *event_data_copy =
-      arena_subarena_alloc(&bus->deferred_events_allocator,
-                           event->event_data_size, alignof(max_align_t));
+  void *event_data_copy = arena_subarena_alloc(
+      &bus->deferred_events_allocator, event->event_data_size, alignof(Event));
 
   memcpy(event_data_copy, event->event_data, event->event_data_size);
 
@@ -61,7 +61,6 @@ void event_bus_defer(struct EventBus *bus, struct Event *event) {
 }
 
 void event_bus_process_deferred(struct EventBus *bus) {
-
   size_t num_deferred_events = bus->num_deferred_events;
   size_t num_subscribers = bus->num_subscribers;
 

@@ -216,8 +216,7 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
     }
 
     if ((entity_signature & system_signature) == system_signature) {
-      //      LOG_INFO("Add entity %d to %s", entity.id,
-      //      registry->systems[i]->name);
+      LOG_INFO("Add entity %d to %s", entity.id, registry->systems[i]->name);
       system_add_entity(registry->systems[i], entity);
     }
   }

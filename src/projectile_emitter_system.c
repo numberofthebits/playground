@@ -40,14 +40,8 @@ void create_projectile(ProjectileEmitterComponent *component,
   pc.velocity.y = dir.y * PROJECTILE_VELOCITY_SCALE;
 
   RenderComponent rc;
-  rc.render_layer = 1;
-
-  rc.tex_coord_offset.x = 0.f;
-  rc.tex_coord_offset.y = 0.f;
-  rc.tex_coord_scale.x = 1.0f;
-  rc.tex_coord_scale.y = 1.0f;
-  rc.material_id = assets_make_id_str("bullet-mat");
-  rc.pipeline_id = assets_make_id_str("tilemap");
+  rc.material_id = assets_make_id_str("bullet.mat");
+  rc.pipeline_id = assets_make_id_str("unit.prog");
 
   TimeComponent ttc = {0};
   ttc.created = spawn_time;

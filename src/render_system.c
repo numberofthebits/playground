@@ -24,9 +24,9 @@ typedef struct {
   Mat4x4 model_matrix;
   AssetId material_id;
   AssetId program_id;
+  AssetId mesh_id;
   Vec2f tex_coord_offset;
   Vec2f tex_coord_scale;
-  int8_t render_layer;
 } RenderData;
 
 void CALLING_CONVENTION gl_debug_callback(GLenum source, GLenum type, GLuint id,
@@ -122,7 +122,7 @@ static GLuint get_program_handle_by_asset_id(RenderSystem *system, AssetId id) {
   GLuint *program = 0;
   if (!hash_map_get(&system->programs, &id, sizeof(AssetId),
                     (void **)&program)) {
-    LOG_EXIT("Failed to find shader program with asset ID %d", id);
+    LOG_EXIT("Failed to find shader program with asset ID %zu", id);
   }
   return (GLuint)(uintptr_t)program;
 }
@@ -131,17 +131,6 @@ static GLuint get_program_handle_by_name(RenderSystem *system,
                                          const char *name) {
   AssetId asset_id = assets_make_id_str(name);
   return get_program_handle_by_asset_id(system, asset_id);
-}
-
-static int render_data_order_comp(const void *lhs, const void *rhs) {
-  const RenderData *a = lhs;
-  const RenderData *b = rhs;
-
-  return a->render_layer - b->render_layer;
-}
-
-void sort_render_data(RenderData *data, size_t count) {
-  qsort(data, count, sizeof(RenderData), &render_data_order_comp);
 }
 
 static void render_batch(RenderSystem *system, unsigned int batch_size) {
@@ -172,9 +161,9 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
                             size_t render_data_size) {
   CHECK_GL_ERROR();
 
-  glClearColor(0.0f, 0.0f, 0.0f, 255.f);
-  glDisable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClearColor(0.2f, 0.2f, 0.2f, 255.f);
+  glEnable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   if (render_data_size == 0) {
     return;
@@ -188,8 +177,6 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER,
                system->tile_renderer->multi_draw_indirect_buffer);
   CHECK_GL_ERROR();
-
-  // sort_render_data(render_data, render_data_size);
 
   unsigned int count_in_batch = 0;
   AssetId current_program = 0;
@@ -291,11 +278,10 @@ static void render_update_range(void *job_params) {
 
     RenderData *rd = &range_args->render_data[i];
 
-    rd->render_layer = rc->render_layer;
-
     Vec3f scale;
-    scale.x = tc->scale;
-    scale.y = tc->scale;
+    // Debug to see individual tiles
+    scale.x = tc->scale * 0.95f;
+    scale.y = tc->scale * 0.95f;
     scale.z = 1.0f;
 
     Vec3f pos;
@@ -303,8 +289,17 @@ static void render_update_range(void *job_params) {
     pos.y = tc->pos.y;
     pos.z = tc->pos.z;
 
-    rd->tex_coord_offset = rc->tex_coord_offset;
-    rd->tex_coord_scale = rc->tex_coord_scale;
+    const float atlas_cols_f = (float)rc->texture_atlas_size.x;
+    const float atlas_rows_f = (float)rc->texture_atlas_size.y;
+
+    rd->tex_coord_offset.x = ((float)rc->texture_atlas_index.x) / atlas_cols_f;
+    rd->tex_coord_offset.y =
+        (atlas_rows_f - 1.f - (float)rc->texture_atlas_index.y) / atlas_rows_f;
+    rd->tex_coord_scale.x = 1.f / atlas_cols_f;
+    rd->tex_coord_scale.y = 1.f / atlas_rows_f;
+
+    rd->material_id = rc->material_id;
+    rd->program_id = rc->pipeline_id;
 
     Vec3f axis = {0.f, 0.f, 1.f};
     Mat4x4 matrix_scale;
@@ -327,8 +322,6 @@ static void render_update_range(void *job_params) {
     m = mat4_mul(&m, &matrix_translate);
 
     rd->model_matrix = m;
-    rd->material_id = rc->material_id;
-    rd->program_id = rc->pipeline_id;
   }
 }
 
@@ -794,18 +787,19 @@ static void render_system_create_map_mesh(RenderSystem *system,
 void render_system_load_assets(RenderSystem *system, Asset *assets,
                                size_t asset_count) {
   for (size_t i = 0; i < asset_count; ++i) {
+    AssetId asset_id = assets[i].id;
     switch (assets[i].type) {
     case AssetTypeTexture:
-      render_system_load_texture(system, assets[i].id);
+      render_system_load_texture(system, asset_id);
       break;
     case AssetTypeShaderProgram:
-      render_system_create_program(system, assets[i].id);
+      render_system_create_program(system, asset_id);
       break;
     case AssetTypeMaterial:
-      render_system_create_material(system, assets[i].id);
+      render_system_create_material(system, asset_id);
       break;
     case AssetTypeMap:
-      render_system_create_map_mesh(system, assets[i].id);
+      render_system_create_map_mesh(system, asset_id);
       break;
     case AssetTypeMesh:
       break;
@@ -819,7 +813,7 @@ void render_system_framebuffer_size_changed(RenderSystem *render_system,
                                             uint16_t width_px,
                                             uint16_t height_px) {
   glClearColor(0.f, 0.0f, 0.0f, 255.f);
-  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   render_system->main_framebuffer.width = width_px;
@@ -921,7 +915,6 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
 
   Pool *collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
-  (void)transform_pool;
 
   for (int i = 0; i < system->base.entities.size; ++i) {
     Entity e = VEC_GET_T(&system->base.entities, Entity, i);

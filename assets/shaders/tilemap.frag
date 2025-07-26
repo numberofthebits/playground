@@ -19,17 +19,15 @@ vec4 uint_to_rgba(uint val) {
   float r = float((val & 0x000000ff));
   float g = float((val & 0x0000ff00) >> 8);
   float b = float((val & 0x00ff0000) >> 16);
-  float a = float((val & 0xff000000) >> 24) * b; // TODO: multipled by 'b'??
+  float a = float((val & 0xff000000) >> 24); // TODO: multipled by 'b'??
   return vec4(r, g, b, a) / 255.0;
 };
 
 void main() {
   Material mat = materials[mat_idx];
   vec4 tex_color = texture(mat.tex_handle, fUV);
-  if (tex_color.a < 0.1)
-    discard;
   vec3 color = uint_to_rgba(mat.color).rgb;
-  vec3 blend = tex_color.rgb * color;
+  vec3 blend = tex_color.rgb + color * 0.0;
 
   fragColor = vec4(blend, 1.0);
 }

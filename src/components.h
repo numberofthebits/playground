@@ -8,7 +8,7 @@
 
 #include <stdalign.h>
 
-enum ComponentBit {
+typedef enum ComponentBit {
   TRANSFORM_COMPONENT_BIT = (1U << 0),
   RENDER_COMPONENT_BIT = (1U << 1),
   PHYSICS_COMPONENT_BIT = (1U << 2),
@@ -21,8 +21,7 @@ enum ComponentBit {
   PROJECTILE_COMPONENT_BIT = (1U << 9),
   HEALTH_COMPONENT_BIT = (1U << 10),
   MESH_COMPONENT_BIT = (1U << 11)
-};
-typedef enum ComponentBit ComponentBit;
+} ComponentBit;
 
 typedef struct TransformComponent {
   Vec3f pos;
@@ -30,55 +29,76 @@ typedef struct TransformComponent {
   float rotation; // Single axis. You pick one for now.
 } TransformComponent;
 
+/* typedef struct { */
+/*   AssetId material_id; */
+/*   AssetId pipeline_id; */
+/*   Vec2u8 texture_atlas_index; */
+/*   Vec2u8 texture_atlas_size; */
+/* } RenderComponentMapTile; */
+
+/* typedef struct RenderComponentUnit { */
+/*   AssetId material_id; */
+/*   AssetId pipeline_id; */
+/*   Vec2u8 texture_atlas_index; */
+/*   Vec2u8 texture_atlas_size; */
+/*   uint8_t animation_frame; */
+/* } RenderComponentUnit; */
+
+/* typedef enum RenderComponentType { */
+/*   RenderComponentTypeMapTile, */
+/*   RenderComponentTypeUnit */
+/* } RenderComponentType; */
+
 typedef struct {
+  /* RenderComponentType type; */
+  /* union { */
+  /*   RenderComponentMapTile map_tile; */
+  /*   RenderComponentUnit unit; */
+  /* }; */
+
   // Normalized texture coordinate modifier
   // Remember. In GL, positive Y is up. In image
   // space, positive Y is down.
-  Vec2f tex_coord_offset;
-  Vec2f tex_coord_scale;
+  Vec2u8 texture_atlas_index;
+  Vec2u8 texture_atlas_size;
   AssetId material_id;
   AssetId pipeline_id;
-  // AssetId mesh_id;
+  /* AssetId mesh_id; */
   uint8_t render_layer;
 } RenderComponent;
 
-struct Physics_Component_t {
+typedef struct PhysicsComponent {
   // TODO: Replace this with two scalars:
   //       angle and velocity.
   Vec2f velocity;
-};
-typedef struct Physics_Component_t PhysicsComponent;
+} PhysicsComponent;
 
-struct AnimationComponent_t {
+typedef struct AnimationComponent {
   float last_offset;
   uint8_t frames_per_animation_frame;
   uint8_t num_animation_frames;
   uint8_t num_frames_width;
   uint8_t num_frames_height;
   uint8_t is_playing;
-};
-typedef struct AnimationComponent_t AnimationComponent;
+} AnimationComponent;
 
-struct CollisionComponent_t {
+typedef struct CollisionComponent {
   // axis aligned bounding rect
   // When paired with TransformComponent, pos should
   // act as an offset, so generally leave pos at 0 in this case
   Rectf aabr;
-};
-typedef struct CollisionComponent_t CollisionComponent;
+} CollisionComponent;
 
-struct InputComponent_t {
+typedef struct InputComponent {
   uint8_t dummy;
-};
-typedef struct InputComponent_t InputComponent;
+} InputComponent;
 
-struct TimeComponent_t {
+typedef struct TimeComponent {
   TimeT created;
   TimeT expires;
-};
-typedef struct TimeComponent_t TimeComponent;
+} TimeComponent;
 
-typedef struct {
+typedef struct CameraMovementComponent {
   uint8_t dummy;
 } CameraMovementComponent;
 

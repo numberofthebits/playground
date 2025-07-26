@@ -76,6 +76,8 @@ void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
                  .event_data = &cursor_moved_event,
                  .event_data_size = sizeof(InputSystemCursorMoved)};
 
+  (void)event;
+  (void)bus;
   event_bus_defer(bus, &event);
 }
 

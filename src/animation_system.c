@@ -13,7 +13,8 @@ static void animation_update(Registry *reg, struct SystemBase *system,
 
   Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
   Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  //  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
+  Pool *physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
 
   Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
 
@@ -21,49 +22,89 @@ static void animation_update(Registry *reg, struct SystemBase *system,
     Entity entity = entities[i];
     RenderComponent *rc =
         PoolGetComponent(render_pool, RenderComponent, entity.index);
+
+    /* // First I thought this might be bad, but will it ever be false */
+    /* // given that the animation system explicitly asks for entities */
+    /* // that have RenderComponent, AnimationComponent and */
+    /* // TransformComponent? */
+    /* if (rc->type != RenderComponentTypeUnit) { */
+    /*   LOG_WARN("Non RenderComponentTypeUnit in animation system"); */
+    /*   break; */
+    /* } */
+
     AnimationComponent *ac =
         PoolGetComponent(animation_pool, AnimationComponent, entity.index);
-    TransformComponent *tc =
-        PoolGetComponent(transform_pool, TransformComponent, entity.index);
+    /* TransformComponent *tc = */
+    /*     PoolGetComponent(transform_pool, TransformComponent, entity.index) */
+    ;
+    PhysicsComponent *pc =
+        PoolGetComponent(physics_pool, PhysicsComponent, entity.index);
 
     size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) %
                                 ac->num_animation_frames * ac->is_playing;
 
-    float offset = 0.f;
-    float radians = tc->rotation;
+    // X is our animation playing in time
+    rc->texture_atlas_index.x = animation_frame_nr;
 
-    // Pick from our sprite sheet based on angle
-    if (radians < PI_DIV_4) {
-      offset = 1.f;
-    } else if (radians < PI_3_DIV_4) {
-      // up
-      offset = 0.f;
-    } else if (radians < (PI + PI_DIV_4)) {
-      // left
-      offset = 3.f;
-    } else if (radians < PI_7_DIV_4) {
-      // down
-      offset = 2.f;
+    // Y is WHICH animation is playing. I.e. where is our unit
+    // headed
+    if (fabsf(pc->velocity.x) > fabsf(pc->velocity.y)) {
+      if (pc->velocity.x >= 0) {
+        // right
+        rc->texture_atlas_index.y = 1;
+      } else {
+        // left
+        rc->texture_atlas_index.y = 3;
+      }
     } else {
-      offset = 1.f;
-      // right again, different quadrant
+      if (pc->velocity.y >= 0) {
+        // up
+        rc->texture_atlas_index.y = 0;
+      } else {
+        // down
+        rc->texture_atlas_index.y = 2;
+      }
     }
+
+    /* // Pick from our sprite sheet based on angle */
+    /* if (radians < PI_DIV_4) { */
+    /*   rc->texture_atlas_index.y = 1; */
+    /* } else if (radians < PI_3_DIV_4) { */
+    /*   // up */
+    /*   rc->texture_atlas_index.y = 0; */
+    /* } else if (radians < (PI + PI_DIV_4)) { */
+    /*   // left */
+    /*   rc->texture_atlas_index.y = 3; */
+    /* } else if (radians < PI_7_DIV_4) { */
+    /*   // down */
+    /*   rc->texture_atlas_index.y = 2; */
+    /* } else { */
+    /*   rc->texture_atlas_index.y = 1; */
+    /*   // right again, different quadrant */
+    /* } */
+
+    /* float offset = 0.f; */
+    /* float radians = tc->rotation; */
 
     // The rotations within each sprite are always in +/- PI/4 (45 degrees),
     // which is PI/2 total. Adding PI/4 maps our rotation to +/- PI/4 radians.
     // Making it wrap correctly at PI_DIV_4. To map inversely, subtract PI/4
     // radians again.
-    tc->rotation = (float)fmod((tc->rotation + PI_DIV_4), PI_DIV_2) - PI_DIV_4;
+    /* tc->rotation = (float)fmod((tc->rotation + PI_DIV_4), PI_DIV_2) -
+     * PI_DIV_4; */
 
-    ac->last_offset = offset;
+    /* ac->last_offset = offset; */
 
-    rc->tex_coord_scale.x = 1.f / ac->num_frames_width;
-    rc->tex_coord_scale.y = 1.f / ac->num_frames_height;
+    /* rc-> */
 
-    rc->tex_coord_offset.x = 1.f / ac->num_frames_width * animation_frame_nr;
-    rc->tex_coord_offset.y =
-        ((float)ac->num_frames_height - 1.f - ac->last_offset) /
-        (float)ac->num_frames_height;
+    /* rc->tex_coord_scale.x = 1.f / ac->num_frames_width; */
+    /* rc->tex_coord_scale.y = 1.f / ac->num_frames_height; */
+
+    /* rc->tex_coord_offset.x = 1.f / ac->num_frames_width * animation_frame_nr;
+     */
+    /* rc->tex_coord_offset.y = */
+    /*     ((float)ac->num_frames_height - 1.f - ac->last_offset) / */
+    /*     (float)ac->num_frames_height; */
   }
 }
 

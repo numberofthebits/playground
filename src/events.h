@@ -50,9 +50,11 @@ typedef struct InputSystemCursorMoved {
 } InputSystemCursorMoved;
 
 typedef struct OSFramebufferSizeChanged {
-  Vec2f size;
+  Vec2u32 size;
 } OSFramebufferSizeChanged;
 
 int is_expected_event_id(enum EventType expected, enum EventType actual);
+
+const char *event_type_name(enum EventType);
 
 #endif

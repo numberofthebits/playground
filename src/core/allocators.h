@@ -63,7 +63,7 @@ struct StackAllocator {
 };
 
 void stack_init(struct StackAllocator *stack, struct ArenaAllocator *allocator,
-                size_t s);
+                size_t capacity);
 
 void *stack_alloc(struct StackAllocator *allocator, size_t s);
 

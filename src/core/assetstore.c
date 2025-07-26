@@ -362,13 +362,8 @@ void assets_print_asset_meta(struct Assets *assets) {
   for (int i = 0; i < assets->asset_meta.size; ++i) {
     AssetMeta *meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
     (void)meta;
-    /* printf("%d Id: %u\tType: %s\tName: %s\tPath: %s\n", i, meta->id, */
-    /*        AssetTypeNames[meta->type], meta->name.name,
-     * meta->file_path.path); */
-    printf("%d\n", i);
-    /* printf("%d\tType: %s\tName: %s\tPath: %s\n", i,
-     * AssetTypeNames[meta->type], */
-    /*        meta->name.name, meta->file_path.path); */
+    printf("%d Id: %zu\tType: %s\tName: %s\tPath: %s\n", i, meta->id,
+           AssetTypeNames[meta->type], meta->name.name, meta->file_path.path);
   }
 }
 
@@ -635,9 +630,6 @@ static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
           map->indices[i].y = y;
         }
 
-        /* #error \ */
-        /*     "this fails because stack_dealloc uses an incorrect alignment.
-         * Alignment of uint8_t is 4? It sort of makes sense..." */
         stack_dealloc(&stack_allocator, packed_tilemap_coords,
                       map->num_indices);
 
@@ -679,9 +671,10 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
     return 0;
   }
 
-  buffer.used = 0; // reuse our buffer
-
   stack_dealloc(&stack_allocator, buffer.data, buffer.capacity);
+
+  // Release dynamically allocated data used by AssetMap
+  assets_clear_temp_data(assets);
 
   return 1;
 }

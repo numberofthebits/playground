@@ -57,11 +57,6 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
 
   RenderComponent rc;
   rc.render_layer = 1;
-
-  rc.tex_coord_offset.x = 0.f;
-  rc.tex_coord_offset.y = 0.f;
-  rc.tex_coord_scale.x = 1.0f;
-  rc.tex_coord_scale.y = 1.0f;
   rc.material_id = assets_make_id_str("bullet-mat");
   rc.pipeline_id = assets_make_id_str("tilemap");
 
@@ -129,7 +124,6 @@ static void player_system_handle_keyboard_update(
     struct KeyStateEventData key_state = event_data->events[i];
     switch (key_state.key) {
     case GLFW_KEY_SPACE:
-      LOG_INFO("SPACE");
       sys->bullets_spawned++;
       break;
     case GLFW_KEY_UP:
@@ -148,17 +142,17 @@ static void player_system_handle_keyboard_update(
       sys->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] +=
           PLAYER_SYSTEM_TIME_TO_MOVEMENT_FACTOR;
       break;
-    case GLFW_KEY_A:
-      sys->angle += PLAYER_ROTATE_ANGLE_DELTA;
-      sys->angle = fmodf(sys->angle, PI_MUL_2);
-      break;
-    case GLFW_KEY_D:
-      sys->angle -= PLAYER_ROTATE_ANGLE_DELTA;
-      sys->angle = fmodf(sys->angle, PI_MUL_2);
-      if (sys->angle < 0.f) {
-        sys->angle += PI_MUL_2;
-      }
-      break;
+    /* case GLFW_KEY_A: */
+    /*   sys->angle += PLAYER_ROTATE_ANGLE_DELTA; */
+    /*   sys->angle = fmodf(sys->angle, PI_MUL_2); */
+    /*   break; */
+    /* case GLFW_KEY_D: */
+    /*   sys->angle -= PLAYER_ROTATE_ANGLE_DELTA; */
+    /*   sys->angle = fmodf(sys->angle, PI_MUL_2); */
+    /*   if (sys->angle < 0.f) { */
+    /*     sys->angle += PI_MUL_2; */
+    /*   } */
+    /*   break; */
     default:
       LOG_WARN("Unhandled key input: Key code %d", key_state.key);
     }
