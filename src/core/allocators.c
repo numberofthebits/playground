@@ -117,15 +117,10 @@ void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
 
   allocator->used += total_bytes;
 
-  /* LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with
-   * alignment bump %lu) at %p. %lu / %lu bytes used", */
-  /*          count_bytes, */
-  /*          alignment, */
-  /*          total_bytes, */
-  /*          alignment_bump, */
-  /*          return_ptr, */
-  /*          allocator->used, */
-  /*          allocator->capacity); */
+  LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with "
+           "alignment bump %lu) at %p. %lu / %lu bytes used",
+           count_bytes, alignment, total_bytes, alignment_bump, return_ptr,
+           allocator->used, allocator->capacity);
 
   // TODO: Make this an optional flag if it ends up taking more
   // time than we want.
@@ -172,12 +167,17 @@ void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
              total_used);
   }
 
+  LOG_INFO("Sub arena alloc from %p at %p capacity / used %zu / %zu",
+           allocator->base, res.ptr, allocator->used, allocator->capacity);
+
   allocator->used += res.used;
 
   return res.ptr;
 }
 
 void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator) {
+  LOG_INFO("Sub arena dealloc all at %p used/capacity %zu / %zu",
+           allocator->base, allocator->used, allocator->capacity);
   allocator->used = 0;
 }
 
@@ -241,6 +241,8 @@ int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
 }
 
 void stack_dealloc_all(struct StackAllocator *allocator) {
+  LOG_INFO("Stack dealloc all at %p used/capacity %zu / %zu", allocator->base,
+           allocator->used, allocator->capacity);
   allocator->used = 0;
 }
 
