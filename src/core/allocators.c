@@ -258,7 +258,7 @@ typedef struct {
 
 static void test_offset_to_align() {
   size_t alignment = alignof(max_align_t);
-  char *ptr = 0;
+  char *ptr = malloc(1024);
 
   for (size_t i = 0; i < alignment; ++i) {
     uintptr_t offset =
@@ -266,6 +266,8 @@ static void test_offset_to_align() {
     uintptr_t expected = (uintptr_t)((alignment - i) % alignment);
     Assert(offset == expected);
   }
+
+  free(ptr);
 }
 
 void stack_test() {
