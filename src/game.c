@@ -112,32 +112,12 @@ typedef struct LevelAssets {
   size_t maps_count;
 } LevelAssets;
 
-/* const char *level_0[][] = { */
-/*     // Shaders */
-/*     {"tilemap.prog"}, */
-/*     {"unit.prog"}, */
-/*     {"collision_debug.prog"}, */
-/*     // Materials */
-/*     {"truck.mat"}, */
-/*     {"jungle.mat"}, */
-/*     {"chopper.mat"}, */
-/*     {"plain-red.mat"}, */
-/*     {"bullet.mat"}, */
-/*     // Textures */
-/*     {"bullet.png"}, */
-/*     {"chopper-spritesheet.png"}, */
-/*     {"jungle.png"}, */
-/*     {"white-pixel.png"}, */
-/*     {"truck-ford-right.png"}, */
-/*     // Map */
-/*     {"jungle.meta"}}; */
-
-enum ReadlineResult {
+typedef enum ReadlineResult {
   READLINE_DONE = 0,
   READLINE_CONTINUE = 1,
   READLINE_BUFFER_TOO_SMALL = -2,
   READLINE_READ_ERROR = -3
-};
+} ReadlineResult;
 // typedef enum ReadlineResult_t ReadlineResult;
 
 static enum ReadlineResult readline(FILE *fp, char *buffer, int buf_size) {
@@ -340,13 +320,24 @@ Game *game_create() {
     return 0;
   }
 
+  GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+  const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
   glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+  glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+  glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+  glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+  glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
 
-  GLFWwindow *window = glfwCreateWindow(1280, 720, "1,2,3 techno", 0, 0);
+  GLFWwindow *window = glfwCreateWindow(800, 800, "1,2,3 techno", 0, 0);
+
+  // This creates borderless fullscreen but completely screws up remedybg
+  /* GLFWwindow *window =
+  glfwCreateWindow(mode->width, mode->height, "1,2,3 techno", monitor, 0); */
 
   if (!window) {
     const char *error = 0;
@@ -384,8 +375,6 @@ Game *game_create() {
   game->services.event_bus = &game->event_bus;
   game->services.work_queue = &game->work_queue;
 
-  GLFWmonitor *monitor = glfwGetPrimaryMonitor();
-  const GLFWvidmode *mode = glfwGetVideoMode(monitor);
   LOG_INFO("Primary monitor mode: width=%d, height=%d,redbits=%d, "
            "greenbits=%d, bluebits=%d,refresh rate=%d",
            mode->width, mode->height, mode->redBits, mode->greenBits,
@@ -401,6 +390,9 @@ Game *game_create() {
   game->collision_system = collision_system_create(&game->services);
   game->animation_system = animation_system_create(&game->services);
   game->time_system = time_system_create(&game->services);
+
+  // TODO: What's the point of this camera_area?
+  //       Doesn't adjust ortho projection currently, which it has to?
   Vec2f camera_area = {8.f, 8.f};
   game->camera_movement_system =
       camera_movement_system_create(&game->services, &camera_area);
@@ -457,25 +449,33 @@ void map_init(Map *map) {
   // structure for maps yet
   map->world_size.x = 25;
   map->world_size.y = 20;
-  map->map_size.x = 25;
-  map->map_size.y = 20;
   map->atlas_size.x = 10;
   map->atlas_size.y = 3;
-  map->tiles = ArenaAlloc(&global_static_allocator,
-                          map->map_size.x * map->map_size.y, MapTile);
+  map->tiles = 0;
 }
 
-void map_load(Map *map, Registry *registry, struct Assets *assets) {
-  (void)assets;
+// void map_load(Map *map, Registry *registry, struct Assets *assets) {
+void map_load(Game *game, AssetId asset_id) {
+  Assets *assets = &game->assets;
+  Registry *registry = &game->registry;
+
+  AssetMap map_asset = {0};
+  if (!assets_load_map(assets, asset_id, &map_asset)) {
+    LOG_EXIT("Failed to load map asset");
+  }
+
+  game->map.world_size.x = map_asset.size_world.x;
+  game->map.world_size.y = map_asset.size_world.y;
+
   /* const float atlas_cols_f = (float)map->atlas_size.x; */
   /* const float atlas_rows_f = (float)map->atlas_size.y; */
 
-  for (uint32_t row = 0; row < map->world_size.y; ++row) {
-    for (uint32_t col = 0; col < map->world_size.x; ++col) {
+  for (uint32_t row = 0; row < map_asset.size_world.y; ++row) {
+    for (uint32_t col = 0; col < map_asset.size_world.x; ++col) {
       Entity e = registry_entity_create(registry);
 
       TransformComponent tc = {0};
-      tc.scale = 1.f;
+      tc.scale = 0.95f;
       tc.pos.x = col;
       tc.pos.y = row;
       tc.pos.z = 0.0f;
@@ -483,23 +483,31 @@ void map_load(Map *map, Registry *registry, struct Assets *assets) {
 
       registry_entity_component_add(registry, e, TRANSFORM_COMPONENT_BIT, &tc);
 
-      MapTile tile =
-          map_get_tile(map, col % map->map_size.x, row % map->map_size.y);
+      /* MapTile tile = */
+      /*     map_get_tile(map, col % map->map_size.x, row % map->map_size.y); */
 
       RenderComponent rc;
 
       // In map space, tile starts at the upper left
       // In GL texture coord space, tile starts at lower left
       // Offset.y must be the bottom of the texture rect.
-      rc.texture_atlas_size = map->atlas_size;
-      rc.texture_atlas_index = tile.atlas_coord;
-      /* rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f; */
+      rc.texture_atlas_size.x = map_asset.size_tilemap.x;
+      rc.texture_atlas_size.y = map_asset.size_tilemap.y;
+
+      size_t tile_index_index =
+          (map_asset.size_world.y - 1 - row) * map_asset.size_world.x + col;
+      Vec2u8 tile_index = map_asset.indices[tile_index_index];
+      rc.texture_atlas_index = tile_index;
+      /* rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f;
+       */
       /* rc.tex_coord_offset.y = */
-      /*     (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) / atlas_rows_f; */
+      /*     (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) /
+  atlas_rows_f; */
       /* rc.tex_coord_scale.x = 1.f / (atlas_cols_f); */
       /* rc.tex_coord_scale.y = 1.f / (atlas_rows_f); */
       rc.material_id = assets_make_id_str("jungle.mat");
       rc.pipeline_id = assets_make_id_str("tilemap.prog");
+      rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_TERRAIN;
 
       registry_entity_component_add(registry, e, RENDER_COMPONENT_BIT, &rc);
 
@@ -666,78 +674,75 @@ void load_units(Registry *registry, struct Assets *assets) {
   const char *unit_shader_name = "tilemap.prog";
   AssetId unit_pipeline_id =
       assets_make_id(unit_shader_name, strlen(unit_shader_name));
-  /* { */
-  /*   Entity truck = registry_entity_create(registry); */
-  /*   registry_entity_group(registry, truck, "enemies"); */
+  {
+    Entity truck = registry_entity_create(registry);
+    registry_entity_group(registry, truck, "enemies");
 
-  /*   TransformComponent tc = {0}; */
-  /*   tc.pos.x = 0.5; */
-  /*   tc.pos.y = 4.0; */
-  /*   tc.pos.z = -1.0f; */
-  /*   tc.scale = 1.0f; */
-  /*   tc.rotation = 0.f; */
+    TransformComponent tc = {0};
+    tc.pos.x = 0.5;
+    tc.pos.y = 4.0;
+    tc.pos.z = 1.0f;
+    tc.scale = 1.0f;
+    tc.rotation = 0.f;
 
-  /*   RenderComponent rc; */
-  /*   rc.material_id = assets_make_id_str("truck.mat"); */
-  /*   rc.pipeline_id = unit_pipeline_id; */
+    RenderComponent rc;
+    rc.material_id = assets_make_id_str("truck.mat");
+    rc.pipeline_id = unit_pipeline_id;
+    rc.texture_atlas_index.x = 0;
+    rc.texture_atlas_index.y = 0;
+    rc.texture_atlas_size.x = 1;
+    rc.texture_atlas_size.y = 1;
+    rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_GROUND;
 
-  /*   PhysicsComponent pc; */
-  /*   pc.velocity.x = 0.0001f; */
-  /*   pc.velocity.y = 0.f; */
+    PhysicsComponent pc;
+    pc.velocity.x = 0.0001f;
+    pc.velocity.y = 0.f;
 
-  /*   CollisionComponent cc; */
-  /*   cc.aabr.pos.x = 0.f; */
-  /*   cc.aabr.pos.y = 0.f; */
-  /*   cc.aabr.width = 1.f; */
-  /*   cc.aabr.height = 1.f; */
+    CollisionComponent cc;
+    cc.aabr.pos.x = 0.f;
+    cc.aabr.pos.y = 0.f;
+    cc.aabr.width = 1.f;
+    cc.aabr.height = 1.f;
 
-  /*   ProjectileEmitterComponent pec; */
-  /*   pec.emission_frequency = time_from_secs(1); */
-  /*   pec.last_emitted = time_now(); */
-  /*   pec.damage = 50; */
-  /*   pec.projectile_duration = time_from_secs(3); */
+    ProjectileEmitterComponent pec;
+    pec.emission_frequency = time_from_secs(1);
+    pec.last_emitted = time_now();
+    pec.damage = 50;
+    pec.projectile_duration = time_from_secs(3);
 
-  /*   HealthComponent hc; */
-  /*   hc.health = 100; */
+    HealthComponent hc;
+    hc.health = 100;
 
-  /*   registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT,
-   * &rc); */
-  /*   registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
-   */
-  /*                                 &tc); */
-  /*   registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT,
-   * &pc); */
-  /*   registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
-   */
-  /*                                 &cc); */
-  /*   registry_entity_component_add(registry, truck, */
-  /*                                 PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
-  /*   registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT,
-   * &hc); */
+    registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
+                                  &tc);
+    registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
+                                  &cc);
+    /* registry_entity_component_add(registry, truck, */
+    /*                               PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
+    registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT, &hc);
 
-  /*   registry_entity_add(registry, truck); */
-  /*   registry_entity_set_flags(registry, truck, ENTITY_HOSTILE); */
+    registry_entity_add(registry, truck);
+    registry_entity_set_flags(registry, truck, ENTITY_HOSTILE);
 
-  /*   // Add a second truck for collision tests */
-  /*   //  truck = registry_entity_create(registry); */
-  /*   registry_entity_group(registry, truck, "enemies"); */
+    // Add a second truck for collision tests
+    truck = registry_entity_create(registry);
+    registry_entity_group(registry, truck, "enemies");
 
-  /*   tc.pos.x = 10.f; */
-  /*   pc.velocity.x = -0.01f; */
-  /*   registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT,
-   * &rc); */
-  /*   registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
-   */
-  /*                                 &tc); */
-  /*   registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT,
-   * &pc); */
-  /*   registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
-   */
-  /*                                 &cc); */
-  /*   registry_entity_component_add(registry, truck, */
-  /*                                 PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
-  /*   registry_entity_add(registry, truck); */
-  /* } */
+    tc.pos.x = 10.f;
+    pc.velocity.x = -0.01f;
+    registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
+    registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
+                                  &tc);
+    registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
+    registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
+                                  &cc);
+    registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT, &hc);
+    /* registry_entity_component_add(registry, truck, */
+    /*                               PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
+    registry_entity_add(registry, truck);
+  }
 
   {
     Entity chopper = registry_entity_create(registry);
@@ -746,7 +751,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     TransformComponent tc = {0};
     tc.pos.x = 0.0f;
     tc.pos.y = 0.0f;
-    tc.pos.z = 0.1f;
+    tc.pos.z = 1.0f;
     tc.scale = 1.f;
     tc.rotation = 0.f;
 
@@ -758,6 +763,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     rc.texture_atlas_index.y = 0;
     rc.texture_atlas_size.x = 2;
     rc.texture_atlas_size.y = 4;
+    rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_AIR;
 
     PhysicsComponent pc;
     pc.velocity.x = 0.01f;
@@ -779,7 +785,8 @@ void load_units(Registry *registry, struct Assets *assets) {
     cc.aabr.width = 1.f;
     cc.aabr.height = 1.f;
 
-    CameraMovementComponent cmc;
+    CameraMovementComponent cmc = {0};
+
     HealthComponent hc;
     hc.health = 100;
 
@@ -806,7 +813,7 @@ void load_units(Registry *registry, struct Assets *assets) {
 static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
   size_t total_asset_count =
       level_assets->textures_count + level_assets->programs_count +
-      level_assets->materials_count + level_assets->maps_count;
+      level_assets->materials_count; // + level_assets->maps_count;
   size_t total_asset_bytes = total_asset_count * sizeof(Asset);
   Asset *assets = stack_alloc(&stack_allocator, total_asset_bytes);
 
@@ -830,15 +837,33 @@ static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
   }
 
   for (size_t i = 0; i < level_assets->maps_count; ++i) {
-    assets[asset_index].id = assets_make_id_str(level_assets->maps[i]);
-    assets[asset_index].type = AssetTypeMap;
-    ++asset_index;
+    AssetId map_id = assets_make_id_str(level_assets->maps[i]);
+    map_load(game, map_id);
+
+    /* assets[asset_index].id = assets_make_id_str(level_assets->maps[i]); */
+    /* assets[asset_index].type = AssetTypeMap; */
+    /* ++asset_index; */
   }
 
   render_system_load_assets(game->render_system, assets, total_asset_count);
 
   stack_dealloc(&stack_allocator, assets, total_asset_bytes);
 }
+
+// Level consists of a map and units.
+// Map => tile entities, whatever they are. RenderComponent ++
+// Units are either friendly or enemy, player controller
+// or non player controlled
+/*
+Unit: - TransformComponent / Position
+      -
+Level
+- Map: map asset
+- Units: Type {truck, tank, chopper}, map tile position to world position
+         Flags: Friendly/unfriendly, Playable, Nonplayable
+
+
+*/
 
 void game_setup(Game *game) {
   LOG_INFO("Setup");
@@ -855,8 +880,8 @@ void game_setup(Game *game) {
 
   game_load_level_assets(game, &level_assets);
 
-  map_init(&game->map);
-  //  map_load(&game->map, &game->registry, &game->assets);
+  /* map_init(&game->map); */
+  /* map_load(&game->map, &game->registry, &game->assets); */
 
   /* /\* map_write_meta(&game->map, "./assets/tilemaps/jungle.meta"); *\/ */
   /* /\* Map lol = {0}; *\/ */
@@ -865,6 +890,15 @@ void game_setup(Game *game) {
   /* load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map); */
 
   load_units(&game->registry, &game->assets);
+
+  CameraMovementSystem *camera_movement_system =
+      (CameraMovementSystem *)registry_get_system(&game->registry,
+                                                  CAMERA_MOVEMENT_SYSTEM_BIT);
+  camera_movement_system_set_world_size(camera_movement_system,
+                                        game->map.world_size);
+
+  // Push our initial entities before entering main loop
+  registry_entity_commit_entities(&game->registry);
 
   /* PreparedResources prep; */
   /* prep.program_ids = vec_create(); */
@@ -887,16 +921,6 @@ void game_setup(Game *game) {
    */
 
   /* render_system_prepare_resources(game->render_system, &prep); */
-
-  /* CameraMovementSystem *camera_movement_system = */
-  /*     (CameraMovementSystem *)registry_get_system(&game->registry, */
-  /*                                                 CAMERA_MOVEMENT_SYSTEM_BIT);
-   */
-  /* camera_movement_system_set_world_size(camera_movement_system, */
-  /*                                       game->map.world_size); */
-
-  // Push our initial entities before entering main loop
-  registry_entity_commit_entities(&game->registry);
 }
 
 void game_update(Game *game) {

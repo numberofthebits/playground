@@ -189,6 +189,7 @@ void registry_init(Registry *reg, size_t max_entity_count,
 
 Pool *registry_get_pool(Registry *reg, int component_bit) {
   const int index = component_index(&reg->components, component_bit);
+  Assert(index >= 0);
   return &reg->pools[index];
 }
 
@@ -270,6 +271,14 @@ void registry_entity_add(Registry *reg, Entity e) {
 
 void registry_entity_remove(Registry *reg, Entity e) {
   LOG_INFO("Remove entity ID %d index %zu", e.id, e.index);
+  for (size_t i = 0; i < reg->count_to_remove; ++i) {
+    if (e.id == reg->to_remove[i].id) {
+      LOG_WARN("Entity ID %zu index %zu already queued for removal", e.id,
+               e.index);
+      return;
+    }
+  }
+
   reg->to_remove[reg->count_to_remove++] = e;
 }
 

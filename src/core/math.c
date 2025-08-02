@@ -143,10 +143,9 @@ Mat4x4 ortho(float near, float far, float right, float left, float top,
   m.data[0] = 2.f / (right - left); // diagonal
   m.data[5] = 2.f / (top - bottom); // diagonal
   m.data[10] = -2.f / (far - near); // diagonal
-  m.data[3] = -(right + left) / (right - left);
-  m.data[7] = -(top + bottom) / (top - bottom);
-  m.data[11] = -(far + near) / (far - near);
-  m.data[15] = 1.f; // diagonal
+  m.data[12] = -(right + left) / (right - left);
+  m.data[13] = -(top + bottom) / (top - bottom);
+  m.data[14] = -(far + near) / (far - near);
 
   return m;
 }

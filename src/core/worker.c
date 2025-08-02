@@ -115,6 +115,10 @@ int work_queue_push(struct WorkQueue *queue, JobFn func, void *args) {
 
   CompletePastWritesBeforeFutureWrites();
   ++queue->work_queue_count;
+  // TODO: This was the one i tried changing to see if it affected
+  // the first batch of work not being processed.
+  // It SHOULD not matter. Only main thread writes to work_queue_count
+  //  InterlockedIncrement((LONG volatile *)&queue->work_queue_count);
   work_queue_signal_worker_thread(queue);
   return 1;
 }
@@ -127,8 +131,11 @@ void work_queue_commit(struct WorkQueue *queue) {
 void work_queue_sync(struct WorkQueue *queue) {
   while (queue->work_queue_completed != queue->work_queue_count) {
     process_work_queue(queue, 0);
+    //_mm_pause();
   }
 
+  LOG_INFO("Sync: Completed %d count %d next %d", queue->work_queue_completed,
+           queue->work_queue_count, queue->work_queue_next);
   /* queue->work_queue_next = 0; */
   /* queue->work_queue_count = 0; */
   /* queue->work_queue_completed = 0; */

@@ -128,7 +128,7 @@ typedef struct AssetMap {
 
 int assets_shader_program_has_shader(AssetShaderProgram *program, size_t index);
 
-struct Assets {
+typedef struct Assets {
   Vec textures;
   Vec programs;
   Vec shaders;
@@ -140,7 +140,7 @@ struct Assets {
   // For assets with dynamic size. User must know
   // its data and call 'assets_clear_temp_asset_data'
   SubArenaAllocator temp_data;
-};
+} Assets;
 
 void assets_init(struct Assets *assets);
 

@@ -57,8 +57,12 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
 
   RenderComponent rc;
   rc.render_layer = 1;
-  rc.material_id = assets_make_id_str("bullet-mat");
-  rc.pipeline_id = assets_make_id_str("tilemap");
+  rc.material_id = assets_make_id_str("bullet.mat");
+  rc.pipeline_id = assets_make_id_str("tilemap.prog");
+  rc.texture_atlas_index.x = 0;
+  rc.texture_atlas_index.y = 0;
+  rc.texture_atlas_size.x = 1;
+  rc.texture_atlas_size.y = 1;
 
   TimeComponent ttc = {0};
   ttc.created = time_now();

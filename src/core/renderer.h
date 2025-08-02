@@ -283,4 +283,6 @@ void renderer_ssbo_create(struct Renderer *renderer, int index,
 void renderer_ssbo_write(struct Renderer *renderer, int index, GLintptr offset,
                          void *data, size_t size);
 
+void renderer_log_state();
+
 #endif

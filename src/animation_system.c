@@ -23,20 +23,9 @@ static void animation_update(Registry *reg, struct SystemBase *system,
     RenderComponent *rc =
         PoolGetComponent(render_pool, RenderComponent, entity.index);
 
-    /* // First I thought this might be bad, but will it ever be false */
-    /* // given that the animation system explicitly asks for entities */
-    /* // that have RenderComponent, AnimationComponent and */
-    /* // TransformComponent? */
-    /* if (rc->type != RenderComponentTypeUnit) { */
-    /*   LOG_WARN("Non RenderComponentTypeUnit in animation system"); */
-    /*   break; */
-    /* } */
-
     AnimationComponent *ac =
         PoolGetComponent(animation_pool, AnimationComponent, entity.index);
-    /* TransformComponent *tc = */
-    /*     PoolGetComponent(transform_pool, TransformComponent, entity.index) */
-    ;
+
     PhysicsComponent *pc =
         PoolGetComponent(physics_pool, PhysicsComponent, entity.index);
 
@@ -118,10 +107,4 @@ struct AnimationSystem *animation_system_create(Services *services) {
       services, "AnimationSystem");
 
   return system;
-}
-
-void animation_system_prepare(struct AnimationSystem *sys,
-                              struct AnimationResources *resources) {
-  (void)sys;
-  (void)resources;
 }

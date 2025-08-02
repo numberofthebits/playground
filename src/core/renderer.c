@@ -198,3 +198,18 @@ void renderer_ssbo_write(struct Renderer *renderer, int index, GLintptr offset,
       size, data);
   CHECK_GL_ERROR();
 }
+
+void renderer_log_state() {
+  int be_rgb;
+  glGetIntegerv(GL_BLEND_EQUATION_RGB, &be_rgb);
+
+  int be_alpha;
+  glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &be_alpha);
+
+  if (be_rgb == GL_FUNC_ADD) {
+    LOG_INFO("ADD");
+  }
+  if (be_alpha == GL_FUNC_ADD) {
+    LOG_INFO("ADD");
+  }
+}

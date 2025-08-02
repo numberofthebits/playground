@@ -27,6 +27,7 @@ typedef struct {
   AssetId mesh_id;
   Vec2f tex_coord_offset;
   Vec2f tex_coord_scale;
+  uint8_t render_layer;
 } RenderData;
 
 void CALLING_CONVENTION gl_debug_callback(GLenum source, GLenum type, GLuint id,
@@ -157,13 +158,36 @@ static GLint get_uniform_location_checked(GLuint program, const char *name) {
   return loc;
 }
 
+static int render_data_order_comp(const void *lhs, const void *rhs) {
+  const RenderData *a = lhs;
+  const RenderData *b = rhs;
+
+  if (a->render_layer < b->render_layer) {
+    return -1;
+  } else if (a->render_layer == b->render_layer) {
+    return 0;
+  }
+
+  return 1;
+}
+
+static void sort_render_data(RenderData *data, size_t count) {
+  qsort(data, count, sizeof(RenderData), &render_data_order_comp);
+}
+
 static void render_entities(RenderSystem *system, RenderData *render_data,
                             size_t render_data_size) {
+  sort_render_data(render_data, render_data_size);
+
   CHECK_GL_ERROR();
 
-  glClearColor(0.2f, 0.2f, 0.2f, 255.f);
-  glEnable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClearColor(0.2f, 0.2f, 0.2f, 0.f);
+  glDisable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  glEnable(GL_BLEND);
+
+  glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   if (render_data_size == 0) {
     return;
@@ -185,7 +209,7 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
     RenderData *rd = &render_data[i];
 
     if (render_data->program_id != current_program) {
-      // We we encounter a new program/pipeline
+      // If we encounter a new program/pipeline
       // Render whatever we have so far, and then continue
       // building a new batch with the new program/pipeline
       render_batch(system, count_in_batch);
@@ -280,9 +304,9 @@ static void render_update_range(void *job_params) {
 
     Vec3f scale;
     // Debug to see individual tiles
-    scale.x = tc->scale * 0.95f;
-    scale.y = tc->scale * 0.95f;
-    scale.z = 1.0f;
+    scale.x = tc->scale;
+    scale.y = tc->scale;
+    scale.z = 0.0f;
 
     Vec3f pos;
     pos.x = tc->pos.x;
@@ -292,6 +316,12 @@ static void render_update_range(void *job_params) {
     const float atlas_cols_f = (float)rc->texture_atlas_size.x;
     const float atlas_rows_f = (float)rc->texture_atlas_size.y;
 
+    /*
+     rc.tex_coord_offset.x = ((float)tile.atlas_coord.x) / atlas_cols_f;
+     rc.tex_coord_offset.y =
+         (atlas_rows_f - 1.f - (float)tile.atlas_coord.y) /
+           atlas_rows_f;
+     */
     rd->tex_coord_offset.x = ((float)rc->texture_atlas_index.x) / atlas_cols_f;
     rd->tex_coord_offset.y =
         (atlas_rows_f - 1.f - (float)rc->texture_atlas_index.y) / atlas_rows_f;
@@ -300,6 +330,8 @@ static void render_update_range(void *job_params) {
 
     rd->material_id = rc->material_id;
     rd->program_id = rc->pipeline_id;
+
+    rd->render_layer = rc->render_layer;
 
     Vec3f axis = {0.f, 0.f, 1.f};
     Mat4x4 matrix_scale;
@@ -338,8 +370,8 @@ static void render_update(Registry *reg, struct SystemBase *sys,
 
   RenderData *render_data =
       ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
-
   int batch_size = sys->entities.size / NUM_THREADS;
+
   for (int i = 0; i < NUM_THREADS; ++i) {
     RenderUpdateRangeArgs *job_args =
         ArenaAlloc(&frame_allocator, 1, RenderUpdateRangeArgs);
@@ -577,17 +609,17 @@ struct Renderer *create_debug_renderer() {
 // I haven't tested if a straight translation is actually the right thing
 static void recalc_camera(struct OrthoCamera *camera, int width, int height,
                           float scale, Vec3f *center) {
-  (void)center;
   (void)scale;
+  (void)center;
   float aspect_ratio = (float)width / (float)height;
   camera->aspect_ratio = aspect_ratio;
 
   camera->projection = ortho(
-      0.01f, 10.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
+      -1.f, 1.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
       camera->rect.pos.y + camera->rect.height, camera->rect.pos.y);
 
   mat4_identity(&camera->view);
-  mat4_translate(&camera->view, center);
+  //  mat4_translate(&camera->view, center);
 }
 
 RenderSystem *render_system_create(Services *services, int window_w,
@@ -619,7 +651,12 @@ RenderSystem *render_system_create(Services *services, int window_w,
   system->debug_renderer = create_debug_renderer();
   CHECK_GL_ERROR();
 
-  Vec3f center = {-4.f, -4.f, 0.f};
+  Vec3f center = {0.f, 0.f, 0.f};
+  /* system->camera.rect.pos.x = -system->main_framebuffer.width / 2; */
+  /* system->camera.rect.pos.y = -system->main_framebuffer.height / 2; */
+  /* system->camera.rect.width = system->main_framebuffer.width; */
+  /* system->camera.rect.height = system->main_framebuffer.height; */
+
   system->camera.rect.pos.x = -4.f;
   system->camera.rect.pos.y = -4.f;
   system->camera.rect.width = 8.f;
@@ -809,15 +846,15 @@ void render_system_load_assets(RenderSystem *system, Asset *assets,
   }
 }
 
-void render_system_framebuffer_size_changed(RenderSystem *render_system,
+void render_system_framebuffer_size_changed(RenderSystem *system,
                                             uint16_t width_px,
                                             uint16_t height_px) {
   glClearColor(0.f, 0.0f, 0.0f, 255.f);
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  render_system->main_framebuffer.width = width_px;
-  render_system->main_framebuffer.height = height_px;
+  system->main_framebuffer.width = width_px;
+  system->main_framebuffer.height = height_px;
 
   uint16_t w = width_px;
   uint16_t h = height_px;
@@ -831,7 +868,7 @@ void render_system_framebuffer_size_changed(RenderSystem *render_system,
   }
 
   uint16_t offset_x = (uint16_t)(((float)width_px - (float)w) / 2.f);
-  uint16_t offset_y = (uint16_t)(((float)width_px - (float)h) / 2.f);
+  uint16_t offset_y = (uint16_t)(((float)height_px - (float)h) / 2.f);
 
   glViewport(offset_x, offset_y, w, h);
 }
@@ -850,17 +887,22 @@ void render_system_handle_framebuffer_size_changed(struct SystemBase *base,
 
 void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e) {
+  (void)e;
   struct RenderSystem *render_sys = (struct RenderSystem *)system;
   CameraUpdated *pos_changed_event = e.event_data;
+
+  Vec3f neg_pos = {-pos_changed_event->pos.x, -pos_changed_event->pos.y, 0.f};
+
   Mat4x4 t;
   mat4_identity(&t);
-  Vec3f neg_pos = {-pos_changed_event->pos.x, -pos_changed_event->pos.y,
-                   -pos_changed_event->pos.z};
-
   mat4_translate(&t, &neg_pos);
-  float x = pos_changed_event->size.x / 1.f;
-  float y = pos_changed_event->size.y / 1.f;
-  render_sys->camera.projection = ortho(0.1f, 10.f, x, -x, y, -y);
+  float width_div_2 = pos_changed_event->size.x / 2.f;
+  float height_div_2 = pos_changed_event->size.x / 2.f;
+  float left = -width_div_2;
+  float right = width_div_2;
+  float top = height_div_2;
+  float bottom = -height_div_2;
+  render_sys->camera.projection = ortho(-1.f, 1.f, right, left, top, bottom);
   render_sys->camera.view = t;
 }
 

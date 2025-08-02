@@ -20,7 +20,4 @@ struct AnimationResources {
 
 struct AnimationSystem *animation_system_create(Services *services);
 
-void animation_system_prepare(struct AnimationSystem *sys,
-                              struct AnimationResources *resources);
-
 #endif

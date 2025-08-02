@@ -21,19 +21,21 @@ typedef struct {
 
 static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u32 world_size,
                                      Vec2f *area) {
+  (void)world_size;
+  (void)area;
   float area_w_half = area->x / 2.f;
   float area_h_half = area->y / 2.f;
   Vec3f camera_pos = *object_position;
 
-  if (object_position->x < area_w_half) {
+  if (camera_pos.x < area_w_half) {
     camera_pos.x = area_w_half;
-  } else if (object_position->x >= world_size.x - area_w_half) {
+  } else if (camera_pos.x >= world_size.x - area_w_half) {
     camera_pos.x = world_size.x - area_w_half;
   }
 
-  if (object_position->y < area_h_half) {
+  if (camera_pos.y < area_h_half) {
     camera_pos.y = area_h_half;
-  } else if (object_position->y >= (world_size.y - area_h_half)) {
+  } else if (camera_pos.y >= (world_size.y - area_h_half)) {
     camera_pos.y = world_size.y - area_h_half;
   }
 

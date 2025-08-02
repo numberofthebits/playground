@@ -27,7 +27,7 @@ void main() {
   Material mat = materials[mat_idx];
   vec4 tex_color = texture(mat.tex_handle, fUV);
   vec3 color = uint_to_rgba(mat.color).rgb;
-  vec3 blend = tex_color.rgb + color * 0.0;
+  vec3 blend = tex_color.rgb * color;
 
-  fragColor = vec4(blend, 1.0);
+  fragColor = vec4(blend, tex_color.a);
 }

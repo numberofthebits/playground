@@ -49,12 +49,11 @@ typedef struct TransformComponent {
 /*   RenderComponentTypeUnit */
 /* } RenderComponentType; */
 
+#define RENDER_COMPONENT_RENDER_LAYER_TERRAIN 0
+#define RENDER_COMPONENT_RENDER_LAYER_GROUND 1
+#define RENDER_COMPONENT_RENDER_LAYER_AIR 2
+
 typedef struct {
-  /* RenderComponentType type; */
-  /* union { */
-  /*   RenderComponentMapTile map_tile; */
-  /*   RenderComponentUnit unit; */
-  /* }; */
 
   // Normalized texture coordinate modifier
   // Remember. In GL, positive Y is up. In image

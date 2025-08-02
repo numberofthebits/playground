@@ -68,6 +68,8 @@ void pool_insert(Pool *pool, Entity e, void *data) {
 
 void pool_remove(Pool *pool, Entity e) {
   if (!pool_has_entity(pool, e)) {
+    // This is normal when we ask all the pools to
+    // remove an entity.
     return;
   }
 

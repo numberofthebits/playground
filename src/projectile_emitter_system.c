@@ -32,6 +32,7 @@ void create_projectile(ProjectileEmitterComponent *component,
   TransformComponent tc = {0};
   tc.pos.x = origin.x + dir.x;
   tc.pos.y = origin.y + dir.y;
+  tc.pos.z = 1.f;
   tc.scale = 0.1f;
   tc.rotation = 0.f;
 
@@ -42,6 +43,11 @@ void create_projectile(ProjectileEmitterComponent *component,
   RenderComponent rc;
   rc.material_id = assets_make_id_str("bullet.mat");
   rc.pipeline_id = assets_make_id_str("unit.prog");
+  rc.texture_atlas_index.x = 0;
+  rc.texture_atlas_index.y = 0;
+  rc.texture_atlas_size.x = 2;
+  rc.texture_atlas_size.y = 4;
+  rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_AIR;
 
   TimeComponent ttc = {0};
   ttc.created = spawn_time;
