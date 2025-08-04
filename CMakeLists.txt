@@ -9,9 +9,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(pikuma_2d_game_engine C)
 
-option(BUILD_TESTS "Compile test functions" OFF)
+option(ENABLE_TESTS "Compile test functions" OFF)
 option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
-
+option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
 add_executable(game)
 #target_compile_options(game PRIVATE -fsanitize=addresss,leak,undefined -fno-omit-frame-pointer)
 
@@ -107,13 +107,14 @@ target_compile_features(game
 )
 
 if ( CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  message("Compiler ID == Clang")
   target_compile_options(game
     PRIVATE
     -Wall
     -Wextra
     -Werror
     -Wshadow
+    -mavx2
+    -mfma
   )
 endif()
 
@@ -126,7 +127,6 @@ if(ENABLE_DEBUG_TIMERS)
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-  message("Clang")
   if (ENABLE_SANITIZERS)
      message(STATUS "Enabling sanitizers")
      target_compile_options(game PRIVATE -fsanitize=undefined)
@@ -151,7 +151,7 @@ if ( MSVC )
      /arch:AVX
      /Zi
      /W3
-     /std:c11
+     /std:c23
    )
    # Make VS understand from where we should run this thing
    set_target_properties(game PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
