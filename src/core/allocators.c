@@ -36,9 +36,9 @@ static inline size_t round_to_aligned(size_t s, size_t alignment) {
 }
 
 static inline char *round_to_aligned_ptr(unsigned char *ptr, size_t alignment) {
-  size_t a = alignment - 1;
-  uintptr_t b = (uintptr_t)(ptr + a);
-  uintptr_t c = b & ~a;
+  const size_t a = alignment - 1;
+  const uintptr_t b = (uintptr_t)(ptr + a);
+  const uintptr_t c = b & ~a;
   return (void *)c;
 }
 
