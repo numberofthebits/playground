@@ -19,14 +19,6 @@ struct ArenaAllocator frame_allocator;
 
 thread_local struct StackAllocator stack_allocator;
 
-static inline size_t calc_alignment_bump(size_t s, size_t alignment) {
-  size_t alignment_bump = 0;
-  if (alignment != 1) {
-    alignment_bump = (alignment - s) % alignment;
-  }
-  return alignment_bump;
-}
-
 static inline ptrdiff_t offset_to_aligned(void *ptr, size_t s,
                                           size_t alignment) {
   uintptr_t res = (uintptr_t)(ptr + s) % alignment;
@@ -41,6 +33,13 @@ static inline ptrdiff_t offset_to_aligned(void *ptr, size_t s,
 static inline size_t round_to_aligned(size_t s, size_t alignment) {
   size_t a = alignment - 1;
   return (s + a) & ~a;
+}
+
+static inline char *round_to_aligned_ptr(unsigned char *ptr, size_t alignment) {
+  size_t a = alignment - 1;
+  uintptr_t b = (uintptr_t)(ptr + a);
+  uintptr_t c = b & ~a;
+  return (void *)c;
 }
 
 static inline AllocImplResult alloc_impl(void *ptr, size_t s,
@@ -103,9 +102,14 @@ void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
 
   const size_t count_bytes = element_count * element_size;
 
-  size_t alignment_bump = calc_alignment_bump(count_bytes, alignment);
+  //  size_t size_rounded_up = round_to_aligned(count_bytes, alignment);
+  // void *return_ptr = allocator->base + allocator->used + alignment_bump;
 
-  void *return_ptr = allocator->base + allocator->used + alignment_bump;
+  void *aligned_ptr =
+      round_to_aligned_ptr(allocator->base + allocator->used, alignment);
+  void *unaligned_ptr = allocator->base + allocator->used;
+  ptrdiff_t alignment_bump = aligned_ptr - unaligned_ptr;
+
   const size_t total_bytes = count_bytes + alignment_bump;
 
   if (allocator->used + total_bytes >= allocator->capacity) {
@@ -119,14 +123,16 @@ void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
 
   LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with "
            "alignment bump %lu) at %p. %lu / %lu bytes used",
-           count_bytes, alignment, total_bytes, alignment_bump, return_ptr,
+           count_bytes, alignment, total_bytes, alignment_bump, aligned_ptr,
            allocator->used, allocator->capacity);
 
   // TODO: Make this an optional flag if it ends up taking more
   // time than we want.
-  memset(return_ptr, 0x0, total_bytes);
+  // NOTE: Total bytes INCLUDES alignment. Set from unalignedptr to clear
+  //       all of it
+  memset(unaligned_ptr, 0x0, total_bytes);
 
-  return return_ptr;
+  return aligned_ptr;
 }
 
 void arena_dealloc_all(struct ArenaAllocator *allocator) {
