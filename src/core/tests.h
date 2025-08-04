@@ -18,7 +18,7 @@ static inline void run_tests() {
   //  assetstore_test();
   /* registry_test(); */
   /* work_queue_test(); */
-  /* math_test(); */
+  math_test();
   /* pool_test(); */
 
   arena_free(&global_static_allocator);

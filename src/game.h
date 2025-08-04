@@ -2,7 +2,6 @@
 #define _GAME_H
 
 typedef struct Game_t Game;
-
 Game *game_create();
 
 void game_run(Game *game);

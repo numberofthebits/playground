@@ -421,7 +421,8 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
   }
 
   AssetShaderProgram program;
-  if (!assets_load_shader_program(system->assets, program_id, &program)) {
+  if (!assets_load_shader_program(system->base.services.assets, program_id,
+                                  &program)) {
     LOG_EXIT("Failed to create program with id '%d': Program asset not found",
              program_id);
   }
@@ -440,8 +441,8 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
                    .capacity = buffer_size,
                    .used = 0};
 
-      if (!assets_load_shader(system->assets, program.shader_ids[i],
-                              &shader_asset)) {
+      if (!assets_load_shader(system->base.services.assets,
+                              program.shader_ids[i], &shader_asset)) {
         LOG_EXIT(
             "Failed to create program with id '%d': Program asset not found",
             program.shader_ids[i]);
@@ -632,11 +633,13 @@ RenderSystem *render_system_create(Services *services, int window_w,
   // individual renderer
 
   RenderSystem *system = ArenaAlloc(&global_static_allocator, 1, RenderSystem);
+  /* RenderSystem *system = */
+  /*     arena_alloc(&global_static_allocator, sizeof(RenderSystem), 1, 4); */
   system_base_init(
       (struct SystemBase *)system, RENDER_SYSTEM_BIT, &render_update,
       RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services, "RenderSystem");
 
-  system->assets = services->assets;
+  system->base.services = *services;
   system->materials = vec_create();
   system->main_framebuffer.width = window_w;
   system->main_framebuffer.height = window_h;
@@ -678,7 +681,8 @@ static void render_system_create_material(RenderSystem *system,
   Material new_material;
   AssetMaterial material_asset;
 
-  if (!assets_load_material(system->assets, material_id, &material_asset)) {
+  if (!assets_load_material(system->base.services.assets, material_id,
+                            &material_asset)) {
     LOG_EXIT("Material id %u not found: '%s", material_id);
   }
 
@@ -696,8 +700,8 @@ static void render_system_create_material(RenderSystem *system,
     void *data = 0;
 
     AssetTexture texture = {0};
-    if (!assets_load_texture(system->assets, material_asset.texture_id,
-                             &texture, &data)) {
+    if (!assets_load_texture(system->base.services.assets,
+                             material_asset.texture_id, &texture, &data)) {
       LOG_EXIT("Failed to load texture asset '%d'", material_asset.texture_id);
     }
 
@@ -795,7 +799,8 @@ void render_system_load_texture(RenderSystem *system, AssetId asset_id) {
 
   void *texture_data = 0;
   AssetTexture texture;
-  assets_load_texture(system->assets, asset_id, &texture, &texture_data);
+  assets_load_texture(system->base.services.assets, asset_id, &texture,
+                      &texture_data);
 
   // just for a pointer sized type
   GLuint64 new_handle =
@@ -813,12 +818,12 @@ void render_system_load_texture(RenderSystem *system, AssetId asset_id) {
 static void render_system_create_map_mesh(RenderSystem *system,
                                           AssetId asset_id) {
   AssetMap map_asset = {0};
-  if (!assets_load_map(system->assets, asset_id, &map_asset)) {
+  if (!assets_load_map(system->base.services.assets, asset_id, &map_asset)) {
     LOG_ERROR("Failed to create map mesh");
     return;
   }
 
-  assets_clear_temp_data(system->assets);
+  assets_clear_temp_data(system->base.services.assets);
 }
 
 void render_system_load_assets(RenderSystem *system, Asset *assets,

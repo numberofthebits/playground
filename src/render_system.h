@@ -18,13 +18,13 @@ typedef struct {
   Vec material_ids;
 } PreparedResources;
 
-struct OrthoCamera {
+typedef struct OrthoCamera {
   Mat4x4 projection;
   Mat4x4 view;
   Rectf rect;
   float aspect_ratio;
   float scale;
-};
+} OrthoCamera;
 
 struct RenderSystem {
   struct SystemBase base;
@@ -44,7 +44,7 @@ struct RenderSystem {
   struct Framebuffer main_framebuffer;
   struct Renderer *tile_renderer;
   struct Renderer *debug_renderer;
-  struct OrthoCamera camera;
+  OrthoCamera camera;
 };
 typedef struct RenderSystem RenderSystem;
 

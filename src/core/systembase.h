@@ -6,7 +6,9 @@
 #include "types.h"
 #include "vec.h"
 
-struct SystemBase;
+#include <stdalign.h>
+
+typedef struct SystemBase SystemBase;
 typedef struct Registry_t Registry;
 
 typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
@@ -20,9 +22,6 @@ typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
    because we don't want anything in core to know about concrete systems.
  */
 struct SystemBase {
-  int flag; /*SystemBit*/
-  int evaluation_order;
-
   // The signature is a bitwise OR'ed set of component flags
   SignatureT signature;
 
@@ -43,7 +42,11 @@ struct SystemBase {
 
   // Human readable name of the system. Makes logs more readable.
   const char *name;
+
+  int flag; /*SystemBit*/
+  int evaluation_order;
 };
+typedef struct SystemBase SystemBase;
 
 // This MUST be called for each concrete system implementation
 void system_base_init(struct SystemBase *system, int system_id,

@@ -58,7 +58,7 @@ typedef struct {
   Vec2f tex_coord_offset;      // 8 bytes
   Vec2f tex_coord_scale;       // 8 bytes
   unsigned int material_index; // 4 bytes
-  char padding[12];
+  char padding[4];
 } DrawCommandDataTiled;
 
 typedef struct DrawCommandData {

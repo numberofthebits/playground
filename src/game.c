@@ -17,6 +17,7 @@
 
 #include <GLFW/glfw3.h>
 // #include <glad/glad.h>
+#include <stdalign.h>
 #include <stdio.h>
 
 #define MAX_ENTITIES 100000
