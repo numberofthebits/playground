@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <memory.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #define PI 3.1415927f
@@ -76,8 +77,8 @@ typedef struct {
   float data[12];
 } Mat3x3;
 
-typedef struct {
-  float data[16];
+typedef struct Mat4x4 {
+  alignas(16) float data[16];
 } Mat4x4;
 
 typedef struct {

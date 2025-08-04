@@ -4,9 +4,12 @@
 #include "log.h"
 #include "util.h"
 
+#include <immintrin.h>
+#include <intrin.h>
 #include <math.h>
 #include <memory.h>
 #include <stdint.h>
+#include <xmmintrin.h>
 
 #define MESH_INTERSECT_RAY_EPSILON 0.01f
 
@@ -236,6 +239,40 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
+static inline float mat4_mul_intrin_impl(const float *col, const float *row) {
+  __m128 rcol = _mm_load_ps(col);
+
+  __m128 rrow = _mm_load_ps(row);
+
+  __m128 res = _mm_mul_ps(rcol, rrow);
+
+  // copy res upper to res lower, and
+  // copy res upper to res upper
+  res = _mm_hadd_ps(res, res);
+  res = _mm_hadd_ps(res, res);
+  /* __m128 upper = _mm_movehl_ps(res, res); */
+  /* res = _mm_add_ps(res, upper); */
+  /* __m128 res2 = _mm_shuffle_ps(res, res, _MM_SHUFFLE(1, 0, 0, 0)); */
+  /* res = _mm_add_ss(upper, res2); */
+
+  return _mm_cvtss_f32(res);
+}
+
+Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
+  Mat4x4 Tb = *b;
+  Mat4x4 m = {0};
+
+  mat4_transpose(&Tb);
+  int index = 0;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      m.data[index++] = mat4_mul_intrin_impl(&a->data[i * 4], &Tb.data[j * 4]);
+    }
+  }
+
+  return m;
+}
+/*
 Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
 
   Mat4x4 m = zero();
@@ -253,7 +290,7 @@ Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
 
   return m;
 }
-
+*/
 Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
   Vec4f result = {0};
   /* for (int i = 0; i < 4; ++i) { */
@@ -590,7 +627,19 @@ static void math_test_mat3_determinant() {
   Assert(det == -12.f);
 }
 
+static void math_test_sse() {
+  Mat4x4 a;
+  mat4_identity(&a);
+
+  Mat4x4 b;
+  mat4_identity(&b);
+
+  Mat4x4 c = mat4_mul(&a, &b);
+  (void)c;
+}
+
 void math_test() {
+  math_test_sse();
   math_test_mat3_determinant();
   math_test_mesh_gen();
   math_test_mesh_ray_intersect();
