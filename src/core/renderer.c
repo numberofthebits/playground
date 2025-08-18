@@ -126,7 +126,9 @@ void renderer_init(struct Renderer *renderer,
 
     glNamedBufferStorage(renderer->vertex_buffer_objects[i],
                          vertex_size_bytes * params->num_vertices, NULL,
-                         GL_DYNAMIC_STORAGE_BIT);
+                         GL_DYNAMIC_STORAGE_BIT | GL_MAP_WRITE_BIT);
+
+    renderer->vertex_buffer_vertex_sizes[i] = vertex_size_bytes;
   }
 
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, renderer->multi_draw_indirect_buffer);
@@ -143,7 +145,8 @@ void renderer_init(struct Renderer *renderer,
                                renderer->element_array_buffer);
 
     glNamedBufferStorage(renderer->element_array_buffer,
-                         params->index_buffer_size, 0, GL_DYNAMIC_STORAGE_BIT);
+                         params->index_buffer_size, 0,
+                         GL_DYNAMIC_STORAGE_BIT | GL_MAP_WRITE_BIT);
   } else {
     GLuint buffer_size =
         sizeof(DrawArraysIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS;
@@ -153,6 +156,8 @@ void renderer_init(struct Renderer *renderer,
   }
 
   CHECK_GL_ERROR();
+
+  renderer->parameters = *params;
 }
 
 void renderer_use(struct Renderer *renderer) {
@@ -167,6 +172,17 @@ void renderer_use(struct Renderer *renderer) {
 
   // Note: There's probably other relevant state that isn't implicitly bound via
   // vertex array object.
+}
+
+void renderer_dispatch_indexed(struct Renderer *renderer, uint32_t offset,
+                               uint32_t count) {
+  (void)renderer;
+  uint32_t min = offset;
+  uint32_t max = offset + count;
+  uint32_t num_elements = count - offset;
+
+  glDrawRangeElements(GL_TRIANGLES, min, max, num_elements, GL_UNSIGNED_SHORT,
+                      0); // use bound index buffer
 }
 
 void renderer_write_element_array_buffer(struct Renderer *renderer,
@@ -212,4 +228,240 @@ void renderer_log_state() {
   if (be_alpha == GL_FUNC_ADD) {
     LOG_INFO("ADD");
   }
+
+  /* GLint arr = 99; */
+  /* glGetNamedBufferParameteriv(system->text_renderer.vertex_buffer_objects[0],
+   */
+  /*                             GL_BUFFER_MAPPED, &arr); */
+  /* arr = 99; */
+  /* glGetNamedBufferParameteriv(system->text_renderer.vertex_buffer_objects[1],
+   */
+  /*                             GL_BUFFER_MAPPED, &arr); */
+}
+
+GLuint64 renderer_create_texture_bindless(struct Renderer *renderer,
+                                          GLenum texture_type,
+                                          GLenum texture_format,
+                                          uint16_t width_px, uint16_t height_px,
+                                          uint16_t depth_px,
+                                          unsigned char *texture_data) {
+  (void)depth_px;
+  (void)renderer;
+
+  GLuint tex_handle;
+  glCreateTextures(texture_type, 1, &tex_handle);
+  CHECK_GL_ERROR();
+
+  GLenum internal_fmt = 0;
+  switch (texture_format) {
+  case GL_RED:
+    internal_fmt = GL_R8;
+    break;
+  case GL_RGB:
+    internal_fmt = GL_RGB8;
+    break;
+  case GL_RGBA:
+    internal_fmt = GL_RGBA8;
+    break;
+  default:
+    LOG_EXIT("Unknown GL texture format %d", texture_format);
+  }
+
+  int levels = 1;
+  int level = 0;
+  int xoffset = 0;
+  int yoffset = 0;
+  GLenum data_type = GL_UNSIGNED_BYTE;
+
+  switch (texture_type) {
+  case GL_TEXTURE_2D:
+    glTextureStorage2D(tex_handle, levels, internal_fmt, width_px, height_px);
+    CHECK_GL_ERROR();
+
+    glTextureSubImage2D(tex_handle, level, xoffset, yoffset, width_px,
+                        height_px, texture_format, data_type, texture_data);
+
+    break;
+  default:
+    LOG_EXIT("Unhandled texture dimensions: Type %d", texture_type);
+  }
+  CHECK_GL_ERROR();
+
+  // Hack set up a texture unit
+
+  glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glBindTexture(GL_TEXTURE_2D, tex_handle);
+  glGenerateTextureMipmap(tex_handle);
+
+  CHECK_GL_ERROR();
+
+  GLuint64 bindless_handle = glGetTextureHandleARB(tex_handle);
+  glMakeTextureHandleResidentARB(bindless_handle);
+
+  CHECK_GL_ERROR();
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+  CHECK_GL_ERROR();
+
+  return bindless_handle;
+}
+
+void *renderer_map_vertex_buffer(struct Renderer *renderer, uint32_t index) {
+  GLint min_align = 0;
+  glGetIntegerv(GL_MIN_MAP_BUFFER_ALIGNMENT, &min_align);
+  size_t num_bytes = renderer->parameters.num_vertices *
+                     renderer->vertex_buffer_vertex_sizes[index];
+  void *mapped_buffer_ptr = glMapNamedBufferRange(
+      renderer->vertex_buffer_objects[index], 0, num_bytes,
+      GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+  CHECK_GL_ERROR();
+
+  return mapped_buffer_ptr;
+}
+
+void renderer_unmap_vertex_buffer(struct Renderer *renderer, uint32_t index) {
+  if (glUnmapNamedBuffer(renderer->vertex_buffer_objects[index]) != GL_TRUE) {
+    LOG_EXIT("Failed to unmap vertex array buffer");
+  }
+  CHECK_GL_ERROR();
+}
+
+void *renderer_map_element_array_buffer(struct Renderer *renderer) {
+  size_t num_bytes = renderer->parameters.index_buffer_size;
+  void *mapped_buffer_ptr = glMapNamedBufferRange(
+      renderer->element_array_buffer, 0, num_bytes, GL_MAP_WRITE_BIT);
+
+  CHECK_GL_ERROR();
+  return mapped_buffer_ptr;
+}
+
+void renderer_unmap_element_array_buffer(struct Renderer *renderer) {
+  if (glUnmapNamedBuffer(renderer->element_array_buffer) != GL_TRUE) {
+    LOG_EXIT("Failed to unmap element array buffer");
+  }
+  CHECK_GL_ERROR();
+}
+
+static GLuint renderer_create_program_impl(GLuint *shaders, int count) {
+  GLuint prog = glCreateProgram();
+
+  CHECK_GL_ERROR();
+
+  for (int i = 0; i < count; ++i) {
+    glAttachShader(prog, *(shaders + i));
+  }
+
+  glLinkProgram(prog);
+
+  CHECK_GL_ERROR();
+
+  glValidateProgram(prog);
+  int status = 0;
+  glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
+
+  if (status != GL_TRUE) {
+    int log_len = 0;
+    // Includes null-terminator
+    glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
+    if (log_len) {
+      GLchar *log_buf = malloc(log_len);
+      GLsizei actual_len = 0;
+      glGetProgramInfoLog(prog, log_len, &actual_len, log_buf);
+      LOG_EXIT("Failed to validate program:\n%s", log_buf);
+      free(log_buf);
+      CHECK_GL_ERROR();
+    } else {
+      LOG_EXIT("Failed to validate program, but info log length is 0");
+    }
+  }
+
+  return prog;
+}
+
+GLuint renderer_compile_shader(const char *src, GLenum type) {
+  GLint src_len = (GLint)strlen(src);
+  GLuint handle = glCreateShader(type);
+  glShaderSource(handle, 1, &src, &src_len);
+  CHECK_GL_ERROR();
+  glCompileShader(handle);
+  CHECK_GL_ERROR();
+
+  int status = 0;
+  glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
+  if (status != GL_TRUE) {
+    int log_len = 0;
+    glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_len);
+    if (log_len) {
+      GLchar *log_buf = malloc(log_len);
+      GLsizei actual_len = 0;
+      glGetShaderInfoLog(handle, log_len, &actual_len, log_buf);
+      LOG_EXIT("Failed to compile shader: %s\n%s", log_buf, src);
+    } else {
+      LOG_EXIT("Failed to compile shader: Log len is 0");
+    }
+
+    CHECK_GL_ERROR();
+  }
+
+  return handle;
+}
+
+GLuint renderer_create_program(struct Renderer *renderer, struct Assets *assets,
+                               AssetId program_id) {
+  (void)renderer;
+  AssetShaderProgram program;
+  if (!assets_load_shader_program(assets, program_id, &program)) {
+    LOG_EXIT("Failed to create program with id '%d': Program asset not found",
+             program_id);
+  }
+
+  int num_shaders_in_program = 0;
+  GLuint shader_handles[6];
+
+  for (size_t i = 0; i < sizeof(program.shader_ids) / sizeof(AssetId); ++i) {
+    if (assets_shader_program_has_shader(&program, i)) {
+
+      size_t buffer_size = 1024 * 1024;
+
+      AssetShader shader_asset;
+      shader_asset.source_buffer =
+          (Buffer){.data = stack_alloc(&stack_allocator, buffer_size),
+                   .capacity = buffer_size,
+                   .used = 0};
+
+      if (!assets_load_shader(assets, program.shader_ids[i], &shader_asset)) {
+        LOG_EXIT(
+            "Failed to create program with id '%d': Program asset not found",
+            program.shader_ids[i]);
+      }
+
+      GLenum gl_shader_type = 0;
+      switch (shader_asset.shader_type) {
+      case AssetShaderTypeVertex:
+        gl_shader_type = GL_VERTEX_SHADER;
+        break;
+      case AssetShaderTypeFragment:
+        gl_shader_type = GL_FRAGMENT_SHADER;
+        break;
+      default:
+        LOG_EXIT("Unhandled shader type");
+      }
+
+      LOG_INFO("Compiling shader '%s'", shader_asset.source_buffer.data);
+
+      shader_handles[num_shaders_in_program++] = renderer_compile_shader(
+          (const char *)shader_asset.source_buffer.data, gl_shader_type);
+
+      stack_dealloc(&stack_allocator, (void *)shader_asset.source_buffer.data,
+                    shader_asset.source_buffer.capacity);
+    }
+  }
+
+  GLuint program_handle =
+      renderer_create_program_impl(shader_handles, num_shaders_in_program);
+
+  return program_handle;
 }

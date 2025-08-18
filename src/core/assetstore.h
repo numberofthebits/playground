@@ -48,6 +48,7 @@ typedef enum AssetType {
   AssetTypeMaterial,
   AssetTypeMap,
   AssetTypeMesh,
+  AssetTypeFont
 } AssetType;
 
 static const char *AssetTypeNames[] = {
@@ -64,6 +65,7 @@ typedef struct AssetMeta {
   AssetType type;
   AssetName name;
   AssetFilePath file_path;
+  size_t file_size;
 } AssetMeta;
 
 typedef struct {
@@ -126,6 +128,11 @@ typedef struct AssetMap {
   Vec2u8 *indices; // Size world x*y encodes how big this should be
 } AssetMap;
 
+typedef struct AssetFont {
+  AssetId id;
+  Buffer font_data;
+} AssetFont;
+
 int assets_shader_program_has_shader(AssetShaderProgram *program, size_t index);
 
 typedef struct Assets {
@@ -147,6 +154,10 @@ void assets_init(struct Assets *assets);
 void assets_clear_temp_data(struct Assets *assets);
 
 AssetName *assets_asset_name_get_by_id(struct Assets *assets, AssetId id);
+
+int assets_asset_id_get_by_name(struct Assets *assets, const char *name,
+                                AssetId *id);
+
 AssetMeta *assets_asset_meta_get(struct Assets *assets, AssetId id);
 
 int assets_load_texture(struct Assets *assets, AssetId id,
@@ -161,6 +172,8 @@ int assets_load_material(struct Assets *assets, AssetId id,
                          AssetMaterial *material);
 
 int assets_load_map(struct Assets *assets, AssetId id, AssetMap *map);
+
+int assets_load_font(struct Assets *assets, AssetId id, AssetFont *font);
 
 AssetMaterial *assets_get_material(struct Assets *assets, AssetId material_id);
 

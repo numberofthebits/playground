@@ -43,7 +43,9 @@ Chunk chunk_realloc(Chunk *c, size_t s) {
     LOG_EXIT("Can't realloc null pointer)");
   }
 
+  void *prev = c->ptr;
   void *ptr = realloc(c->ptr, s);
+  LOG_INFO("Realloc %zu bytes: prev ptr %p new ptr %p", s, prev, ptr);
 
   if (!ptr) {
     LOG_EXIT("realloc() failed");
@@ -85,14 +87,10 @@ Vec vec_create(void) {
 
 void vec_reserve(Vec *v, int s) {
   LOG_INFO("Reserve: current %d, new %d", v->storage.size, s);
-  if (s > v->storage.size) {
-    if (chunk_is_allocated(&v->storage)) {
-      v->storage = chunk_realloc(&v->storage, s);
-    } else {
-      v->storage = chunk_alloc(s);
-    }
-
-    v->capacity = s;
+  if (chunk_is_allocated(&v->storage)) {
+    v->storage = chunk_realloc(&v->storage, s);
+  } else {
+    v->storage = chunk_alloc(s);
   }
 }
 
@@ -100,12 +98,9 @@ void vec_resize(Vec *v, int s) {
   LOG_INFO("Resize: current %d, new %d", v->storage.size, s);
   if (chunk_is_allocated(&v->storage)) {
     v->storage = chunk_realloc(&v->storage, s);
-    v->size = s;
   } else {
     v->storage = chunk_alloc(s);
   }
-
-  v->capacity = s;
 }
 
 void vec_destroy(Vec *v) {

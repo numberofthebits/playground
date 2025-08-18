@@ -76,7 +76,7 @@ void vec_destroy(Vec *v);
 
 #define VEC_RESERVE(vec, size_t_bytes, count)                                  \
   vec_reserve((vec), size_t_bytes *count);                                     \
-  (vec)->capacity = count;
+  (vec)->capacity = (count);
 
 #define VEC_RESERVE_T(vec, type, count) VEC_RESERVE((vec), sizeof(type), count);
 

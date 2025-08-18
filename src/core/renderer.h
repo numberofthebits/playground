@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include "assetstore.h"
 #include "log.h"
 #include "math.h"
 
@@ -215,44 +216,47 @@ struct VertexAttributeDescriptor {
   GLuint relative_offset; // I have no clue when this is useful
 };
 
-struct BufferObjectBindings {
+typedef struct BufferObjectBindings {
   GLuint binding_point_index[SSBO_MAX];
   GLuint buffer_object[SSBO_MAX];
-};
+} BufferObjectBindings;
 
-struct BindingPointDescriptor {
+typedef struct BindingPointDescriptor {
   GLuint binding_point_index;
   GLuint stride;
   GLintptr offset;
   unsigned int num_attrib_descriptors;
   struct VertexAttributeDescriptor *attrib_descriptors;
-};
+} BindingPointDescriptor;
 
-struct VertexBufferDescriptor {
+typedef struct VertexBufferDescriptor {
   struct BindingPointDescriptor *binding_descriptors;
   unsigned int binding_point_count;
-};
+} VertexBufferDescriptor;
 
-struct RendererParameters {
+typedef struct RendererParameters {
   unsigned int num_vertices;
+  uint32_t num_indices;
   int index_buffer_size;
 
   unsigned int num_buffer_descriptors;
   struct VertexBufferDescriptor *buffer_descriptors;
-};
+} RendererParameters;
 
-struct Renderer {
+typedef struct Renderer {
   GLuint vertex_array_object;
 
-  // This is optional, but indexed rendering is currently untested
   GLuint element_array_buffer;
 
   unsigned int num_vertex_buffers;
   GLuint vertex_buffer_objects[VBO_MAX];
+  size_t vertex_buffer_vertex_sizes[VBO_MAX];
 
   GLuint multi_draw_indirect_buffer;
   struct BufferObjectBindings shader_storage_buffer_objects;
-};
+
+  RendererParameters parameters;
+} Renderer;
 
 // Utility function. Interleave N disparate vertex attributes into single buffer
 void interleave_attributes(struct Interleave *interleave);
@@ -273,6 +277,9 @@ void renderer_init(struct Renderer *renderer,
 // place
 void renderer_use(struct Renderer *renderer);
 
+void renderer_dispatch_indexed(struct Renderer *renderer, uint32_t offset,
+                               uint32_t count);
+
 void renderer_write_element_array_buffer(struct Renderer *renderer,
                                          size_t offset, size_t size,
                                          void *data);
@@ -283,6 +290,26 @@ void renderer_ssbo_create(struct Renderer *renderer, int index,
 void renderer_ssbo_write(struct Renderer *renderer, int index, GLintptr offset,
                          void *data, size_t size);
 
+// Create a bindless texture and make it resident. Returns the bindless texture
+// handle.
+GLuint64 renderer_create_texture_bindless(struct Renderer *renderer,
+                                          GLenum texture_type,
+                                          GLenum texture_format,
+                                          uint16_t width_px, uint16_t height_px,
+                                          uint16_t depth_px,
+                                          unsigned char *texture_data);
+
+void *renderer_map_vertex_buffer(struct Renderer *renderer, uint32_t index);
+
+void renderer_unmap_vertex_buffer(struct Renderer *renderer, uint32_t index);
+
+void *renderer_map_element_array_buffer(struct Renderer *renderer);
+
+void renderer_unmap_element_array_buffer(struct Renderer *renderer);
+
 void renderer_log_state();
+
+GLuint renderer_create_program(Renderer *renderer, Assets *assets,
+                               AssetId program_id);
 
 #endif

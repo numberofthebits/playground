@@ -8,7 +8,7 @@
 // #include <pthread.h>
 
 #define WORK_QUEUE_MAX_SIZE 100000
-#define WORKER_THREAD_COUNT 8
+#define WORKER_THREAD_COUNT 7
 #define NUM_THREADS (1 + WORKER_THREAD_COUNT)
 
 typedef void (*JobFn)(void *);
@@ -47,7 +47,7 @@ int work_queue_init(struct WorkQueue *queue);
 
 int work_queue_push(struct WorkQueue *queue, JobFn func, void *args);
 
-void work_queue_commit(struct WorkQueue *queue);
+/* void work_queue_commit(struct WorkQueue *queue); */
 
 // Run until all work is completed
 void work_queue_sync(struct WorkQueue *queue);

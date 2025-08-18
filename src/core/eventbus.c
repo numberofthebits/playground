@@ -1,5 +1,6 @@
 #include "eventbus.h"
 
+#include "core/allocators.h"
 #include "log.h"
 
 #include <stddef.h>
@@ -49,8 +50,10 @@ void event_bus_emit(struct EventBus *bus, struct Event *event) {
 }
 
 void event_bus_defer(struct EventBus *bus, struct Event *event) {
-  void *event_data_copy = arena_subarena_alloc(
-      &bus->deferred_events_allocator, event->event_data_size, alignof(Event));
+
+  void *event_data_copy =
+      arena_subarena_alloc(&bus->deferred_events_allocator, 1,
+                           event->event_data_size, alignof(max_align_t));
 
   memcpy(event_data_copy, event->event_data, event->event_data_size);
 

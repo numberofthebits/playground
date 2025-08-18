@@ -42,21 +42,21 @@ static inline char *round_to_aligned_ptr(unsigned char *ptr, size_t alignment) {
   return (void *)c;
 }
 
-static inline AllocImplResult alloc_impl(void *ptr, size_t s,
-                                         size_t alignment) {
-  AllocImplResult res = {.ptr = 0, .used = s};
+/* static inline AllocImplResult alloc_impl(void *ptr, size_t s, */
+/*                                          size_t alignment) { */
+/*   AllocImplResult res = {.ptr = 0, .used = s}; */
 
-  if ((uintptr_t)ptr % alignment == 0) {
-    res.ptr = ptr;
-    return res;
-  }
+/*   if ((uintptr_t)ptr % alignment == 0) { */
+/*     res.ptr = ptr; */
+/*     return res; */
+/*   } */
 
-  ptrdiff_t offset = offset_to_aligned(ptr, s, alignment);
-  res.ptr += offset;
-  res.used += offset;
+/*   ptrdiff_t offset = offset_to_aligned(ptr, s, alignment); */
+/*   res.ptr += offset; */
+/*   res.used += offset; */
 
-  return res;
-}
+/*   return res; */
+/* } */
 
 void arena_init(struct ArenaAllocator *allocator, size_t capacity) {
   if (!allocator) {
@@ -162,23 +162,75 @@ SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
   return sub_arena;
 }
 
-void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
+void *arena_subarena_alloc(struct SubArenaAllocator *allocator,
+                           size_t element_size, size_t element_count,
                            size_t alignment) {
-  AllocImplResult res =
-      alloc_impl(allocator->base + allocator->used, s, alignment);
-
-  size_t total_used = allocator->used + res.used;
-  if (total_used > allocator->capacity) {
-    LOG_EXIT("Failed to allocate sub arena: asked for %zu, available %zu", s,
-             total_used);
+  if (!allocator) {
+    LOG_ERROR("Null pointer allocator");
+    return 0;
   }
 
-  LOG_INFO("Sub arena alloc from %p at %p capacity / used %zu / %zu",
-           allocator->base, res.ptr, allocator->used, allocator->capacity);
+  // Example/reasoning:
+  // Arena is 8 bytes.
+  // We allocated 1 byte previously.
+  // Next allocation is an int and should be aligned to 4
+  // [ 0, 1, 2, 3, 4, 5, 7, 8 ] total
+  // [ x,  ,  ,   ]
+  // Let's say base address startted at 0x0, and is now at 0x1
+  // base addr % alignment == 1
+  // increment to align should be 3 bytes. alignment - base % alignment = 3
 
-  allocator->used += res.used;
+  const size_t count_bytes = element_count * element_size;
 
-  return res.ptr;
+  //  size_t size_rounded_up = round_to_aligned(count_bytes, alignment);
+  // void *return_ptr = allocator->base + allocator->used + alignment_bump;
+
+  void *aligned_ptr =
+      round_to_aligned_ptr(allocator->base + allocator->used, alignment);
+  void *unaligned_ptr = allocator->base + allocator->used;
+  ptrdiff_t alignment_bump = aligned_ptr - unaligned_ptr;
+
+  const size_t total_bytes = count_bytes + alignment_bump;
+
+  if (allocator->used + total_bytes >= allocator->capacity) {
+    LOG_ERROR("Allocator used %lu + new allocation %lu bytes exceeds allocator "
+              "capacity %lu",
+              allocator->used, total_bytes, allocator->capacity);
+    return 0;
+  }
+
+  allocator->used += total_bytes;
+
+  LOG_INFO("Allocated %lu bytes with alignment %lu (%lu bytes total with "
+           "alignment bump %lu) at %p. %lu / %lu bytes used",
+           count_bytes, alignment, total_bytes, alignment_bump, aligned_ptr,
+           allocator->used, allocator->capacity);
+
+  // TODO: Make this an optional flag if it ends up taking more
+  // time than we want.
+  // NOTE: Total bytes INCLUDES alignment. Set from unalignedptr to clear
+  //       all of it
+  memset(unaligned_ptr, 0x0, total_bytes);
+
+  return aligned_ptr;
+
+  /* AllocImplResult res = */
+  /*     alloc_impl(allocator->base + allocator->used, s, alignment); */
+
+  /* size_t total_used = allocator->used + res.used; */
+  /* if (total_used > allocator->capacity) { */
+  /*   LOG_EXIT("Failed to allocate sub arena: asked for %zu, available %zu", s,
+   */
+  /*            total_used); */
+  /* } */
+
+  /* LOG_INFO("Sub arena alloc from %p at %p capacity / used %zu / %zu", */
+  /*          allocator->base, res.ptr, allocator->used, allocator->capacity);
+   */
+
+  /* allocator->used += res.used; */
+
+  /* return res.ptr; */
 }
 
 void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator) {

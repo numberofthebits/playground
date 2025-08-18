@@ -20,7 +20,8 @@ typedef enum ComponentBit {
   PROJECTILE_EMITTER_COMPONENT_BIT = (1U << 8),
   PROJECTILE_COMPONENT_BIT = (1U << 9),
   HEALTH_COMPONENT_BIT = (1U << 10),
-  MESH_COMPONENT_BIT = (1U << 11)
+  MESH_COMPONENT_BIT = (1U << 11),
+  TEXT_COMPONENT_BIT = (1U << 12)
 } ComponentBit;
 
 typedef struct TransformComponent {
@@ -120,6 +121,11 @@ typedef struct {
   Mesh mesh;
 } MeshComponent;
 
+typedef struct TextComponent {
+  const char *text;
+  uint32_t len;
+} TextComponent;
+
 // Our "user defined" component table. We feed this
 // to the entity component system, so that it has a way
 // to differentiate components, and to know the size and
@@ -178,9 +184,15 @@ static const struct Component component_table[] = {
      .size = sizeof(HealthComponent),
      .alignment = alignof(HealthComponent),
      .name = "HealthComponent"},
+
     {.flag = MESH_COMPONENT_BIT,
      .size = sizeof(MeshComponent),
      .alignment = alignof(MeshComponent),
-     .name = "MeshComponent"}};
+     .name = "MeshComponent"},
+
+    {.flag = TEXT_COMPONENT_BIT,
+     .size = sizeof(TextComponent),
+     .alignment = alignof(TextComponent),
+     .name = "TextComponent"}};
 
 #endif // COMPONENTS_H

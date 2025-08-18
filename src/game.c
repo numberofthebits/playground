@@ -72,6 +72,7 @@ struct Game_t {
   ProjectileEmitterSystem *projectile_emitter_system;
   struct RenderSystem *render_system;
   DamageSystem *damage_system;
+  TextSystem *text_system;
 };
 
 /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap")); */
@@ -88,7 +89,7 @@ VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("plain-red"));
 */
 
 const char *level_0_programs[] = {"tilemap.prog", "unit.prog",
-                                  "collision_debug.prog"};
+                                  "collision_debug.prog", "text.prog"};
 
 const char *level_0_materials[] = {"truck.mat", "jungle.mat", "chopper.mat",
                                    "plain-red.mat", "bullet.mat"};
@@ -98,6 +99,7 @@ const char *level_0_textures[] = {"bullet.png", "chopper-spritesheet.png",
                                   "truck-ford-right.png"};
 
 const char *level_0_maps[] = {"jungle.meta"};
+const char *level_0_fonts[] = {"arial.ttf"};
 
 typedef struct LevelAssets {
   const char **textures;
@@ -111,6 +113,9 @@ typedef struct LevelAssets {
 
   const char **maps;
   size_t maps_count;
+
+  const char **fonts;
+  size_t fonts_count;
 } LevelAssets;
 
 typedef enum ReadlineResult {
@@ -297,7 +302,11 @@ static void window_size_callback(GLFWwindow *window, int width, int height) {
   }
 
   Game *game = glfwGetWindowUserPointer(window);
-  game_window_size_changed(game, width, height);
+  if (game) {
+    game_window_size_changed(game, width, height);
+  } else {
+    LOG_ERROR("No context ptr in window size callback");
+  }
 }
 
 Game *game_create() {
@@ -384,6 +393,7 @@ Game *game_create() {
   int window_width, window_height;
   glfwGetWindowSize(game->window, &window_width, &window_height);
 
+  game->text_system = text_system_create(&game->services);
   game->input_system = input_system_create(&game->services);
   game->hit_detection_system = hit_detection_system_create(&game->services);
   game->player_system = player_system_create(&game->services);
@@ -423,6 +433,7 @@ Game *game_create() {
                       (struct SystemBase *)game->hit_detection_system);
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->render_system);
+  registry_add_system(&game->registry, (struct SystemBase *)game->text_system);
 
   return game;
 }
@@ -732,7 +743,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_group(registry, truck, "enemies");
 
     tc.pos.x = 10.f;
-    pc.velocity.x = -0.01f;
+    pc.velocity.x = -0.1f;
     registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
     registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
                                   &tc);
@@ -790,6 +801,9 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     HealthComponent hc;
     hc.health = 100;
+    TextComponent text;
+    text.text = "AZaz";
+    text.len = strlen(text.text);
 
     registry_entity_component_add(registry, chopper, RENDER_COMPONENT_BIT, &rc);
     registry_entity_component_add(registry, chopper, TRANSFORM_COMPONENT_BIT,
@@ -804,6 +818,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_component_add(registry, chopper,
                                   CAMERA_MOVEMENT_COMPONENT_BIT, &cmc);
     registry_entity_component_add(registry, chopper, HEALTH_COMPONENT_BIT, &hc);
+    registry_entity_component_add(registry, chopper, TEXT_COMPONENT_BIT, &text);
 
     registry_entity_add(registry, chopper);
 
@@ -814,7 +829,8 @@ void load_units(Registry *registry, struct Assets *assets) {
 static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
   size_t total_asset_count =
       level_assets->textures_count + level_assets->programs_count +
-      level_assets->materials_count; // + level_assets->maps_count;
+      level_assets->materials_count +
+      level_assets->fonts_count; // + level_assets->maps_count;
   size_t total_asset_bytes = total_asset_count * sizeof(Asset);
   Asset *assets = stack_alloc(&stack_allocator, total_asset_bytes);
 
@@ -844,6 +860,12 @@ static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
     /* assets[asset_index].id = assets_make_id_str(level_assets->maps[i]); */
     /* assets[asset_index].type = AssetTypeMap; */
     /* ++asset_index; */
+  }
+
+  for (size_t i = 0; i < level_assets->fonts_count; ++i) {
+    assets[asset_index].id = assets_make_id_str(level_assets->materials[i]);
+    assets[asset_index].type = AssetTypeFont;
+    ++asset_index;
   }
 
   render_system_load_assets(game->render_system, assets, total_asset_count);
@@ -877,7 +899,9 @@ void game_setup(Game *game) {
       .programs = level_0_programs,
       .programs_count = sizeof(level_0_programs) / sizeof(const char *),
       .maps = level_0_maps,
-      .maps_count = sizeof(level_0_maps) / sizeof(const char *)};
+      .maps_count = sizeof(level_0_maps) / sizeof(const char *),
+      .fonts = level_0_fonts,
+      .fonts_count = sizeof(level_0_fonts) / sizeof(const char *)};
 
   game_load_level_assets(game, &level_assets);
 

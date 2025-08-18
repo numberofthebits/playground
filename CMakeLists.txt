@@ -11,7 +11,7 @@ project(pikuma_2d_game_engine C)
 
 option(ENABLE_TESTS "Compile test functions" OFF)
 option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
-option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
+option(ENABLE_SANITIZERS "Enable sanitizers" ON)
 add_executable(game)
 #target_compile_options(game PRIVATE -fsanitize=addresss,leak,undefined -fno-omit-frame-pointer)
 
@@ -80,6 +80,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/render_system.h
   ${PROJECT_SOURCE_DIR}/src/systems.c
   ${PROJECT_SOURCE_DIR}/src/systems.h
+  ${PROJECT_SOURCE_DIR}/src/text_system.c
+  ${PROJECT_SOURCE_DIR}/src/text_system.h
   ${PROJECT_SOURCE_DIR}/src/time_system.c
   ${PROJECT_SOURCE_DIR}/src/time_system.h
   $<$<PLATFORM_ID:Windows>:${PROJECT_SOURCE_DIR}/src/core/os_win.c>

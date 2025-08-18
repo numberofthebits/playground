@@ -36,11 +36,12 @@ void arena_free(struct ArenaAllocator *allocator);
 SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
                                         size_t s);
 
-void *arena_subarena_alloc(struct SubArenaAllocator *allocator, size_t s,
+void *arena_subarena_alloc(struct SubArenaAllocator *allocator,
+                           size_t element_size, size_t element_count,
                            size_t alignment);
 
 #define SubArenaAlloc(allocator, count, type)                                  \
-  arena_subarena_alloc(allocator, sizeof(type) * count, alignof(type));
+  arena_subarena_alloc(allocator, sizeof(type), count, alignof(type));
 
 void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator);
 

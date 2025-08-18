@@ -56,15 +56,20 @@ size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer) {
   return (size_t)bytes_read;
 }
 
+static inline int file_get_size_impl(FILE *fp) {
+  fseek(fp, 0, SEEK_END);
+  int file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  return file_size;
+}
+
 int file_read_all(const char *file_path, Buffer *buffer) {
   FILE *fp = fopen(file_path, "r+b");
   if (!fp) {
     return 0;
   }
 
-  fseek(fp, 0, SEEK_END);
-  int file_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
+  int file_size = file_get_size_impl(fp);
 
   LOG_INFO("File size %d bytes", file_size);
   buffer->data = malloc(file_size + 1);
@@ -75,6 +80,29 @@ int file_read_all(const char *file_path, Buffer *buffer) {
   fclose(fp);
 
   return 1;
+}
+
+size_t file_write_all_binary(const char *file_path, unsigned char *buffer,
+                             size_t buffer_size) {
+  FILE *fp = fopen(file_path, "w+b");
+  int ret = fwrite(buffer, buffer_size, 1, fp);
+  if (ret < 0) {
+    return 0;
+  }
+  return (size_t)ret;
+}
+
+int file_get_size(const char *file_path) {
+  FILE *fp = fopen(file_path, "r+b");
+
+  if (!fp) {
+    return -1;
+  }
+
+  int ret = file_get_size_impl(fp);
+  fclose(fp);
+
+  return ret;
 }
 
 int get_msb_set(uint64_t value) {

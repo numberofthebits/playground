@@ -116,9 +116,13 @@ Mat4x4 zero(void) {
 }
 
 void mat4_identity(Mat4x4 *m) {
-  static float Mat4x4_Identity[] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                                    0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-                                    0.0f, 0.0f, 0.0f, 1.0f};
+  // clang-format off
+  static float Mat4x4_Identity[] = {
+      1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, 1.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 1.0f, 0.0f,
+      0.0f, 0.0f, 0.0f, 1.0f};
+  // clang-format on
   memcpy(&m->data[0], Mat4x4_Identity, sizeof(Mat4x4));
 }
 

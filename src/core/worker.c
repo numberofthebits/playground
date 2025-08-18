@@ -3,13 +3,14 @@
 #include "log.h"
 #include "os.h"
 
+#define WORK_QUEUE_PROCESS_RESULT_AGAIN 0
+#define WORK_QUEUE_PROCESS_RESULT_DONE 1
+
 // Returns non-zero if there is no more work to do,
 // and zero if it either did work, or it couldn't determine
 // what to do, i.e. some caller picked up next unit of work
 // before we could
-static int process_work_queue(struct WorkQueue *queue, int thread_index) {
-  (void)thread_index;
-  int go_to_sleep = 0;
+static int work_queue_process(struct WorkQueue *queue, int thread_index) {
 
   uint32_t original_next_queue_index = queue->work_queue_next;
   if (original_next_queue_index < queue->work_queue_count) {
@@ -23,8 +24,7 @@ static int process_work_queue(struct WorkQueue *queue, int thread_index) {
       // Pull out our unit of work
       WorkQueueEntry entry = queue->work_queue[actual_index];
 
-      //      LOG_INFO("Thread %d doing work entry %d", thread_index,
-      //      actual_index);
+      LOG_INFO("Thread %d doing work entry %d", thread_index, actual_index);
       entry.job_fn(entry.job_args);
 
       // TODO: Replace with something general
@@ -33,10 +33,10 @@ static int process_work_queue(struct WorkQueue *queue, int thread_index) {
   } else {
     // LOG_INFO("Thread %d no more work to do %d/%d", thread_index,
     //        original_next_queue_index, work_queue_next);
-    go_to_sleep = 1;
+    return WORK_QUEUE_PROCESS_RESULT_DONE;
   }
 
-  return go_to_sleep;
+  return WORK_QUEUE_PROCESS_RESULT_AGAIN;
 }
 
 static int worker_thread_main(void *arg) {
@@ -44,7 +44,8 @@ static int worker_thread_main(void *arg) {
   LOG_INFO("Thread %d started", args.thread_index);
 
   for (;;) {
-    if (process_work_queue(args.queue, args.thread_index)) {
+    if (work_queue_process(args.queue, args.thread_index) ==
+        WORK_QUEUE_PROCESS_RESULT_DONE) {
       // LOG_INFO("Thread %d going to sleep", args.thread_index);
       WaitForSemaphore(args.semaphore_handle);
       // LOG_INFO("Thread %d woke up", args.thread_index);
@@ -114,27 +115,27 @@ int work_queue_push(struct WorkQueue *queue, JobFn func, void *args) {
   //  LOG_INFO("Push work entry %d", queue->work_queue_count);
 
   CompletePastWritesBeforeFutureWrites();
-  ++queue->work_queue_count;
+  //++queue->work_queue_count;
   // TODO: This was the one i tried changing to see if it affected
   // the first batch of work not being processed.
   // It SHOULD not matter. Only main thread writes to work_queue_count
-  //  InterlockedIncrement((LONG volatile *)&queue->work_queue_count);
+  InterlockedIncrement((LONG volatile *)&queue->work_queue_count);
   work_queue_signal_worker_thread(queue);
   return 1;
 }
 
-void work_queue_commit(struct WorkQueue *queue) {
-  CompletePastWritesBeforeFutureWrites();
-  work_queue_signal_worker_thread(queue);
-}
+/* void work_queue_commit(struct WorkQueue *queue) { */
+/*   CompletePastWritesBeforeFutureWrites(); */
+/*   work_queue_signal_worker_thread(queue); */
+/* } */
 
 void work_queue_sync(struct WorkQueue *queue) {
   while (queue->work_queue_completed != queue->work_queue_count) {
-    process_work_queue(queue, 0);
+    work_queue_process(queue, 0);
     //_mm_pause();
   }
 
-  LOG_INFO("Sync: Completed %d count %d next %d", queue->work_queue_completed,
+  LOG_INFO("completed=%d count=%d next=%d", queue->work_queue_completed,
            queue->work_queue_count, queue->work_queue_next);
   /* queue->work_queue_next = 0; */
   /* queue->work_queue_count = 0; */

@@ -17,7 +17,8 @@ typedef enum {
   PROJECTILE_EMITTER_SYSTEM_BIT = (1U << 8),
   DAMAGE_SYSTEM_BIT = (1U << 9),
   HIT_DETECTION_SYSTEM_BIT = (1U << 10),
-  SYSTEM_BIT_ITER_END = (1U << 11),
+  TEXT_SYSTEM_BIT = (1U << 11),
+  SYSTEM_BIT_ITER_END = (1U << 12),
 
   INVALID_SYSTEM_BIT = (1U << 30)
 } SystemBit;
@@ -32,6 +33,7 @@ typedef enum {
 #include "player_system.h"
 #include "projectile_emitter_system.h"
 #include "render_system.h"
+#include "text_system.h"
 #include "time_system.h"
 
 #endif

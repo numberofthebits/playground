@@ -292,7 +292,7 @@ typedef struct {
 static void render_update_range(void *job_params) {
   RenderUpdateRangeArgs *range_args = job_params;
 
-  //  LOG_INFO("Processing range [%d,%d>", range_args->begin, range_args->end);
+  LOG_INFO("Processing range [%d,%d>", range_args->begin, range_args->end);
   for (int i = range_args->begin; i < range_args->end; ++i) {
     Entity entity = range_args->entities[i];
     TransformComponent *tc = PoolGetComponent(range_args->transform_pool,
@@ -359,6 +359,7 @@ static void render_update_range(void *job_params) {
 
 static void render_update(Registry *reg, struct SystemBase *sys,
                           size_t frame_nr) {
+  return;
   BeginScopedTimer(render_update);
   (void)frame_nr;
 
@@ -370,35 +371,42 @@ static void render_update(Registry *reg, struct SystemBase *sys,
 
   RenderData *render_data =
       ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
+
+  // 'NUM_THREADS' + 1 because we also need to deal with the remainder
+  // after evenly distributing work
+  RenderUpdateRangeArgs *job_args =
+      ArenaAlloc(&frame_allocator, NUM_THREADS + 1, RenderUpdateRangeArgs);
+
   int batch_size = sys->entities.size / NUM_THREADS;
 
   for (int i = 0; i < NUM_THREADS; ++i) {
-    RenderUpdateRangeArgs *job_args =
-        ArenaAlloc(&frame_allocator, 1, RenderUpdateRangeArgs);
-    job_args->entities = entities;
-    job_args->transform_pool = transform_pool;
-    job_args->render_data = render_data;
-    job_args->render_pool = render_pool;
+
+    job_args[i].entities = entities;
+    job_args[i].transform_pool = transform_pool;
+    job_args[i].render_data = render_data;
+    job_args[i].render_pool = render_pool;
     int begin = i * batch_size;
     int end = begin + batch_size;
-    job_args->begin = begin;
-    job_args->end = end;
+    job_args[i].begin = begin;
+    job_args[i].end = end;
 
-    work_queue_push(sys->services.work_queue, render_update_range, job_args);
+    work_queue_push(sys->services.work_queue, &render_update_range,
+                    &job_args[i]);
   }
 
+  // Dispatch the leftover work
   int job_batch_remainder = sys->entities.size % NUM_THREADS;
   if (job_batch_remainder) {
-    RenderUpdateRangeArgs *job_args =
-        ArenaAlloc(&frame_allocator, 1, RenderUpdateRangeArgs);
-    job_args->entities = entities;
-    job_args->transform_pool = transform_pool;
-    job_args->render_data = render_data;
-    job_args->render_pool = render_pool;
-    job_args->begin = NUM_THREADS * batch_size;
-    job_args->end = job_args->begin + job_batch_remainder;
+    job_args[NUM_THREADS].entities = entities;
+    job_args[NUM_THREADS].transform_pool = transform_pool;
+    job_args[NUM_THREADS].render_data = render_data;
+    job_args[NUM_THREADS].render_pool = render_pool;
+    job_args[NUM_THREADS].begin = NUM_THREADS * batch_size;
+    job_args[NUM_THREADS].end =
+        job_args[NUM_THREADS].begin + job_batch_remainder;
 
-    work_queue_push(sys->services.work_queue, &render_update_range, job_args);
+    work_queue_push(sys->services.work_queue, &render_update_range,
+                    &job_args[NUM_THREADS]);
   }
 
   work_queue_sync(sys->services.work_queue);

@@ -18,8 +18,6 @@
 #define MAKE_FILE_PATH_BUF_MAX 1024
 #define ASSETS_ALLOCATOR_MAX_SIZE 1024 * 1024 * 64
 
-SubArenaAllocator asset_allocator;
-
 AssetName assets_make_asset_name(const char *name, size_t len) {
   if (len > ASSET_NAME_MAX_LEN) {
     LOG_WARN("Truncating asset name '%' length %d exceeding max length %d",
@@ -53,9 +51,10 @@ AssetFilePath assets_make_asset_file_path(const char *file_path) {
 }
 
 int assets_asset_name_eq(AssetName *lhs, AssetName *rhs) {
-  size_t len = (lhs->len > rhs->len ? (size_t)lhs->len : rhs->len);
-  LOG_INFO("lhs %.*s rhs %.*s", lhs->len, lhs->name, rhs->len, rhs->name);
-  return memcmp(lhs->name, rhs->name, len);
+  /* size_t len = (lhs->len > rhs->len ? (size_t)lhs->len : rhs->len); */
+  /* LOG_INFO("lhs %.*s rhs %.*s", lhs->len, lhs->name, rhs->len, rhs->name); */
+  /* return memcmp(lhs->name, rhs->name, len) == 0; */
+  return strcmp(lhs->name, rhs->name) == 0;
 }
 
 typedef struct _TileInfo {
@@ -147,6 +146,24 @@ AssetName *assets_asset_name_get_by_id(struct Assets *assets, AssetId id) {
       return &meta->name;
     }
   }
+
+  return 0;
+}
+
+int assets_asset_id_get_by_name(struct Assets *assets, const char *name,
+                                AssetId *id) {
+  AssetMeta *meta = 0;
+  AssetName asset_name = assets_make_asset_name_str(name);
+
+  for (int i = 0; i < assets->asset_meta.size; ++i) {
+    meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
+    if (assets_asset_name_eq(&meta->name, &asset_name)) {
+      *id = meta->id;
+      return 1;
+    }
+  }
+
+  LOG_ERROR("Failed to get asset ID for '%s'", name);
 
   return 0;
 }
@@ -357,6 +374,24 @@ static int enumerate_materials_callback(const FileSystemListResult *result,
   return FILE_CALLBACK_RESULT_CONTINUE;
 }
 
+static int enumerate_fonts_callback(const FileSystemListResult *result,
+                                    void *context) {
+
+  if (!result) {
+    LOG_EXIT("Invalid file system list result");
+  }
+
+  struct Assets *assets = context;
+
+  AssetId id = assets_make_id_str(result->file_name);
+  AssetName name = assets_make_asset_name_str(result->file_name);
+  AssetFilePath file_path = assets_make_asset_file_path(result->file_path);
+
+  insert_asset_meta(assets, id, AssetTypeMaterial, &file_path, &name);
+
+  return FILE_CALLBACK_RESULT_CONTINUE;
+}
+
 void assets_print_asset_meta(struct Assets *assets) {
   printf("*********** ASSET META *************\n");
   for (int i = 0; i < assets->asset_meta.size; ++i) {
@@ -380,6 +415,9 @@ void assets_enumerate(struct Assets *assets) {
 
   file_system_list("./assets/materials/", "*.mat",
                    &enumerate_materials_callback, assets);
+
+  file_system_list("./assets/fonts/", "*.ttf", &enumerate_fonts_callback,
+                   assets);
 
   assets_print_asset_meta(assets);
 }
@@ -649,7 +687,6 @@ static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
 }
 
 int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
-  (void)map;
   AssetMeta *asset_meta = assets_asset_meta_get(assets, asset_id);
   if (!asset_meta) {
     return 0;
@@ -675,6 +712,33 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
 
   // Release dynamically allocated data used by AssetMap
   assets_clear_temp_data(assets);
+
+  return 1;
+}
+
+int assets_load_font(struct Assets *assets, AssetId id, AssetFont *font) {
+  AssetMeta *asset_meta = assets_asset_meta_get(assets, id);
+  if (!asset_meta) {
+    return 0;
+  }
+
+  int file_size = file_get_size(asset_meta->file_path.path);
+  if (file_size < 0) {
+    LOG_EXIT("No file size for '%s'", asset_meta->file_path.path);
+  }
+
+  uint8_t *file_buf =
+      SubArenaAlloc(&assets->temp_data, (size_t)file_size, uint8_t);
+
+  font->id = id;
+  font->font_data =
+      (Buffer){.data = file_buf, .capacity = (size_t)file_size, .used = 0};
+  if (!file_read_all_buffer_binary(asset_meta->file_path.path,
+                                   font->font_data.data,
+                                   font->font_data.capacity)) {
+    assets_clear_temp_data(assets);
+    return 0;
+  }
 
   return 1;
 }

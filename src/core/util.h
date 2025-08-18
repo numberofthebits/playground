@@ -24,14 +24,18 @@
 }
 #endif
 
+#define ArrayLen(array, type) sizeof(array) / sizeof(type)
+
 typedef struct Buffer {
   uint8_t *data;
   size_t capacity;
   size_t used;
 } Buffer;
 
-// Mallocs for you
+// It mallocs for you.
 int file_read_all(const char *file_path, Buffer *buffer);
+
+int file_get_size(const char *file_path);
 
 // You allocate for it. Fails if file size is bigger than buffer
 size_t file_read_all_buffer_binary(const char *file_path, unsigned char *buffer,
@@ -39,6 +43,9 @@ size_t file_read_all_buffer_binary(const char *file_path, unsigned char *buffer,
 
 // You allocate for it. Fails if file size is bigger than buffer
 size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer);
+
+size_t file_write_all_binary(const char *file_path, unsigned char *buffer,
+                             size_t buffer_size);
 
 int get_msb_set(uint64_t value);
 

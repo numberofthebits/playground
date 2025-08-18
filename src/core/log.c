@@ -9,7 +9,7 @@
 
 unsigned long long time_logging;
 
-static thread_local char log_buffer[4096 * 4];
+static thread_local char log_buffer[1024 * 64];
 static FILE *fp;
 
 // TODO: Remove mutex?
