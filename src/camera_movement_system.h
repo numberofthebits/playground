@@ -13,81 +13,27 @@
 #include "core/services.h"
 #include "core/systembase.h"
 
-typedef struct {
+typedef struct Camera {
+  Mat4x4 projection;
+  Mat4x4 view;
+  Mat4x4 view_projection; // mat4_mul(&Proj, &View)
+  Vec3f position;         // Camera center
+  Vec2f area;             // Extent of camera view
+} Camera;
+
+typedef struct CameraMovementSystem {
   struct SystemBase base;
-  Vec2f camera_area;
+  Camera camera; // We only have one for now :)
   Vec2u32 world_size;
 } CameraMovementSystem;
 
-static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u32 world_size,
-                                     Vec2f *area) {
-  (void)world_size;
-  (void)area;
-  float area_w_half = area->x / 2.f;
-  float area_h_half = area->y / 2.f;
-  Vec3f camera_pos = *object_position;
+void camera_movement_system_update(Registry *reg, struct SystemBase *base,
+                                   size_t frame_nr);
 
-  if (camera_pos.x < area_w_half) {
-    camera_pos.x = area_w_half;
-  } else if (camera_pos.x >= world_size.x - area_w_half) {
-    camera_pos.x = world_size.x - area_w_half;
-  }
+CameraMovementSystem *camera_movement_system_create(Services *services,
+                                                    Camera *camera);
 
-  if (camera_pos.y < area_h_half) {
-    camera_pos.y = area_h_half;
-  } else if (camera_pos.y >= (world_size.y - area_h_half)) {
-    camera_pos.y = world_size.y - area_h_half;
-  }
-
-  return camera_pos;
-}
-
-static inline void camera_movement_system_update(Registry *reg,
-                                                 struct SystemBase *base,
-                                                 size_t frame_nr) {
-  (void)frame_nr;
-  Entity *ptr = base->entities.storage.ptr;
-  Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  CameraMovementSystem *camera_movement_system = (CameraMovementSystem *)base;
-
-  for (int i = 0; i < base->entities.size && i < 1; ++i) {
-    Entity e = *(ptr + i);
-    TransformComponent *tc =
-        PoolGetComponent(pool, TransformComponent, e.index);
-    CameraUpdated data;
-    data.pos = clamp_camera_pos(&tc->pos, camera_movement_system->world_size,
-                                &camera_movement_system->camera_area);
-    data.size = camera_movement_system->camera_area;
-
-    struct Event ev;
-    ev.id = CameraSystem_CameraChanged;
-
-    ev.event_data = &data;
-    ev.event_data_size = sizeof(CameraUpdated);
-
-    event_bus_emit(base->services.event_bus, &ev);
-  }
-}
-
-static inline CameraMovementSystem *
-camera_movement_system_create(Services *services, Vec2f *camera_area) {
-  CameraMovementSystem *sys =
-      ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
-
-  system_base_init((struct SystemBase *)sys, CAMERA_MOVEMENT_SYSTEM_BIT,
-                   camera_movement_system_update,
-                   TRANSFORM_COMPONENT_BIT | CAMERA_MOVEMENT_COMPONENT_BIT,
-                   services, "CameraMovementSystem");
-
-  sys->camera_area = *camera_area;
-
-  return sys;
-}
-
-static inline void
-camera_movement_system_set_world_size(CameraMovementSystem *self,
-                                      Vec2u32 world_size) {
-  self->world_size = world_size;
-}
+void camera_movement_system_set_world_size(CameraMovementSystem *self,
+                                           Vec2u32 world_size);
 
 #endif

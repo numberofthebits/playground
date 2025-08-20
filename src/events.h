@@ -8,7 +8,7 @@ enum EventType {
   CollisionSystem_Detected,
   KeyboardInput_Update,
   DebugEvent_StateChanged, // This is a piss poor name
-  CameraSystem_CameraChanged,
+  CameraSystem_CameraUpdated,
   HitDetectionSystem_MeshHit,
   InputSystem_CursorMoved,
   OS_FramebufferSizeChanged,
@@ -41,9 +41,12 @@ typedef struct HitDetectionEvent {
 } HitDetectionEvent;
 
 typedef struct {
-  Vec3f pos;
-  Vec2f size;
-} CameraUpdated;
+  Vec3f position; // Camera center
+  Vec2f area;     // Extent of camera view
+  Mat4x4 projection;
+  Mat4x4 view;
+  Mat4x4 view_projection;
+} CameraUpdatedEventData;
 
 typedef struct InputSystemCursorMoved {
   Vec2f pos;

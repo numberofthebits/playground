@@ -135,9 +135,9 @@ Mat4x4 perspective(float near, float far, float fov, float aspect) {
 
   m.data[0] = scale;
   m.data[5] = scale;
-  m.data[10] = -((far + near) / f_min_n);
+  m.data[10] = -(far + near) / f_min_n;
   m.data[11] = -1.0f;
-  m.data[14] = -(2.0f * far * near) / (far - near);
+  m.data[14] = -(2.0f * far * near) / f_min_n;
 
   return m;
 }
@@ -243,7 +243,7 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
-static inline float mat4_mul_intrin_impl(const float *col, const float *row) {
+inline float mat4_mul_intrin_impl(const float *col, const float *row) {
   __m128 rcol = _mm_load_ps(col);
 
   __m128 rrow = _mm_load_ps(row);
@@ -264,12 +264,20 @@ static inline float mat4_mul_intrin_impl(const float *col, const float *row) {
 
 Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
   Mat4x4 Tb = *b;
-  Mat4x4 m = {0};
-
   mat4_transpose(&Tb);
+
+  Mat4x4 m;
+
   int index = 0;
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
+      /* float sum = 0.0f; */
+      /* for (int k = 0; k < 4; ++k) { */
+      /*   sum += a->data[i * 4 + k] * b->data[k * 4 + j]; */
+      /* } */
+      /* m.data[index] = sum; */
+      /* index += 1; */
+
       m.data[index++] = mat4_mul_intrin_impl(&a->data[i * 4], &Tb.data[j * 4]);
     }
   }
@@ -299,13 +307,26 @@ Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
   Vec4f result = {0};
   /* for (int i = 0; i < 4; ++i) { */
   /*   for (int j = 0; j < 4; ++j) { */
-  result.x = m->data[0] * v->x + m->data[1] * v->y + m->data[2] * v->z +
-             m->data[3] * v->w;
-  result.y = m->data[4] * v->x + m->data[5] * v->y + m->data[6] * v->z +
-             m->data[7] * v->w;
-  result.x = m->data[8] * v->x + m->data[9] * v->y + m->data[10] * v->z +
-             m->data[11] * v->w;
-  result.y = m->data[12] * v->x + m->data[13] * v->y + m->data[14] * v->z +
+  /* result.x = m->data[0] * v->x + m->data[1] * v->y + m->data[2] * v->z + */
+  /*            m->data[3] * v->w; */
+  /* result.y = m->data[4] * v->x + m->data[5] * v->y + m->data[6] * v->z + */
+  /*            m->data[7] * v->w; */
+  /* result.z = m->data[8] * v->x + m->data[9] * v->y + m->data[10] * v->z + */
+  /*            m->data[11] * v->w; */
+  /* result.w = m->data[12] * v->x + m->data[13] * v->y + m->data[14] * v->z +
+   */
+  /*            m->data[15] * v->w; */
+
+  result.x = m->data[0] * v->x + m->data[4] * v->y + m->data[8] * v->z +
+             m->data[12] * v->w;
+
+  result.y = m->data[1] * v->x + m->data[5] * v->y + m->data[9] * v->z +
+             m->data[13] * v->w;
+
+  result.z = m->data[2] * v->x + m->data[6] * v->y + m->data[10] * v->z +
+             m->data[14] * v->w;
+
+  result.w = m->data[3] * v->x + m->data[7] * v->y + m->data[11] * v->z +
              m->data[15] * v->w;
 
   return result;

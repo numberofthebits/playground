@@ -344,6 +344,7 @@ Game *game_create() {
   glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
 
   GLFWwindow *window = glfwCreateWindow(800, 800, "1,2,3 techno", 0, 0);
+  glfwSetWindowUserPointer(window, game);
 
   // This creates borderless fullscreen but completely screws up remedybg
   /* GLFWwindow *window =
@@ -371,7 +372,6 @@ Game *game_create() {
     return 0;
   }
 
-  glfwSetWindowUserPointer(window, game);
   game->window = window;
 
   registry_init(&game->registry, MAX_ENTITIES, component_table,
@@ -405,8 +405,10 @@ Game *game_create() {
   // TODO: What's the point of this camera_area?
   //       Doesn't adjust ortho projection currently, which it has to?
   Vec2f camera_area = {8.f, 8.f};
+  Vec3f camera_position = {0.f, 0.f, 0.f};
+  Camera camera = {.area = camera_area, .position = camera_position};
   game->camera_movement_system =
-      camera_movement_system_create(&game->services, &camera_area);
+      camera_movement_system_create(&game->services, &camera);
   game->projectile_emitter_system =
       projectile_emitter_system_create(&game->services);
   game->render_system = render_system_create(
@@ -743,7 +745,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_group(registry, truck, "enemies");
 
     tc.pos.x = 10.f;
-    pc.velocity.x = -0.1f;
+    pc.velocity.x = -0.001f;
     registry_entity_component_add(registry, truck, RENDER_COMPONENT_BIT, &rc);
     registry_entity_component_add(registry, truck, TRANSFORM_COMPONENT_BIT,
                                   &tc);
@@ -801,8 +803,9 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     HealthComponent hc;
     hc.health = 100;
+
     TextComponent text;
-    text.text = "AZaz";
+    text.text = "Expressway to hell!";
     text.len = strlen(text.text);
 
     registry_entity_component_add(registry, chopper, RENDER_COMPONENT_BIT, &rc);
@@ -980,7 +983,11 @@ void game_update(Game *game) {
 
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->render_system,
-      CameraSystem_CameraChanged, render_system_handle_camera_position_changed);
+      CameraSystem_CameraUpdated, render_system_handle_camera_position_changed);
+
+  event_bus_subscribe(&game->event_bus, (struct SystemBase *)game->text_system,
+                      CameraSystem_CameraUpdated,
+                      text_system_handle_camera_position_changed);
 
   event_bus_subscribe(
       &game->event_bus, (struct SystemBase *)game->hit_detection_system,

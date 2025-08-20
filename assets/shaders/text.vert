@@ -10,14 +10,11 @@ layout(location = 2) in vec3 vCol;
 layout(location = 0) out vec2 fUV;
 layout(location = 1) out vec3 fCol;
 
-uniform mat4 Proj;
-uniform mat4 Scale;
+uniform mat4 ViewProj;
+uniform mat4 Model;
 
 void main() {
   fUV = vUV;
   fCol = vCol;
-  vec3 pos = vPos.xyz;
-  // pos.x = (vPos.x - 0.5) * 10.0;
-  // pos.y = (vPos.y - 0.5) * 10.0;
-  gl_Position = Proj * vec4(pos, 1.0);
+  gl_Position = ViewProj * Model * vec4(vPos.xyz, 1.0);
 }

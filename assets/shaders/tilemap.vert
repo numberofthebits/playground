@@ -18,13 +18,14 @@ struct DrawData {
 
 layout(std430, binding = 18) buffer DrawDataBuffer { DrawData draw_data[]; };
 
-uniform mat4 View;
-uniform mat4 Proj;
+// uniform mat4 View;
+// uniform mat4 Proj;
+uniform mat4 ViewProj;
 
 void main() {
   DrawData data = draw_data[gl_DrawID];
   fUV = data.tex_scale * vUV + data.tex_offset;
   mat_idx = data.material_idx;
 
-  gl_Position = Proj * View * data.model_matrix * vec4(vPos, 1.0);
+  gl_Position = ViewProj * data.model_matrix * vec4(vPos, 1.0);
 }

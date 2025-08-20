@@ -11,7 +11,7 @@ layout(location = 0) out vec4 fragColor;
 
 void main() {
 
-  float luminance = texture(font_atlas, fUV).r;
-  fragColor = vec4(fCol * luminance, 1.0);
+  vec4 alpha = vec4(texture(font_atlas, fUV).r);
+  fragColor = vec4(fCol, 1.0) * alpha;
   //  fragColor = vec4(fUV, 0.0, 1.0);
 }

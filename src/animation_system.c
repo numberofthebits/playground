@@ -54,46 +54,6 @@ static void animation_update(Registry *reg, struct SystemBase *system,
         rc->texture_atlas_index.y = 2;
       }
     }
-
-    /* // Pick from our sprite sheet based on angle */
-    /* if (radians < PI_DIV_4) { */
-    /*   rc->texture_atlas_index.y = 1; */
-    /* } else if (radians < PI_3_DIV_4) { */
-    /*   // up */
-    /*   rc->texture_atlas_index.y = 0; */
-    /* } else if (radians < (PI + PI_DIV_4)) { */
-    /*   // left */
-    /*   rc->texture_atlas_index.y = 3; */
-    /* } else if (radians < PI_7_DIV_4) { */
-    /*   // down */
-    /*   rc->texture_atlas_index.y = 2; */
-    /* } else { */
-    /*   rc->texture_atlas_index.y = 1; */
-    /*   // right again, different quadrant */
-    /* } */
-
-    /* float offset = 0.f; */
-    /* float radians = tc->rotation; */
-
-    // The rotations within each sprite are always in +/- PI/4 (45 degrees),
-    // which is PI/2 total. Adding PI/4 maps our rotation to +/- PI/4 radians.
-    // Making it wrap correctly at PI_DIV_4. To map inversely, subtract PI/4
-    // radians again.
-    /* tc->rotation = (float)fmod((tc->rotation + PI_DIV_4), PI_DIV_2) -
-     * PI_DIV_4; */
-
-    /* ac->last_offset = offset; */
-
-    /* rc-> */
-
-    /* rc->tex_coord_scale.x = 1.f / ac->num_frames_width; */
-    /* rc->tex_coord_scale.y = 1.f / ac->num_frames_height; */
-
-    /* rc->tex_coord_offset.x = 1.f / ac->num_frames_width * animation_frame_nr;
-     */
-    /* rc->tex_coord_offset.y = */
-    /*     ((float)ac->num_frames_height - 1.f - ac->last_offset) / */
-    /*     (float)ac->num_frames_height; */
   }
 }
 

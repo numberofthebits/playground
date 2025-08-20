@@ -21,6 +21,7 @@ typedef struct {
 typedef struct OrthoCamera {
   Mat4x4 projection;
   Mat4x4 view;
+  Mat4x4 view_projection;
   Rectf rect;
   float aspect_ratio;
   float scale;
@@ -44,6 +45,10 @@ struct RenderSystem {
   struct Framebuffer main_framebuffer;
   struct Renderer *tile_renderer;
   struct Renderer *debug_renderer;
+  GLint loc_view_projection;
+  GLint loc_view;
+  GLint loc_projection;
+  GLuint program_handle;
   OrthoCamera camera;
 };
 typedef struct RenderSystem RenderSystem;

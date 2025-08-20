@@ -7,6 +7,7 @@
 #include "core/renderer.h"
 #include "core/sparsecomponentpool.h"
 #include "core/util.h"
+#include "events.h"
 #include "systems.h"
 
 #include <core/allocators.h>
@@ -25,7 +26,7 @@
 
 #define TEXT_SYSTEM_ATLAS_PX_WIDTH 512
 #define TEXT_SYSTEM_ATLAS_PX_HEIGHT 512
-#define TEXT_SYSTEM_ATLAS_FONT_SIZE 20
+#define TEXT_SYSTEM_ATLAS_FONT_SIZE 40
 #define TEXT_SYSTEM_FONT_FILE_NAME "arial.ttf"
 #define TEXT_SYSTEM_ASCII_TABLE_SIZE 128
 #define TEXT_SYSTEM_GLYPH_MAX_PER_DRAW_CALL 4096
@@ -68,10 +69,6 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
                        ArrayLen(range, stbtt_pack_range));
   stbtt_PackEnd(&pack_ctx);
 
-  size_t ret =
-      file_write_all_binary("dump.atlas", bitmap_data, bitmap_data_size);
-  LOG_INFO("RET = %zu", ret);
-
   GLuint64 handle_font_atlas_texture = renderer_create_texture_bindless(
       &system->text_renderer, GL_TEXTURE_2D, GL_RED, TEXT_SYSTEM_ATLAS_PX_WIDTH,
       TEXT_SYSTEM_ATLAS_PX_HEIGHT, 0, bitmap_data);
@@ -91,15 +88,18 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
 void text_system_update(Registry *registry, struct SystemBase *sys,
                         size_t frame_nr) {
 
+  return;
   (void)frame_nr;
 
   TextSystem *system = (TextSystem *)sys;
+
   renderer_use(&system->text_renderer);
   glUseProgram(system->program_id);
+  glUniformMatrix4fv(system->loc_proj, 1, GL_FALSE,
+                     system->view_projection.data);
 
   Pool *text_pool = registry_get_pool(registry, TEXT_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
-  (void)transform_pool;
 
   Vec3f *vbo_pos = renderer_map_vertex_buffer(&system->text_renderer, 0);
   Vec2f *vbo_uv = renderer_map_vertex_buffer(&system->text_renderer, 1);
@@ -107,29 +107,58 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 
   uint32_t num_glyphs = 0;
 
+  float sf = 1.f / 512.f;
+  Vec3f scale_factor = {sf, sf, 1.f};
+  (void)scale_factor;
+
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity entity = VEC_GET_T(&sys->entities, Entity, i);
     TextComponent *tc =
         PoolGetComponent(text_pool, TextComponent, entity.index);
+    TransformComponent *xform =
+        PoolGetComponent(transform_pool, TransformComponent, entity.index);
+    (void)xform;
+
+    Mat4x4 translate;
+    Mat4x4 scale;
+    (void)translate;
+    (void)scale;
+    mat4_identity(&translate);
+    mat4_identity(&scale);
+    Vec3f pos_neg = {xform->pos.x, xform->pos.y, 0.f};
+    (void)pos_neg;
+    mat4_translate(&translate, &pos_neg);
+    mat4_scale(&scale, &scale_factor);
+
+    Mat4x4 model = mat4_mul(&scale, &translate);
+    mat4_identity(&model);
+
+    glUniformMatrix4fv(system->loc_model, 1, GL_FALSE, model.data);
 
     // Quad uses top left and bottom right convention
     stbtt_aligned_quad quad = {0};
-    float xpos = 0.f;
-    float ypos = 0.f;
 
     // Make quads. 4 vertices per quad. 6 indices to render them
     // as GL_TRIANGLES
-    for (uint32_t c = 0; c < tc->len; ++c) {
-      stbtt_GetPackedQuad(packed_chars, 512, 512, tc->text[c], &xpos, &ypos,
-                          &quad, 0);
 
-      quad.x0 /= 800.f;
-      quad.y0 /= 800.f;
-      quad.x1 /= 800.f;
-      quad.y1 /= 800.f;
+    float xpos = 0.f;
+    float ypos = 0.f;
+
+    for (uint32_t c = 0; c < tc->len; ++c) {
+      stbtt_GetPackedQuad(packed_chars, TEXT_SYSTEM_ATLAS_PX_WIDTH,
+                          TEXT_SYSTEM_ATLAS_PX_HEIGHT, tc->text[c], &xpos,
+                          &ypos, &quad, 0);
+
+      /* quad.x0 *= 1.f / 800.f; */
+      /* quad.y0 *= 1.f / 800.f; */
+      /* quad.x1 *= 1.f / 800.f; */
+      /* quad.y1 *= 1.f / 800.f; */
+
+      quad.y0 *= -1.f;
+      quad.y1 *= -1.f;
 
       // Flip y-axis
-      quad.y0 = (quad.y1 - quad.y0);
+      //      quad.y0 = (quad.y1 - quad.y0);
 
       // NOTE: Corners must be mapped to match indices in index buffer
       //       assuming: LL, LR, UL, UR
@@ -142,12 +171,16 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_pos[0].y = quad.y1;
       vbo_pos[0].z = 0.f;
 
+      /* Vec4f a = {quad.x0, quad.y1, 0.f, 1.f}; */
+      /* Vec4f res = mat4_mul_vec(&model, &a); */
+      /* (void)res; */
+
       vbo_uv[0].x = quad.s0;
       vbo_uv[0].y = quad.t1;
 
       vbo_col[0].x = 1.f;
-      vbo_col[0].y = 0.f;
-      vbo_col[0].z = 0.f;
+      vbo_col[0].y = 1.f;
+      vbo_col[0].z = 1.f;
 
       // Upper left
       vbo_pos[1].x = quad.x0;
@@ -157,9 +190,9 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_uv[1].x = quad.s0;
       vbo_uv[1].y = quad.t0;
 
-      vbo_col[1].x = 0.f;
+      vbo_col[1].x = 1.f;
       vbo_col[1].y = 1.f;
-      vbo_col[1].z = 0.f;
+      vbo_col[1].z = 1.f;
 
       // Lower Right
       vbo_pos[2].x = quad.x1;
@@ -169,7 +202,7 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_uv[2].x = quad.s1;
       vbo_uv[2].y = quad.t0;
 
-      vbo_col[2].x = 0.f;
+      vbo_col[2].x = 1.f;
       vbo_col[2].y = 1.f;
       vbo_col[2].z = 1.f;
 
@@ -181,8 +214,8 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_uv[3].x = quad.s1;
       vbo_uv[3].y = quad.t1;
 
-      vbo_col[3].x = 0.f;
-      vbo_col[3].y = 0.f;
+      vbo_col[3].x = 1.f;
+      vbo_col[3].y = 1.f;
       vbo_col[3].z = 1.f;
 
       vbo_pos += 4;
@@ -196,16 +229,14 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
   renderer_unmap_vertex_buffer(&system->text_renderer, 1);
   renderer_unmap_vertex_buffer(&system->text_renderer, 2);
 
-  glClearColor(0.2f, 0.2, 0.2f, 1.f);
-  glClear(GL_COLOR_BUFFER_BIT);
-  //  glDisable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
-  glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  /* glDisable(GL_CULL_FACE); */
+  /* glDisable(GL_DEPTH_TEST); */
+  /* glEnable(GL_BLEND); */
+  /* glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); */
 
   // DrawElements takes number of indices, NOT number of primitives.
+  //  renderer_dispatch_indexed(&system->text_renderer, 0, num_glyphs * 6);
   (void)num_glyphs;
-  renderer_dispatch_indexed(&system->text_renderer, 0, num_glyphs * 6);
 }
 
 TextSystem *text_system_create(Services *services) {
@@ -333,19 +364,28 @@ TextSystem *text_system_create(Services *services) {
   glUniformHandleui64ARB(loc_font_atlas, handle_font_atlas_texture);
   CHECK_GL_ERROR();
 
-  GLint loc_proj = glGetUniformLocation(system->program_id, "Proj");
-  /* Mat4x4 proj = ortho(1.f, -1.f, 800, 0, 800, 0); */
-  Mat4x4 proj;
-  mat4_identity(&proj);
+  system->loc_proj = glGetUniformLocation(system->program_id, "ViewProj");
+  system->loc_model = glGetUniformLocation(system->program_id, "Model");
+  /* Mat4x4 proj = ortho(1.f, -1.f, 400, -400, -400, 400); */
 
-  Mat4x4 scale;
-  mat4_identity(&scale);
-  Vec3f scale_factor = {.x = 10.f, .y = 10.0f, .z = 1.f};
-  mat4_scale(&scale, &scale_factor);
+  /* Mat4x4 scale; */
+  /* mat4_identity(&scale); */
 
-  Mat4x4 lol = mat4_mul(&proj, &scale);
+  /* Vec3f scale_factor = {.x = 1.f / 800.f, .y = 1.f / 800.f, .z = 0.f}; */
+  /* mat4_scale(&scale, &scale_factor); */
 
-  glUniformMatrix4fv(loc_proj, 1, GL_FALSE, lol.data);
+  /* Mat4x4 lol = mat4_mul(&proj, &scale); */
+  /* (void)lol; */
 
+  CHECK_GL_ERROR();
   return system;
+}
+
+void text_system_handle_camera_position_changed(struct SystemBase *system,
+                                                struct Event e) {
+  (void)e;
+  TextSystem *text_sys = (TextSystem *)system;
+  CameraUpdatedEventData *pos_changed_event = e.event_data;
+
+  text_sys->view_projection = pos_changed_event->projection;
 }

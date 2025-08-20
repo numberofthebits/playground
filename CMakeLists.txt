@@ -58,6 +58,7 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/vec.h
   ${PROJECT_SOURCE_DIR}/src/core/worker.c
   ${PROJECT_SOURCE_DIR}/src/core/worker.h
+  ${PROJECT_SOURCE_DIR}/src/camera_movement_system.c
   ${PROJECT_SOURCE_DIR}/src/camera_movement_system.h
   ${PROJECT_SOURCE_DIR}/src/damage_system.c
   ${PROJECT_SOURCE_DIR}/src/damage_system.h

@@ -29,5 +29,5 @@ void main() {
   vec3 color = uint_to_rgba(mat.color).rgb;
   vec3 blend = tex_color.rgb * color;
 
-  fragColor = vec4(blend, tex_color.a);
+  fragColor = vec4(blend * color, tex_color.a);
 }

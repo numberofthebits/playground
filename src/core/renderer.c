@@ -289,8 +289,9 @@ GLuint64 renderer_create_texture_bindless(struct Renderer *renderer,
 
   // Hack set up a texture unit
 
-  glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTextureParameteri(tex_handle, GL_TEXTURE_MIN_FILTER,
+                      GL_LINEAR_MIPMAP_LINEAR);
+  glTextureParameteri(tex_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTextureParameteri(tex_handle, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glBindTexture(GL_TEXTURE_2D, tex_handle);

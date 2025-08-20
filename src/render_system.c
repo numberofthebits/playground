@@ -181,53 +181,46 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
 
   CHECK_GL_ERROR();
 
-  glClearColor(0.2f, 0.2f, 0.2f, 0.f);
+  glClearColor(0.2f, 0.2f, 0.2f, 1.f);
   glDisable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT);
+  glDisable(GL_CULL_FACE);
 
   glEnable(GL_BLEND);
-
   glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   if (render_data_size == 0) {
+    LOG_WARN("Render called with render data size 0");
     return;
   }
 
   renderer_use(system->tile_renderer);
+  glUseProgram(system->program_handle);
+  CHECK_GL_ERROR();
 
-  GLint loc_view;
-  GLint loc_proj;
+  /* system->loc_view = */
+  /*     get_uniform_location_checked(system->program_handle, "View"); */
+  /* system->loc_projection = */
+  /*     get_uniform_location_checked(system->program_handle, "Proj"); */
+  system->loc_view_projection =
+      get_uniform_location_checked(system->program_handle, "ViewProj");
+
+  glUniformMatrix4fv(system->loc_view_projection, 1, GL_FALSE,
+                     system->camera.view_projection.data);
+
+  /* glUniformMatrix4fv(system->loc_view, 1, GL_FALSE,
+   * system->camera.view.data); */
+  /* glUniformMatrix4fv(system->loc_projection, 1, GL_FALSE, */
+  /*                    system->camera.projection.data); */
 
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER,
                system->tile_renderer->multi_draw_indirect_buffer);
   CHECK_GL_ERROR();
 
   unsigned int count_in_batch = 0;
-  AssetId current_program = 0;
 
   for (size_t i = 0; i < render_data_size; ++i) {
     RenderData *rd = &render_data[i];
-
-    if (render_data->program_id != current_program) {
-      // If we encounter a new program/pipeline
-      // Render whatever we have so far, and then continue
-      // building a new batch with the new program/pipeline
-      render_batch(system, count_in_batch);
-      count_in_batch = 0;
-
-      GLuint program_handle =
-          get_program_handle_by_asset_id(system, rd->program_id);
-      glUseProgram(program_handle);
-      CHECK_GL_ERROR();
-
-      current_program = rd->program_id;
-
-      loc_view = get_uniform_location_checked(program_handle, "View");
-      loc_proj = get_uniform_location_checked(program_handle, "Proj");
-
-      glUniformMatrix4fv(loc_view, 1, GL_FALSE, system->camera.view.data);
-      glUniformMatrix4fv(loc_proj, 1, GL_FALSE, system->camera.projection.data);
-    }
 
     DrawElementsIndirectCommand *command =
         &system->draw_commands_elements[count_in_batch];
@@ -359,7 +352,6 @@ static void render_update_range(void *job_params) {
 
 static void render_update(Registry *reg, struct SystemBase *sys,
                           size_t frame_nr) {
-  return;
   BeginScopedTimer(render_update);
   (void)frame_nr;
 
@@ -572,6 +564,7 @@ static struct Renderer *create_tile_renderer() {
   renderer_ssbo_create(tile_renderer, 1, BO_INDEX_MATERIALS,
                        MAX_DRAW_INDIRECT_DRAW_COMMANDS * sizeof(Material));
 
+  // Indexed quad
   renderer_write_element_array_buffer(tile_renderer, 0, sizeof(index_data),
                                       index_data);
   CHECK_GL_ERROR();
@@ -614,22 +607,23 @@ struct Renderer *create_debug_renderer() {
   return debug_renderer;
 }
 
-// TODO: Make it work without a position/center argument first.
-// I haven't tested if a straight translation is actually the right thing
-static void recalc_camera(struct OrthoCamera *camera, int width, int height,
-                          float scale, Vec3f *center) {
-  (void)scale;
-  (void)center;
-  float aspect_ratio = (float)width / (float)height;
-  camera->aspect_ratio = aspect_ratio;
+/* // TODO: Make it work without a position/center argument first. */
+/* // I haven't tested if a straight translation is actually the right thing */
+/* void recalc_camera(struct OrthoCamera *camera, int width, int height, */
+/*                    float scale, Vec3f *center) { */
+/*   (void)scale; */
+/*   (void)center; */
+/*   float aspect_ratio = (float)width / (float)height; */
+/*   camera->aspect_ratio = aspect_ratio; */
 
-  camera->projection = ortho(
-      -1.f, 1.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
-      camera->rect.pos.y + camera->rect.height, camera->rect.pos.y);
+/*   camera->projection = ortho( */
+/*       1.f, -1.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
+ */
+/*       camera->rect.pos.y + camera->rect.height, camera->rect.pos.y); */
 
-  mat4_identity(&camera->view);
-  //  mat4_translate(&camera->view, center);
-}
+/*   mat4_identity(&camera->view); */
+/*   //  mat4_translate(&camera->view, center); */
+/* } */
 
 RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h) {
@@ -662,19 +656,19 @@ RenderSystem *render_system_create(Services *services, int window_w,
   system->debug_renderer = create_debug_renderer();
   CHECK_GL_ERROR();
 
-  Vec3f center = {0.f, 0.f, 0.f};
+  //  Vec3f center = {0.f, 0.f, 0.f};
   /* system->camera.rect.pos.x = -system->main_framebuffer.width / 2; */
   /* system->camera.rect.pos.y = -system->main_framebuffer.height / 2; */
   /* system->camera.rect.width = system->main_framebuffer.width; */
   /* system->camera.rect.height = system->main_framebuffer.height; */
 
-  system->camera.rect.pos.x = -4.f;
-  system->camera.rect.pos.y = -4.f;
-  system->camera.rect.width = 8.f;
-  system->camera.rect.height = 8.f;
+  /* system->camera.rect.pos.x = -4.f; */
+  /* system->camera.rect.pos.y = -4.f; */
+  /* system->camera.rect.width = 8.f; */
+  /* system->camera.rect.height = 8.f; */
 
-  recalc_camera(&system->camera, system->main_framebuffer.width,
-                system->main_framebuffer.height, 25.f, &center);
+  /* recalc_camera(&system->camera, system->main_framebuffer.width, */
+  /*               system->main_framebuffer.height, 25.f, &center); */
 
   render_system_framebuffer_size_changed(system, system->main_framebuffer.width,
                                          system->main_framebuffer.height);
@@ -857,15 +851,17 @@ void render_system_load_assets(RenderSystem *system, Asset *assets,
       continue;
     }
   }
+
+  system->program_handle = get_program_handle_by_name(system, "tilemap.prog");
 }
 
 void render_system_framebuffer_size_changed(RenderSystem *system,
                                             uint16_t width_px,
                                             uint16_t height_px) {
-  glClearColor(0.f, 0.0f, 0.0f, 255.f);
+  glClearColor(0.f, 0.0f, 0.0f, 1.f);
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+  glDisable(GL_DEPTH_TEST);
   system->main_framebuffer.width = width_px;
   system->main_framebuffer.height = height_px;
 
@@ -902,21 +898,11 @@ void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e) {
   (void)e;
   struct RenderSystem *render_sys = (struct RenderSystem *)system;
-  CameraUpdated *pos_changed_event = e.event_data;
+  CameraUpdatedEventData *event_data = e.event_data;
 
-  Vec3f neg_pos = {-pos_changed_event->pos.x, -pos_changed_event->pos.y, 0.f};
-
-  Mat4x4 t;
-  mat4_identity(&t);
-  mat4_translate(&t, &neg_pos);
-  float width_div_2 = pos_changed_event->size.x / 2.f;
-  float height_div_2 = pos_changed_event->size.x / 2.f;
-  float left = -width_div_2;
-  float right = width_div_2;
-  float top = height_div_2;
-  float bottom = -height_div_2;
-  render_sys->camera.projection = ortho(-1.f, 1.f, right, left, top, bottom);
-  render_sys->camera.view = t;
+  render_sys->camera.view_projection = event_data->view_projection;
+  render_sys->camera.view = event_data->view;
+  render_sys->camera.projection = event_data->projection;
 }
 
 void render_system_handle_hit_detection(struct SystemBase *base,

@@ -6,7 +6,7 @@ EventTypeName event_type_names[EventTypeCount] = {
     {CollisionSystem_Detected, "CollisionSystem_Detected"},
     {KeyboardInput_Update, "KeyboardInput_Update"},
     {DebugEvent_StateChanged, "DebugEvent_StateChanged"},
-    {CameraSystem_CameraChanged, "CameraSystem_CameraChanged"},
+    {CameraSystem_CameraUpdated, "CameraSystem_CameraUpdated"},
     {HitDetectionSystem_MeshHit, "HitDetectionSystem_MeshHit"},
     {InputSystem_CursorMoved, "InputSystem_CursorMoved"},
     {OS_FramebufferSizeChanged, "OS_FramebufferSizeChanged"}};
