@@ -299,7 +299,7 @@ static void render_update_range(void *job_params) {
     // Debug to see individual tiles
     scale.x = tc->scale;
     scale.y = tc->scale;
-    scale.z = 0.0f;
+    scale.z = 1.0f;
 
     Vec3f pos;
     pos.x = tc->pos.x;
@@ -327,11 +327,12 @@ static void render_update_range(void *job_params) {
     rd->render_layer = rc->render_layer;
 
     Vec3f axis = {0.f, 0.f, 1.f};
-    Mat4x4 matrix_scale;
-    mat4_identity(&matrix_scale);
 
     Mat4x4 matrix_translate;
     mat4_identity(&matrix_translate);
+
+    Mat4x4 matrix_scale;
+    mat4_identity(&matrix_scale);
 
     Mat4x4 matrix_rotate;
     mat4_identity(&matrix_rotate);
@@ -342,9 +343,9 @@ static void render_update_range(void *job_params) {
 
     Mat4x4 m;
     mat4_identity(&m);
+    m = mat4_mul(&m, &matrix_translate);
     m = mat4_mul(&m, &matrix_rotate);
     m = mat4_mul(&m, &matrix_scale);
-    m = mat4_mul(&m, &matrix_translate);
 
     rd->model_matrix = m;
   }

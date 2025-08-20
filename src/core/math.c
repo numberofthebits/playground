@@ -104,8 +104,22 @@ Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up) {
   Vec3f r = cross(&u, &d);
   Vec3f t = {vec3f_dot(pos, &r), vec3f_dot(pos, &u), vec3f_dot(pos, &d)};
 
-  Mat4x4 m = {{r.x, u.x, d.x, 0.0, r.y, u.y, d.y, 0.0, r.z, u.z, d.z, 0.0, -t.x,
-               -t.y, -t.z, 1.0}};
+  /*
+  Mat4x4 m = {{r.x, u.x, d.x, 0.0,
+               r.y, u.y, d.y, 0.0,
+               r.z, u.z, d.z, 0.0,
+               -t.x, -t.y, -t.z, 1.0}};
+  */
+  Mat4x4 m;
+  /* m.columns[0] = (Vec4f){r.x, r.y, r.z, -t.x}; */
+  /* m.columns[1] = (Vec4f){u.x, u.y, u.z, -t.y}; */
+  /* m.columns[2] = (Vec4f){d.x, d.y, d.z, -t.z}; */
+  /* m.columns[3] = (Vec4f){0.f, 0.f, 0.f, 1.f}; */
+  m.columns[0] = (Vec4f){.data = {r.x, u.x, d.x, 0.0}};
+  m.columns[1] = (Vec4f){.data = {r.y, u.y, d.y, 0.0}};
+  m.columns[2] = (Vec4f){.data = {r.z, u.z, d.z, 0.0}};
+  m.columns[3] = (Vec4f){.data = {-t.x, -t.y, -t.z, 1.0}};
+
   return m;
 }
 
@@ -147,12 +161,22 @@ Mat4x4 ortho(float near, float far, float right, float left, float top,
   Mat4x4 m;
   mat4_identity(&m);
 
-  m.data[0] = 2.f / (right - left); // diagonal
-  m.data[5] = 2.f / (top - bottom); // diagonal
-  m.data[10] = -2.f / (far - near); // diagonal
-  m.data[12] = -(right + left) / (right - left);
-  m.data[13] = -(top + bottom) / (top - bottom);
-  m.data[14] = -(far + near) / (far - near);
+  m.columns[0].x = 2.f / (right - left); // diagonal
+
+  m.columns[1].y = 2.f / (top - bottom); // diagonal
+
+  m.columns[2].z = -2.f / (far - near); // ?? not matching book p.91
+
+  m.columns[3].x = -(right + left) / (right - left);
+  m.columns[3].y = -(top + bottom) / (top - bottom);
+  m.columns[3].z = -(far + near) / (far - near);
+
+  /* m.data[0] = 2.f / (right - left); // diagonal */
+  /* m.data[5] = 2.f / (top - bottom); // diagonal */
+  /* m.data[10] = -2.f / (far - near); // diagonal */
+  /* m.data[12] = -(right + left) / (right - left); */
+  /* m.data[13] = -(top + bottom) / (top - bottom); */
+  /* m.data[14] = -(far + near) / (far - near); */
 
   return m;
 }
@@ -191,6 +215,8 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians) {
   mat->data[8] = xz * one_min_cos_r + axis->y * sin_r;
   mat->data[9] = yz * one_min_cos_r - axis->x * sin_r;
   mat->data[10] = z2 * one_min_cos_r + cos_r;
+
+  mat4_transpose(mat);
 }
 
 void mat4_transform(Mat4x4 *mat, Vec3f *axis, float angle, float scale,
@@ -243,44 +269,64 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
-inline float mat4_mul_intrin_impl(const float *col, const float *row) {
-  __m128 rcol = _mm_load_ps(col);
+inline float mat4_mul_intrin_impl(const Vec4f *row, const Vec4f *col) {
+  __m128 rcol = _mm_load_ps(&row->x);
 
-  __m128 rrow = _mm_load_ps(row);
+  __m128 rrow = _mm_load_ps(&col->x);
 
-  __m128 res = _mm_mul_ps(rcol, rrow);
+  __m128 res = _mm_mul_ps(rrow, rcol);
 
   // copy res upper to res lower, and
   // copy res upper to res upper
   res = _mm_hadd_ps(res, res);
   res = _mm_hadd_ps(res, res);
-  /* __m128 upper = _mm_movehl_ps(res, res); */
-  /* res = _mm_add_ps(res, upper); */
-  /* __m128 res2 = _mm_shuffle_ps(res, res, _MM_SHUFFLE(1, 0, 0, 0)); */
-  /* res = _mm_add_ss(upper, res2); */
 
   return _mm_cvtss_f32(res);
 }
 
 Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
-  Mat4x4 Tb = *b;
-  mat4_transpose(&Tb);
+  Vec4f a_rows[4];
+  a_rows[0] = (Vec4f){.x = a->columns[0].x,
+                      .y = a->columns[1].x,
+                      .z = a->columns[2].x,
+                      .w = a->columns[3].x};
+
+  a_rows[1] = (Vec4f){.x = a->columns[0].y,
+                      .y = a->columns[1].y,
+                      .z = a->columns[2].y,
+                      .w = a->columns[3].y};
+
+  a_rows[2] = (Vec4f){.x = a->columns[0].z,
+                      .y = a->columns[1].z,
+                      .z = a->columns[2].z,
+                      .w = a->columns[3].z};
+
+  a_rows[3] = (Vec4f){.x = a->columns[0].w,
+                      .y = a->columns[1].w,
+                      .z = a->columns[2].w,
+                      .w = a->columns[3].w};
 
   Mat4x4 m;
 
-  int index = 0;
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      /* float sum = 0.0f; */
-      /* for (int k = 0; k < 4; ++k) { */
-      /*   sum += a->data[i * 4 + k] * b->data[k * 4 + j]; */
-      /* } */
-      /* m.data[index] = sum; */
-      /* index += 1; */
+  m.columns[0].x = mat4_mul_intrin_impl(&a_rows[0], &b->columns[0]);
+  m.columns[0].y = mat4_mul_intrin_impl(&a_rows[1], &b->columns[0]);
+  m.columns[0].z = mat4_mul_intrin_impl(&a_rows[2], &b->columns[0]);
+  m.columns[0].w = mat4_mul_intrin_impl(&a_rows[3], &b->columns[0]);
 
-      m.data[index++] = mat4_mul_intrin_impl(&a->data[i * 4], &Tb.data[j * 4]);
-    }
-  }
+  m.columns[1].x = mat4_mul_intrin_impl(&a_rows[0], &b->columns[1]);
+  m.columns[1].y = mat4_mul_intrin_impl(&a_rows[1], &b->columns[1]);
+  m.columns[1].z = mat4_mul_intrin_impl(&a_rows[2], &b->columns[1]);
+  m.columns[1].w = mat4_mul_intrin_impl(&a_rows[3], &b->columns[1]);
+
+  m.columns[2].x = mat4_mul_intrin_impl(&a_rows[0], &b->columns[2]);
+  m.columns[2].y = mat4_mul_intrin_impl(&a_rows[1], &b->columns[2]);
+  m.columns[2].z = mat4_mul_intrin_impl(&a_rows[2], &b->columns[2]);
+  m.columns[2].w = mat4_mul_intrin_impl(&a_rows[3], &b->columns[2]);
+
+  m.columns[3].x = mat4_mul_intrin_impl(&a_rows[0], &b->columns[3]);
+  m.columns[3].y = mat4_mul_intrin_impl(&a_rows[1], &b->columns[3]);
+  m.columns[3].z = mat4_mul_intrin_impl(&a_rows[2], &b->columns[3]);
+  m.columns[3].w = mat4_mul_intrin_impl(&a_rows[3], &b->columns[3]);
 
   return m;
 }

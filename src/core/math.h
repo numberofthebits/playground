@@ -31,16 +31,22 @@ typedef struct {
 } Vec2d;
 
 typedef struct {
+
   float x;
   float y;
   float z;
 } Vec3f;
 
 typedef struct {
-  float x;
-  float y;
-  float z;
-  float w;
+  union {
+    float data[4];
+    struct {
+      float x;
+      float y;
+      float z;
+      float w;
+    };
+  };
 } Vec4f;
 
 typedef struct {
@@ -78,7 +84,11 @@ typedef struct {
 } Mat3x3;
 
 typedef struct Mat4x4 {
-  alignas(16) float data[16];
+  //  alignas(16) float data[16];
+  alignas(16) union {
+    Vec4f columns[4];
+    float data[16];
+  };
 } Mat4x4;
 
 typedef struct {

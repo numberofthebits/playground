@@ -6,9 +6,7 @@
 #include "systems.h"
 
 #include "core/allocators.h"
-#include "core/componentbase.h"
 #include "core/ecs.h"
-#include "core/log.h"
 #include "core/services.h"
 #include "core/systembase.h"
 
@@ -52,11 +50,10 @@ static inline void camera_movement_system_update(Registry *reg,
     cms->camera.position =
         clamp_camera_pos(&tc->pos, cms->world_size, &cms->camera);
 
-    /* Vec3f pos_neg = {-cms->camera.position.x, -cms->camera.position.y, -1.f};
-     */
-    /* (void)pos_neg; */
+    Vec3f pos_neg = {-cms->camera.position.x, -cms->camera.position.y, 1.f};
+    (void)pos_neg;
 
-    float f = 6.f;
+    float f = 4.f;
     Mat4x4 projection = ortho(1.0f, -1.0f, f, -f, f, -f);
     cms->camera.projection = projection;
 
@@ -65,10 +62,10 @@ static inline void camera_movement_system_update(Registry *reg,
     target.z = -1.f;
 
     Mat4x4 view = look_at(&cms->camera.position, &target, &up);
+    // Mat4x4 view = look_at(&pos_neg, &target, &up);
     cms->camera.view = view;
-    //    cms->camera.view = look_at(&pos_neg, &target, &up);
-    //    Mat4x4 view_projection = mat4_mul(&projection, &view);
-    Mat4x4 view_projection = mat4_mul(&view, &projection);
+
+    Mat4x4 view_projection = mat4_mul(&projection, &view);
     cms->camera.view_projection = view_projection;
 
     CameraUpdatedEventData event_data;

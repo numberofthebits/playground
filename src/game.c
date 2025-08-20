@@ -733,8 +733,8 @@ void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_component_add(registry, truck, PHYSICS_COMPONENT_BIT, &pc);
     registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
                                   &cc);
-    /* registry_entity_component_add(registry, truck, */
-    /*                               PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
+    registry_entity_component_add(registry, truck,
+                                  PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT, &hc);
 
     registry_entity_add(registry, truck);
@@ -753,8 +753,8 @@ void load_units(Registry *registry, struct Assets *assets) {
     registry_entity_component_add(registry, truck, COLLISION_COMPONENT_BIT,
                                   &cc);
     registry_entity_component_add(registry, truck, HEALTH_COMPONENT_BIT, &hc);
-    /* registry_entity_component_add(registry, truck, */
-    /*                               PROJECTILE_EMITTER_COMPONENT_BIT, &pec); */
+    registry_entity_component_add(registry, truck,
+                                  PROJECTILE_EMITTER_COMPONENT_BIT, &pec);
     registry_entity_add(registry, truck);
   }
 
