@@ -13,13 +13,15 @@
 
 #define MESH_INTERSECT_RAY_EPSILON 0.01f
 
-float vec2f_dot(Vec2f *a, Vec2f *b) { return a->x * b->x + a->y * b->y; }
+float vec2f_dot(Vec2f *restrict a, Vec2f *restrict b) {
+  return a->x * b->x + a->y * b->y;
+}
 
-float vec3f_dot(Vec3f *a, Vec3f *b) {
+float vec3f_dot(Vec3f *restrict a, Vec3f *restrict b) {
   return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-Vec3f cross(Vec3f *a, Vec3f *b) {
+Vec3f cross(Vec3f *restrict a, Vec3f *restrict b) {
   Vec3f result;
   result.x = a->y * b->z - a->z * b->y;
   result.y = a->z * b->x - a->x * b->z;
@@ -269,7 +271,8 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
-inline float mat4_mul_intrin_impl(const Vec4f *row, const Vec4f *col) {
+inline float mat4_mul_intrin_impl(const Vec4f *restrict row,
+                                  const Vec4f *restrict col) {
   __m128 rcol = _mm_load_ps(&row->x);
 
   __m128 rrow = _mm_load_ps(&col->x);
@@ -284,7 +287,7 @@ inline float mat4_mul_intrin_impl(const Vec4f *row, const Vec4f *col) {
   return _mm_cvtss_f32(res);
 }
 
-Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
+Mat4x4 mat4_mul(Mat4x4 *restrict a, Mat4x4 *restrict b) {
   Vec4f a_rows[4];
   a_rows[0] = (Vec4f){.x = a->columns[0].x,
                       .y = a->columns[1].x,
@@ -378,7 +381,7 @@ Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
   return result;
 }
 
-int intersect_rectf(Rectf *a, Rectf *b) {
+int intersect_rectf(Rectf *restrict a, Rectf *restrict b) {
   if (a->pos.x + a->width < b->pos.x || a->pos.x >= b->pos.x + b->width ||
       a->pos.y + a->height < b->pos.y || a->pos.y >= b->pos.y + b->height) {
     return 0;

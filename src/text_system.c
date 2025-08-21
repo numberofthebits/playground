@@ -87,8 +87,6 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
 
 void text_system_update(Registry *registry, struct SystemBase *sys,
                         size_t frame_nr) {
-
-  return;
   (void)frame_nr;
 
   TextSystem *system = (TextSystem *)sys;
@@ -107,9 +105,8 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 
   uint32_t num_glyphs = 0;
 
-  float sf = 1.f / 512.f;
+  float sf = 1.f / 32.f;
   Vec3f scale_factor = {sf, sf, 1.f};
-  (void)scale_factor;
 
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity entity = VEC_GET_T(&sys->entities, Entity, i);
@@ -125,13 +122,13 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
     (void)scale;
     mat4_identity(&translate);
     mat4_identity(&scale);
-    Vec3f pos_neg = {xform->pos.x, xform->pos.y, 0.f};
+    Vec3f pos_neg = {xform->pos.x, xform->pos.y, 1.f};
     (void)pos_neg;
     mat4_translate(&translate, &pos_neg);
     mat4_scale(&scale, &scale_factor);
 
-    Mat4x4 model = mat4_mul(&scale, &translate);
-    mat4_identity(&model);
+    Mat4x4 model = mat4_mul(&translate, &scale);
+    //    mat4_identity(&model);
 
     glUniformMatrix4fv(system->loc_model, 1, GL_FALSE, model.data);
 
@@ -140,6 +137,9 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 
     // Make quads. 4 vertices per quad. 6 indices to render them
     // as GL_TRIANGLES
+
+    /* float xpos = xform->pos.x; */
+    /* float ypos = xform->pos.y; */
 
     float xpos = 0.f;
     float ypos = 0.f;
@@ -171,9 +171,9 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_pos[0].y = quad.y1;
       vbo_pos[0].z = 0.f;
 
-      /* Vec4f a = {quad.x0, quad.y1, 0.f, 1.f}; */
-      /* Vec4f res = mat4_mul_vec(&model, &a); */
-      /* (void)res; */
+      Vec4f a = {.data = {quad.x0, quad.y1, 0.f, 1.f}};
+      Vec4f res = mat4_mul_vec(&model, &a);
+      (void)res;
 
       vbo_uv[0].x = quad.s0;
       vbo_uv[0].y = quad.t1;
@@ -229,13 +229,13 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
   renderer_unmap_vertex_buffer(&system->text_renderer, 1);
   renderer_unmap_vertex_buffer(&system->text_renderer, 2);
 
-  /* glDisable(GL_CULL_FACE); */
-  /* glDisable(GL_DEPTH_TEST); */
-  /* glEnable(GL_BLEND); */
-  /* glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); */
+  glDisable(GL_CULL_FACE);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // DrawElements takes number of indices, NOT number of primitives.
-  //  renderer_dispatch_indexed(&system->text_renderer, 0, num_glyphs * 6);
+  renderer_dispatch_indexed(&system->text_renderer, 0, num_glyphs * 6);
   (void)num_glyphs;
 }
 
@@ -387,5 +387,5 @@ void text_system_handle_camera_position_changed(struct SystemBase *system,
   TextSystem *text_sys = (TextSystem *)system;
   CameraUpdatedEventData *pos_changed_event = e.event_data;
 
-  text_sys->view_projection = pos_changed_event->projection;
+  text_sys->view_projection = pos_changed_event->view_projection;
 }

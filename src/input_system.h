@@ -8,7 +8,7 @@
 
 #define INPUT_SYSTEM_MAX_KEY_STATES 512
 
-typedef enum {
+typedef enum KeyFlags {
   KeyFlag_Released = 0x0,
   KeyFlag_Pressed = 0x1,
   // If IsToggle, pressed state is reset to
@@ -16,24 +16,24 @@ typedef enum {
   KeyFlag_IsOneShot = 0x2
 } KeyFlags;
 
-struct KeyState {
+typedef struct KeyState {
   KeyFlags flags;
-};
+} KeyState;
 
-struct KeyStateEventData {
+typedef struct KeyStateEventData {
   int key;
-};
+} KeyStateEventData;
 
-struct AggregatedKeyboardEvents {
+typedef struct AggregatedKeyboardEvents {
   size_t num_events;
   struct KeyStateEventData *events;
-};
+} AggregatedKeyboardEvents;
 
 typedef struct {
   Vec2u16 pos; // Position in screen pixels
 } Cursor;
 
-struct InputSystem {
+typedef struct InputSystem {
   struct SystemBase base;
 
   // Working data structure for callbacks from OS
@@ -43,14 +43,14 @@ struct InputSystem {
   struct KeyStateEventData events[INPUT_SYSTEM_MAX_KEY_STATES];
 
   Cursor cursor;
-};
+} InputSystem;
 
 struct InputSystem *input_system_create(Services *services);
 
-void input_system_handle_keyboard_input(struct InputSystem *input_system,
-                                        int key, int action);
+void input_system_handle_keyboard_input(InputSystem *input_system, int key,
+                                        int action);
 
-void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
+void input_system_set_cursor_pos(InputSystem *input_system, uint16_t x,
                                  uint16_t y, uint16_t framebuffer_width,
                                  uint16_t framebuffer_height);
 

@@ -27,15 +27,15 @@ struct InputSystem *input_system_create(Services *services) {
   return system;
 }
 
-static inline void input_system_reset(struct InputSystem *system) {
+static inline void input_system_reset(InputSystem *system) {
   memset(system->events, 0x0, sizeof(system->events));
 }
 
-static inline void clear_key_pressed_flag(struct KeyState *state) {
+static inline void clear_key_pressed_flag(KeyState *state) {
   state->flags &= ~KeyFlag_Pressed;
 }
 
-void input_system_handle_keyboard_input(struct InputSystem *system, int key,
+void input_system_handle_keyboard_input(InputSystem *system, int key,
                                         int action) {
   // TODO: is there still some jank in this function, or
   // the update function or between the two? When pressing
@@ -55,7 +55,7 @@ void input_system_handle_keyboard_input(struct InputSystem *system, int key,
   }
 }
 
-void input_system_set_cursor_pos(struct InputSystem *input_system, uint16_t x,
+void input_system_set_cursor_pos(InputSystem *input_system, uint16_t x,
                                  uint16_t y, uint16_t framebuffer_width,
                                  uint16_t framebuffer_height) {
   if (x == input_system->cursor.pos.x && y == input_system->cursor.pos.y) {

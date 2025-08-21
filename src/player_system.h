@@ -14,14 +14,14 @@
 #define PLAYER_SYSTEM_DIRECTION_AXIS_X_INDEX 0
 #define PLAYER_SYSTEM_DIRECTION_AXIS_Y_INDEX 1
 
-struct PlayerSystem {
+typedef struct PlayerSystem {
   struct SystemBase base;
 
   // 4 Axes of keyboard movement
   float movement[2];
   float angle;
   uint16_t bullets_spawned;
-};
+} PlayerSystem;
 
 struct PlayerSystem *player_system_create(Services *services);
 

@@ -14,7 +14,22 @@
 
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
-static Vec2f BULLET_VELOCITY = {0.1f, 0.1f};
+static Vec2f PLAYER_SYSTEM_PLAYER_VELOCITY_MAX = {0.05f, 0.05f};
+static Vec2f PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT = {0.1f, 0.1f};
+
+static Vec2f clamp_velocity(Vec2f v, Vec2f max) {
+  Vec2f clamped = v;
+  if (v.x < -max.x)
+    clamped.x = -max.x;
+  if (v.y < -max.y)
+    clamped.y = -max.y;
+  if (v.x > max.x)
+    clamped.x = max.x;
+  if (v.y > max.y)
+    clamped.y = max.y;
+
+  return clamped;
+}
 
 void player_system_reset(struct PlayerSystem *system) {
   memset(system->movement, 0x0, sizeof(system->movement));
@@ -52,8 +67,8 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   tc.rotation = 0.f;
 
   PhysicsComponent pc = {0};
-  pc.velocity.x = projectile_dir.x * BULLET_VELOCITY.x;
-  pc.velocity.y = projectile_dir.y * BULLET_VELOCITY.y;
+  pc.velocity.x = projectile_dir.x * PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT.x;
+  pc.velocity.y = projectile_dir.y * PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT.y;
 
   RenderComponent rc;
   rc.render_layer = 1;
@@ -115,14 +130,18 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
     pc->velocity.y +=
         player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX];
 
+    pc->velocity =
+        clamp_velocity(pc->velocity, PLAYER_SYSTEM_PLAYER_VELOCITY_MAX);
+
     tc->rotation = player_system->angle;
   }
 
   player_system_reset(player_system);
 }
 
-static void player_system_handle_keyboard_update(
-    struct PlayerSystem *sys, struct AggregatedKeyboardEvents *event_data) {
+static void
+player_system_handle_keyboard_update(PlayerSystem *sys,
+                                     AggregatedKeyboardEvents *event_data) {
   for (size_t i = 0; i < event_data->num_events; ++i) {
 
     struct KeyStateEventData key_state = event_data->events[i];
