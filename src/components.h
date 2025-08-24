@@ -121,9 +121,14 @@ typedef struct {
   Mesh mesh;
 } MeshComponent;
 
+#define TEXT_COMPONENT_FLAG_SCREEN_SPACE 0x1
+
 typedef struct TextComponent {
   const char *text;
   uint32_t len;
+  Vec4u8 color;
+  float scale_factor;
+  int flags;
 } TextComponent;
 
 // Our "user defined" component table. We feed this
@@ -180,6 +185,7 @@ static const struct Component component_table[] = {
      .size = sizeof(ProjectileComponent),
      .alignment = sizeof(ProjectileComponent),
      .name = "ProjectileComponent"},
+
     {.flag = HEALTH_COMPONENT_BIT,
      .size = sizeof(HealthComponent),
      .alignment = alignof(HealthComponent),

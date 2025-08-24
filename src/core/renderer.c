@@ -133,26 +133,21 @@ void renderer_init(struct Renderer *renderer,
 
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, renderer->multi_draw_indirect_buffer);
 
+  GLuint multi_draw_indirect_buffer_size =
+      sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS;
+
+  glNamedBufferStorage(renderer->multi_draw_indirect_buffer,
+                       multi_draw_indirect_buffer_size, NULL,
+                       GL_DYNAMIC_STORAGE_BIT);
+
   if (params->index_buffer_size) {
-    GLuint buffer_size =
-        sizeof(DrawElementsIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS;
-    glNamedBufferStorage(renderer->multi_draw_indirect_buffer, buffer_size,
-                         NULL, GL_DYNAMIC_STORAGE_BIT);
-
     // Binding should not be necessary
-
     glVertexArrayElementBuffer(renderer->vertex_array_object,
                                renderer->element_array_buffer);
 
     glNamedBufferStorage(renderer->element_array_buffer,
                          params->index_buffer_size, 0,
                          GL_DYNAMIC_STORAGE_BIT | GL_MAP_WRITE_BIT);
-  } else {
-    GLuint buffer_size =
-        sizeof(DrawArraysIndirectCommand) * MAX_DRAW_INDIRECT_DRAW_COMMANDS;
-    glNamedBufferStorage(renderer->multi_draw_indirect_buffer,
-                         buffer_size * MAX_DRAW_INDIRECT_DRAW_COMMANDS, NULL,
-                         GL_DYNAMIC_STORAGE_BIT);
   }
 
   CHECK_GL_ERROR();
@@ -163,6 +158,8 @@ void renderer_init(struct Renderer *renderer,
 void renderer_use(struct Renderer *renderer) {
   glBindVertexArray(renderer->vertex_array_object);
 
+  glBindBuffer(GL_DRAW_INDIRECT_BUFFER, renderer->multi_draw_indirect_buffer);
+
   for (int i = 0; i < SSBO_MAX; ++i) {
     glBindBufferBase(
         GL_SHADER_STORAGE_BUFFER,
@@ -170,6 +167,8 @@ void renderer_use(struct Renderer *renderer) {
         renderer->shader_storage_buffer_objects.buffer_object[i]);
   }
 
+  glVertexArrayElementBuffer(renderer->vertex_array_object,
+                             renderer->element_array_buffer);
   // Note: There's probably other relevant state that isn't implicitly bound via
   // vertex array object.
 }

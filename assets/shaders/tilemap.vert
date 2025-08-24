@@ -18,8 +18,6 @@ struct DrawData {
 
 layout(std430, binding = 18) buffer DrawDataBuffer { DrawData draw_data[]; };
 
-// uniform mat4 View;
-// uniform mat4 Proj;
 uniform mat4 ViewProj;
 
 void main() {

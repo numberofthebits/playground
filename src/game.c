@@ -801,12 +801,15 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     CameraMovementComponent cmc = {0};
 
-    HealthComponent hc;
+    HealthComponent hc = {0};
     hc.health = 100;
 
     TextComponent text;
-    text.text = "Expressway to hell!";
+    text.text = "Text follows Player 1";
     text.len = strlen(text.text);
+    text.flags = 0;
+    text.scale_factor = 1.f;
+    text.color = (Vec4u8){.r = 0, .g = 0, .b = 255, .a = 255};
 
     registry_entity_component_add(registry, chopper, RENDER_COMPONENT_BIT, &rc);
     registry_entity_component_add(registry, chopper, TRANSFORM_COMPONENT_BIT,
@@ -827,6 +830,29 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     registry_entity_tag(registry, chopper, "player");
   }
+
+  Entity level_overlay = registry_entity_create(registry);
+
+  TextComponent text = {0};
+  text.text = "OVERLAY TEXT Level 1";
+  text.len = strlen(text.text);
+  text.flags |= TEXT_COMPONENT_FLAG_SCREEN_SPACE;
+  text.scale_factor = 1.f;
+  text.color = (Vec4u8){.r = 0.f, .g = 255.f, .b = 0.f, .a = 255.f};
+
+  TransformComponent xform = {0};
+  xform.pos.x = 0.0f;
+  xform.pos.y = 0.0f;
+  xform.pos.z = 0.0f;
+  xform.scale = 1.f;
+  xform.rotation = 0.f;
+
+  registry_entity_component_add(registry, level_overlay, TEXT_COMPONENT_BIT,
+                                &text);
+  registry_entity_component_add(registry, level_overlay,
+                                TRANSFORM_COMPONENT_BIT, &xform);
+
+  registry_entity_add(registry, level_overlay);
 }
 
 static void game_load_level_assets(Game *game, LevelAssets *level_assets) {

@@ -15,11 +15,11 @@ typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
 
 /* SystemBase defines invariants for concrete systems such that
    the entity component system (ECS) can work with systems in a general manner.
-   Systembase describes which entities are interesting for a concrete system,
+   SystemBase describes which entities are interesting for a concrete system,
    and tracks which entities are registered in the system.
 
    Each system is identified by a bit flag 'flag'. This is just an integer,
-   because we don't want anything in core to know about concrete systems.
+   because we don't want anything in core to know about specific systems.
  */
 struct SystemBase {
   // The signature is a bitwise OR'ed set of component flags
@@ -30,7 +30,7 @@ struct SystemBase {
 
   // The ECS calls this when it's time to update systems.
   // TODO: Is this abstraction just for the sake of abstraction?
-  //       How is this better than a hardcoded list of concrete system
+  //       How is this better than a hardcoded list of specific system
   //       calling each update function in turn. A hard coded list would allow
   //       each concrete system to take the parameters it needs to update,
   //       instead of the update callback parameters becoming the set of all
@@ -43,8 +43,8 @@ struct SystemBase {
   // Human readable name of the system. Makes logs more readable.
   const char *name;
 
-  int flag; /*SystemBit*/
-  int evaluation_order;
+  int flag;             /*SystemBit*/
+  int evaluation_order; // unused
 };
 typedef struct SystemBase SystemBase;
 

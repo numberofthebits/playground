@@ -54,20 +54,12 @@ typedef struct {
   Vec4u8 color;
 } Material;
 
-typedef struct {
-  Mat4x4 model;                // 64 bytes
-  Vec2f tex_coord_offset;      // 8 bytes
-  Vec2f tex_coord_scale;       // 8 bytes
-  unsigned int material_index; // 4 bytes
-  char padding[4];
-} DrawCommandDataTiled;
-
-typedef struct DrawCommandData {
-  Mat4x4 model;
-  Vec2u32 tile_tex_index;
-  Vec2u32 tile_tex_size;
-  unsigned int material_index;
-} DrawCommandData;
+/* typedef struct DrawCommandData { */
+/*   Mat4x4 model; */
+/*   Vec2u32 tile_tex_index; */
+/*   Vec2u32 tile_tex_size; */
+/*   unsigned int material_index; */
+/* } DrawCommandData; */
 
 struct Framebuffer {
   uint16_t width;

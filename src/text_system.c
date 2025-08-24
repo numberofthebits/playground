@@ -92,62 +92,76 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
   TextSystem *system = (TextSystem *)sys;
 
   renderer_use(&system->text_renderer);
+
   glUseProgram(system->program_id);
+
+  /* glUniformMatrix4fv(system->loc_viewproj, 1, GL_FALSE, */
+  /*                    system->view_projection_matrix.data); */
+
+  /* glUniformMatrix4fv(system->loc_view, 1, GL_FALSE,
+   * system->view_matrix.data); */
+
   glUniformMatrix4fv(system->loc_proj, 1, GL_FALSE,
-                     system->view_projection.data);
+                     system->projection_matrix.data);
 
   Pool *text_pool = registry_get_pool(registry, TEXT_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
 
   Vec3f *vbo_pos = renderer_map_vertex_buffer(&system->text_renderer, 0);
   Vec2f *vbo_uv = renderer_map_vertex_buffer(&system->text_renderer, 1);
-  Vec3f *vbo_col = renderer_map_vertex_buffer(&system->text_renderer, 2);
 
-  uint32_t num_glyphs = 0;
-
-  float sf = 1.f / 32.f;
+  float sf = 1.f / 50.f;
   Vec3f scale_factor = {sf, sf, 1.f};
+  uint32_t num_glyphs_total = 0;
 
   for (int i = 0; i < sys->entities.size; ++i) {
+
+    DrawElementsIndirectCommand *draw_command = &system->draw_commands[i];
+    DrawCommandDataText *draw_command_data = &system->draw_command_data[i];
+
     Entity entity = VEC_GET_T(&sys->entities, Entity, i);
+
     TextComponent *tc =
         PoolGetComponent(text_pool, TextComponent, entity.index);
     TransformComponent *xform =
         PoolGetComponent(transform_pool, TransformComponent, entity.index);
-    (void)xform;
 
     Mat4x4 translate;
     Mat4x4 scale;
-    (void)translate;
-    (void)scale;
     mat4_identity(&translate);
     mat4_identity(&scale);
-    Vec3f pos_neg = {xform->pos.x, xform->pos.y, 1.f};
-    (void)pos_neg;
-    mat4_translate(&translate, &pos_neg);
+
+    Vec3f pos = {0};
+
+    if (tc->flags & TEXT_COMPONENT_FLAG_SCREEN_SPACE) {
+      pos = (Vec3f){.x = 0.f, .y = 3.f, .z = 0.f};
+      mat4_identity(&draw_command_data->view_matrix);
+    } else {
+      pos = (Vec3f){.x = xform->pos.x, .y = xform->pos.y, 0.f};
+      draw_command_data->view_matrix = system->view_matrix;
+    }
+
+    mat4_translate(&translate, &pos);
     mat4_scale(&scale, &scale_factor);
 
-    Mat4x4 model = mat4_mul(&translate, &scale);
-    //    mat4_identity(&model);
-
-    glUniformMatrix4fv(system->loc_model, 1, GL_FALSE, model.data);
+    draw_command_data->model_matrix = mat4_mul(&translate, &scale);
+    draw_command_data->color = tc->color;
 
     // Quad uses top left and bottom right convention
     stbtt_aligned_quad quad = {0};
 
-    // Make quads. 4 vertices per quad. 6 indices to render them
-    // as GL_TRIANGLES
-
-    /* float xpos = xform->pos.x; */
-    /* float ypos = xform->pos.y; */
-
     float xpos = 0.f;
     float ypos = 0.f;
 
-    for (uint32_t c = 0; c < tc->len; ++c) {
+    // Make quads. 4 vertices per quad. 6 indices to render them
+    // as GL_TRIANGLES. GL_QUADS doesn't exist in 4.6 core.
+    // NOTE: Could use triangle strip or fan to reduce number of indices to 4
+    uint32_t num_glyphs = 0;
+
+    for (; num_glyphs < tc->len; ++num_glyphs) {
       stbtt_GetPackedQuad(packed_chars, TEXT_SYSTEM_ATLAS_PX_WIDTH,
-                          TEXT_SYSTEM_ATLAS_PX_HEIGHT, tc->text[c], &xpos,
-                          &ypos, &quad, 0);
+                          TEXT_SYSTEM_ATLAS_PX_HEIGHT, tc->text[num_glyphs],
+                          &xpos, &ypos, &quad, 0);
 
       /* quad.x0 *= 1.f / 800.f; */
       /* quad.y0 *= 1.f / 800.f; */
@@ -171,16 +185,8 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_pos[0].y = quad.y1;
       vbo_pos[0].z = 0.f;
 
-      Vec4f a = {.data = {quad.x0, quad.y1, 0.f, 1.f}};
-      Vec4f res = mat4_mul_vec(&model, &a);
-      (void)res;
-
       vbo_uv[0].x = quad.s0;
       vbo_uv[0].y = quad.t1;
-
-      vbo_col[0].x = 1.f;
-      vbo_col[0].y = 1.f;
-      vbo_col[0].z = 1.f;
 
       // Upper left
       vbo_pos[1].x = quad.x0;
@@ -190,10 +196,6 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_uv[1].x = quad.s0;
       vbo_uv[1].y = quad.t0;
 
-      vbo_col[1].x = 1.f;
-      vbo_col[1].y = 1.f;
-      vbo_col[1].z = 1.f;
-
       // Lower Right
       vbo_pos[2].x = quad.x1;
       vbo_pos[2].y = quad.y0;
@@ -201,10 +203,6 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 
       vbo_uv[2].x = quad.s1;
       vbo_uv[2].y = quad.t0;
-
-      vbo_col[2].x = 1.f;
-      vbo_col[2].y = 1.f;
-      vbo_col[2].z = 1.f;
 
       // Upper Right
       vbo_pos[3].x = quad.x1;
@@ -214,42 +212,58 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       vbo_uv[3].x = quad.s1;
       vbo_uv[3].y = quad.t1;
 
-      vbo_col[3].x = 1.f;
-      vbo_col[3].y = 1.f;
-      vbo_col[3].z = 1.f;
-
       vbo_pos += 4;
       vbo_uv += 4;
-      vbo_col += 4;
-      ++num_glyphs;
     }
+
+    draw_command->base_instance = 0;
+    draw_command->base_vertex = 0;
+    draw_command->instance_count = 1;
+    draw_command->count = num_glyphs * 6;
+    draw_command->first_index = num_glyphs_total * 6;
+
+    num_glyphs_total += num_glyphs;
   }
 
   renderer_unmap_vertex_buffer(&system->text_renderer, 0);
   renderer_unmap_vertex_buffer(&system->text_renderer, 1);
-  renderer_unmap_vertex_buffer(&system->text_renderer, 2);
 
-  glDisable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
+  /* glDisable(GL_CULL_FACE); */
+  /* glDisable(GL_DEPTH_TEST); */
   glEnable(GL_BLEND);
   glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+  CHECK_GL_ERROR();
+  glNamedBufferSubData(system->text_renderer.multi_draw_indirect_buffer, 0,
+                       sizeof(DrawElementsIndirectCommand) * sys->entities.size,
+                       system->draw_commands);
+  CHECK_GL_ERROR();
+
+  glNamedBufferSubData(
+      system->text_renderer.shader_storage_buffer_objects.buffer_object[0], 0,
+      sizeof(DrawCommandDataText) * sys->entities.size,
+      system->draw_command_data);
+  CHECK_GL_ERROR();
+
   // DrawElements takes number of indices, NOT number of primitives.
-  renderer_dispatch_indexed(&system->text_renderer, 0, num_glyphs * 6);
-  (void)num_glyphs;
+  //  renderer_dispatch_indexed(&system->text_renderer, 0, sys->entities.size);
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, 0, // *indirect *
+                              sys->entities.size,
+                              sizeof(DrawElementsIndirectCommand));
+  CHECK_GL_ERROR();
 }
 
 TextSystem *text_system_create(Services *services) {
   TextSystem *system =
       ArenaAlloc(&global_static_allocator, 1, struct TextSystem);
 
-  system_base_init(
-      (struct SystemBase *)system, TEXT_SYSTEM_BIT, &text_system_update,
-      TEXT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services, "TextSystem");
+  system_base_init((struct SystemBase *)system, TEXT_SYSTEM_BIT,
+                   &text_system_update, TEXT_COMPONENT_BIT, services,
+                   "TextSystem");
 
   system->base.services = *services;
 
-  struct VertexAttributeDescriptor attrib_desc[3];
+  struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
   attrib_desc[0].element_count = 3;
   attrib_desc[0].element_type = GL_FLOAT;
@@ -262,13 +276,7 @@ TextSystem *text_system_create(Services *services) {
   attrib_desc[1].normalize = GL_FALSE;
   attrib_desc[1].relative_offset = 0;
 
-  attrib_desc[2].vertex_attribute = 2;
-  attrib_desc[2].element_count = 3;
-  attrib_desc[2].element_type = GL_FLOAT;
-  attrib_desc[2].normalize = GL_FALSE;
-  attrib_desc[2].relative_offset = 0;
-
-  struct BindingPointDescriptor bp_desc[3];
+  struct BindingPointDescriptor bp_desc[2];
   bp_desc[0].attrib_descriptors = &attrib_desc[0];
   bp_desc[0].num_attrib_descriptors = 1;
   bp_desc[0].binding_point_index = 0;
@@ -281,21 +289,12 @@ TextSystem *text_system_create(Services *services) {
   bp_desc[1].offset = 0;
   bp_desc[1].stride = sizeof(float) * 2;
 
-  bp_desc[2].attrib_descriptors = &attrib_desc[2];
-  bp_desc[2].num_attrib_descriptors = 1;
-  bp_desc[2].binding_point_index = 2;
-  bp_desc[2].offset = 0;
-  bp_desc[2].stride = sizeof(float) * 3;
-
-  struct VertexBufferDescriptor vb_desc[3];
+  struct VertexBufferDescriptor vb_desc[2];
   vb_desc[0].binding_descriptors = &bp_desc[0];
   vb_desc[0].binding_point_count = 1;
 
   vb_desc[1].binding_descriptors = &bp_desc[1];
   vb_desc[1].binding_point_count = 1;
-
-  vb_desc[2].binding_descriptors = &bp_desc[2];
-  vb_desc[2].binding_point_count = 1;
 
   const size_t num_vertices =
       TEXT_SYSTEM_GLYPH_MAX_PER_DRAW_CALL * TEXT_SYSTEM_GLYPH_VERTEX_COUNT;
@@ -311,6 +310,11 @@ TextSystem *text_system_create(Services *services) {
   renderer_params.buffer_descriptors = vb_desc;
 
   renderer_init(&system->text_renderer, &renderer_params);
+
+  // Draw command aux data
+  renderer_ssbo_create(&system->text_renderer, 0, BO_INDEX_DRAW_COMMAND_DATA,
+                       MAX_DRAW_INDIRECT_DRAW_COMMANDS *
+                           sizeof(DrawCommandDataText));
 
   uint16_t *index_buffer =
       renderer_map_element_array_buffer(&system->text_renderer);
@@ -364,18 +368,7 @@ TextSystem *text_system_create(Services *services) {
   glUniformHandleui64ARB(loc_font_atlas, handle_font_atlas_texture);
   CHECK_GL_ERROR();
 
-  system->loc_proj = glGetUniformLocation(system->program_id, "ViewProj");
-  system->loc_model = glGetUniformLocation(system->program_id, "Model");
-  /* Mat4x4 proj = ortho(1.f, -1.f, 400, -400, -400, 400); */
-
-  /* Mat4x4 scale; */
-  /* mat4_identity(&scale); */
-
-  /* Vec3f scale_factor = {.x = 1.f / 800.f, .y = 1.f / 800.f, .z = 0.f}; */
-  /* mat4_scale(&scale, &scale_factor); */
-
-  /* Mat4x4 lol = mat4_mul(&proj, &scale); */
-  /* (void)lol; */
+  system->loc_proj = glGetUniformLocation(system->program_id, "Proj");
 
   CHECK_GL_ERROR();
   return system;
@@ -387,5 +380,7 @@ void text_system_handle_camera_position_changed(struct SystemBase *system,
   TextSystem *text_sys = (TextSystem *)system;
   CameraUpdatedEventData *pos_changed_event = e.event_data;
 
-  text_sys->view_projection = pos_changed_event->view_projection;
+  text_sys->view_projection_matrix = pos_changed_event->view_projection;
+  text_sys->view_matrix = pos_changed_event->view;
+  text_sys->projection_matrix = pos_changed_event->projection;
 }

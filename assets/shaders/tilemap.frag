@@ -19,7 +19,7 @@ vec4 uint_to_rgba(uint val) {
   float r = float((val & 0x000000ff));
   float g = float((val & 0x0000ff00) >> 8);
   float b = float((val & 0x00ff0000) >> 16);
-  float a = float((val & 0xff000000) >> 24); // TODO: multipled by 'b'??
+  float a = float((val & 0xff000000) >> 24);
   return vec4(r, g, b, a) / 255.0;
 };
 

@@ -13,11 +13,6 @@
 
 #include <stdint.h>
 
-typedef struct {
-  Vec program_ids;
-  Vec material_ids;
-} PreparedResources;
-
 typedef struct OrthoCamera {
   Mat4x4 projection;
   Mat4x4 view;
@@ -27,11 +22,18 @@ typedef struct OrthoCamera {
   float scale;
 } OrthoCamera;
 
+typedef struct {
+  Mat4x4 model;                // 64 bytes
+  Vec2f tex_coord_offset;      // 8 bytes
+  Vec2f tex_coord_scale;       // 8 bytes
+  unsigned int material_index; // 4 bytes
+  char padding[4];
+} DrawCommandDataTiled;
+
 struct RenderSystem {
   struct SystemBase base;
   DrawElementsIndirectCommand
       draw_commands_elements[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
-  DrawArraysIndirectCommand draw_commands_arrays;
   DrawCommandDataTiled draw_command_data[MAX_DRAW_INDIRECT_DRAW_COMMANDS];
   HashMap material_asset_index_mapping;
   HashMap textures;
