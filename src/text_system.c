@@ -245,6 +245,8 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
       system->draw_command_data);
   CHECK_GL_ERROR();
 
+  renderer_multi_draw_elements_indirect(&system->text_renderer,
+                                        sys->entities.size);
   // DrawElements takes number of indices, NOT number of primitives.
   //  renderer_dispatch_indexed(&system->text_renderer, 0, sys->entities.size);
   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, 0, // *indirect *

@@ -489,7 +489,7 @@ void map_load(Game *game, AssetId asset_id) {
       Entity e = registry_entity_create(registry);
 
       TransformComponent tc = {0};
-      tc.scale = 0.95f;
+      tc.scale = 1.f;
       tc.pos.x = col;
       tc.pos.y = row;
       tc.pos.z = 0.0f;
@@ -713,10 +713,8 @@ void load_units(Registry *registry, struct Assets *assets) {
     pc.velocity.y = 0.f;
 
     CollisionComponent cc;
-    cc.aabr.pos.x = 0.f;
-    cc.aabr.pos.y = 0.f;
-    cc.aabr.width = 1.f;
-    cc.aabr.height = 1.f;
+    cc.width = 1.f;
+    cc.height = 1.f;
 
     ProjectileEmitterComponent pec;
     pec.emission_frequency = time_from_secs(1);
@@ -789,15 +787,12 @@ void load_units(Registry *registry, struct Assets *assets) {
     ac.num_frames_width = 2;
     ac.num_frames_height = 4;
     ac.is_playing = 1;
-    ac.last_offset = 0.f;
 
     InputComponent ic = {0};
 
     CollisionComponent cc;
-    cc.aabr.pos.x = 0.f;
-    cc.aabr.pos.y = 0.f;
-    cc.aabr.width = 1.f;
-    cc.aabr.height = 1.f;
+    cc.width = 1.f;
+    cc.height = 1.f;
 
     CameraMovementComponent cmc = {0};
 

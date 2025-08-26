@@ -24,9 +24,11 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
     TransformComponent *self_transform =
         PoolGetComponent(transform_pool, TransformComponent, self.index);
 
-    Rectf self_rect = self_collision->aabr;
-    self_rect.pos.x += self_transform->pos.x;
-    self_rect.pos.y += self_transform->pos.y;
+    Rectf self_rect = {.pos = {self_transform->pos.x, self_transform->pos.y},
+                       .width = self_collision->width,
+                       .height = self_collision->height};
+    /* self_rect.pos.x += self_transform->pos.x; */
+    /* self_rect.pos.y += self_transform->pos.y; */
 
     for (int j = i; j < sys->entities.size; ++j) {
       Entity other = entities[j];
@@ -40,9 +42,12 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
       TransformComponent *other_transform =
           PoolGetComponent(transform_pool, TransformComponent, other.index);
 
-      Rectf other_rect = other_collision->aabr;
-      other_rect.pos.x += other_transform->pos.x;
-      other_rect.pos.y += other_transform->pos.y;
+      Rectf other_rect = {
+          .pos = {.x = other_transform->pos.x, .y = other_transform->pos.y},
+          .width = other_collision->width,
+          .height = other_collision->height};
+      /* other_rect.pos.x += other_transform->pos.x; */
+      /* other_rect.pos.y += other_transform->pos.y; */
 
       if (intersect_rectf(&self_rect, &other_rect)) {
         struct CollisionDetectedEvent event;

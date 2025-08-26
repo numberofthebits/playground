@@ -134,19 +134,6 @@ static GLuint get_program_handle_by_name(RenderSystem *system,
   return get_program_handle_by_asset_id(system, asset_id);
 }
 
-static void render_batch(RenderSystem *system, unsigned int batch_size) {
-  if (!batch_size) {
-    return;
-  }
-
-  (void)system;
-  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT,
-                              0, // *indirect *
-                              batch_size, sizeof(DrawElementsIndirectCommand));
-
-  CHECK_GL_ERROR();
-}
-
 static GLint get_uniform_location_checked(GLuint program, const char *name) {
   GLint loc = glGetUniformLocation(program, name);
   CHECK_GL_ERROR();
@@ -198,20 +185,11 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
   glUseProgram(system->program_handle);
   CHECK_GL_ERROR();
 
-  /* system->loc_view = */
-  /*     get_uniform_location_checked(system->program_handle, "View"); */
-  /* system->loc_projection = */
-  /*     get_uniform_location_checked(system->program_handle, "Proj"); */
   system->loc_view_projection =
       get_uniform_location_checked(system->program_handle, "ViewProj");
 
   glUniformMatrix4fv(system->loc_view_projection, 1, GL_FALSE,
                      system->camera.view_projection.data);
-
-  /* glUniformMatrix4fv(system->loc_view, 1, GL_FALSE,
-   * system->camera.view.data); */
-  /* glUniformMatrix4fv(system->loc_projection, 1, GL_FALSE, */
-  /*                    system->camera.projection.data); */
 
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER,
                system->tile_renderer->multi_draw_indirect_buffer);
@@ -252,6 +230,8 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
   }
 
   CHECK_GL_ERROR();
+  glBeginQuery(GL_TIME_ELAPSED, system->query_time_elapsed);
+
   glNamedBufferSubData(system->tile_renderer->multi_draw_indirect_buffer, 0,
                        sizeof(DrawElementsIndirectCommand) * count_in_batch,
                        system->draw_commands_elements);
@@ -269,14 +249,21 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
 
   CHECK_GL_ERROR();
 
-  // Dispatch the final batch
-  render_batch(system, count_in_batch);
+  glEndQuery(GL_TIME_ELAPSED);
+  GLint time_elapsed_ns = -1;
+  glGetQueryObjectiv(system->query_time_elapsed, GL_QUERY_RESULT,
+                     &time_elapsed_ns);
+
+  LOG_INFO("named buffer sub data elapsed ns %d", time_elapsed_ns);
+
+  renderer_multi_draw_elements_indirect(system->tile_renderer, count_in_batch);
 }
 
 typedef struct {
   Entity *entities;
   Pool *transform_pool;
   Pool *render_pool;
+  Pool *tile_pool;
   RenderData *render_data;
   int begin;
   int end;
@@ -288,6 +275,7 @@ static void render_update_range(void *job_params) {
   LOG_INFO("Processing range [%d,%d>", range_args->begin, range_args->end);
   for (int i = range_args->begin; i < range_args->end; ++i) {
     Entity entity = range_args->entities[i];
+
     TransformComponent *tc = PoolGetComponent(range_args->transform_pool,
                                               TransformComponent, entity.index);
     RenderComponent *rc = PoolGetComponent(range_args->render_pool,
@@ -296,7 +284,8 @@ static void render_update_range(void *job_params) {
     RenderData *rd = &range_args->render_data[i];
 
     Vec3f scale;
-    // Debug to see individual tiles
+
+    // Scale <1.f to see individual map tiles
     scale.x = tc->scale;
     scale.y = tc->scale;
     scale.z = 1.0f;
@@ -523,10 +512,10 @@ static struct Renderer *create_tile_renderer() {
   renderer_init(tile_renderer, &tile_params);
 
   float pos_data[] = {
-      0.f, 0.f, 0.0f, // lower left
-      1.f, 0.f, 0.0f, // lower right
-      1.f, 1.f, 0.0f, // upper right
-      0.f, 1.f, 0.0f, // upper left
+      -0.5f, -0.5f, 0.0f, // lower left
+      0.5f,  -0.5f, 0.0f, // lower right
+      0.5f,  0.5f,  0.0f, // upper right
+      -0.5f, 0.5f,  0.0f, // upper left
   };
 
   float uv_data[] = {
@@ -674,7 +663,9 @@ RenderSystem *render_system_create(Services *services, int window_w,
   render_system_framebuffer_size_changed(system, system->main_framebuffer.width,
                                          system->main_framebuffer.height);
 
-  LOG_INFO("Created render system implementation");
+  glCreateQueries(GL_TIME_ELAPSED, 1, &system->query_time_elapsed);
+
+  LOG_INFO("Created tile renderer");
 
   return system;
 }
@@ -943,7 +934,8 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
   renderer_use(system->debug_renderer);
   CHECK_GL_ERROR();
 
-  GLuint program_handle = get_program_handle_by_name(system, "collision_debug");
+  GLuint program_handle =
+      get_program_handle_by_name(system, "collision_debug.prog");
   glUseProgram(program_handle);
   CHECK_GL_ERROR();
 
@@ -962,48 +954,44 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
     Entity e = VEC_GET_T(&system->base.entities, Entity, i);
 
     // Skip anything that doesn't have at least a collision component
-    if (registry_entity_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
-      CollisionComponent *cc =
-          PoolGetComponent(collision_pool, CollisionComponent, e.index);
-      Vec3f pos[4] = {0};
-      float width = cc->aabr.width;
-      float height = cc->aabr.height;
-
-      pos[0].x = cc->aabr.pos.x;
-      pos[0].y = cc->aabr.pos.y;
-      pos[0].z = 0.f;
-
-      pos[1].x = cc->aabr.pos.x + width;
-      pos[1].y = cc->aabr.pos.y;
-      pos[1].z = 0.f;
-
-      pos[2].x = cc->aabr.pos.x + width;
-      pos[2].y = cc->aabr.pos.y + height;
-      pos[2].z = 0.f;
-
-      pos[3].x = cc->aabr.pos.x;
-      pos[3].y = cc->aabr.pos.y + height;
-      pos[3].z = 0.f;
-
-      /* // If it does have a transform component, we build that into the
-       * vertex
-       */
-      /* // data and just issue the draw call for the hardcoded vertex data */
-      Mat4x4 model;
-      mat4_identity(&model);
-      if (registry_entity_has_component(registry, e, TRANSFORM_COMPONENT_BIT)) {
-        TransformComponent *tc =
-            PoolGetComponent(transform_pool, TransformComponent, e.index);
-        mat4_translate(&model, &tc->pos);
-      }
-
-      glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0], 0,
-                           sizeof(pos), pos);
-
-      glUniformMatrix4fv(loc_model, 1, GL_FALSE, model.data);
-
-      glDrawArrays(GL_LINE_LOOP, 0, 4);
+    if (!registry_entity_has_component(registry, e, COLLISION_COMPONENT_BIT)) {
+      continue;
     }
+
+    TransformComponent *tc =
+        PoolGetComponent(transform_pool, TransformComponent, e.index);
+    CollisionComponent *cc =
+        PoolGetComponent(collision_pool, CollisionComponent, e.index);
+    Vec3f pos[4] = {0};
+    float w = cc->width / 2.f;
+    float h = cc->height / 2.f;
+
+    pos[0].x = tc->pos.x - w;
+    pos[0].y = tc->pos.y - h;
+    pos[0].z = 0.f;
+
+    pos[1].x = tc->pos.x + w;
+    pos[1].y = tc->pos.y - h;
+    pos[1].z = 0.f;
+
+    pos[2].x = tc->pos.x + w;
+    pos[2].y = tc->pos.y + h;
+    pos[2].z = 0.f;
+
+    pos[3].x = tc->pos.x - w;
+    pos[3].y = tc->pos.y + h;
+    pos[3].z = 0.f;
+
+    Mat4x4 model;
+    mat4_identity(&model);
+    //    mat4_translate(&model, &tc->pos);
+
+    glNamedBufferSubData(system->debug_renderer->vertex_buffer_objects[0], 0,
+                         sizeof(pos), pos);
+
+    glUniformMatrix4fv(loc_model, 1, GL_FALSE, model.data);
+
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
   }
 
   CHECK_GL_ERROR();

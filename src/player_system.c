@@ -85,10 +85,8 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   ttc.expires = time_add(ttc.created, expires);
 
   CollisionComponent cc;
-  cc.aabr.pos.x = 0.f;
-  cc.aabr.pos.y = 0.f;
-  cc.aabr.width = 1.f * tc.scale;
-  cc.aabr.height = 1.f * tc.scale;
+  cc.width = 1.f * tc.scale;
+  cc.height = 1.f * tc.scale;
 
   ProjectileComponent prc;
   prc.damage = 50;

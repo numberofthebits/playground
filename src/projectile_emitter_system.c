@@ -54,10 +54,8 @@ void create_projectile(ProjectileEmitterComponent *component,
   ttc.expires = time_add(ttc.created, component->projectile_duration);
 
   CollisionComponent cc;
-  cc.aabr.pos.x = 0.f;
-  cc.aabr.pos.y = 0.f;
-  cc.aabr.width = 0.1f;
-  cc.aabr.height = 0.1f;
+  cc.width = 0.1f;
+  cc.height = 0.1f;
 
   ProjectileComponent projc;
   projc.damage = component->damage;

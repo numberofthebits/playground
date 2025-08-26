@@ -52,6 +52,7 @@ struct RenderSystem {
   GLint loc_projection;
   GLuint program_handle;
   OrthoCamera camera;
+  GLuint query_time_elapsed;
 };
 typedef struct RenderSystem RenderSystem;
 

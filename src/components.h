@@ -74,7 +74,6 @@ typedef struct PhysicsComponent {
 } PhysicsComponent;
 
 typedef struct AnimationComponent {
-  float last_offset;
   uint8_t frames_per_animation_frame;
   uint8_t num_animation_frames;
   uint8_t num_frames_width;
@@ -86,7 +85,8 @@ typedef struct CollisionComponent {
   // axis aligned bounding rect
   // When paired with TransformComponent, pos should
   // act as an offset, so generally leave pos at 0 in this case
-  Rectf aabr;
+  float width;
+  float height;
 } CollisionComponent;
 
 typedef struct InputComponent {

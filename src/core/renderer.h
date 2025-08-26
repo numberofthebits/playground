@@ -248,6 +248,7 @@ typedef struct Renderer {
   struct BufferObjectBindings shader_storage_buffer_objects;
 
   RendererParameters parameters;
+  GLuint query_multi_draw_elements_indirect_time_elapsed;
 } Renderer;
 
 // Utility function. Interleave N disparate vertex attributes into single buffer
@@ -269,6 +270,9 @@ void renderer_init(struct Renderer *renderer,
 // place
 void renderer_use(struct Renderer *renderer);
 
+void renderer_multi_draw_elements_indirect(struct Renderer *renderer,
+                                           uint32_t draw_command_count);
+
 void renderer_dispatch_indexed(struct Renderer *renderer, uint32_t offset,
                                uint32_t count);
 
@@ -282,8 +286,8 @@ void renderer_ssbo_create(struct Renderer *renderer, int index,
 void renderer_ssbo_write(struct Renderer *renderer, int index, GLintptr offset,
                          void *data, size_t size);
 
-// Create a bindless texture and make it resident. Returns the bindless texture
-// handle.
+// Create a bindless texture and make it resident. Returns the bindless
+// texture handle.
 GLuint64 renderer_create_texture_bindless(struct Renderer *renderer,
                                           GLenum texture_type,
                                           GLenum texture_format,

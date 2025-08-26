@@ -207,10 +207,11 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
 void mat4_transform(Mat4x4 *mat, Vec3f *axis, float angle, float scale,
                     Vec3f *pos);
 
-Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b);
+Mat4x4 mat4_mul(Mat4x4 *restrict a, Mat4x4 *restrict b);
+
 Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v);
 
-int intersect_rectf(Rectf *a, Rectf *b);
+int intersect_rectf(Rectf *restrict a, Rectf *restrict b);
 
 int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
                        MeshRayIntersection *intersect_out);

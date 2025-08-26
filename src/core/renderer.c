@@ -152,6 +152,8 @@ void renderer_init(struct Renderer *renderer,
 
   CHECK_GL_ERROR();
 
+  glGenQueries(1, &renderer->query_multi_draw_elements_indirect_time_elapsed);
+
   renderer->parameters = *params;
 }
 
@@ -171,6 +173,24 @@ void renderer_use(struct Renderer *renderer) {
                              renderer->element_array_buffer);
   // Note: There's probably other relevant state that isn't implicitly bound via
   // vertex array object.
+}
+
+void renderer_multi_draw_elements_indirect(struct Renderer *renderer,
+                                           uint32_t draw_command_count) {
+
+  glBeginQuery(GL_TIME_ELAPSED,
+               renderer->query_multi_draw_elements_indirect_time_elapsed);
+  // DrawElements takes number of indices, NOT number of primitives.
+  //  renderer_dispatch_indexed(&system->text_renderer, 0, sys->entities.size);
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, 0, // *indirect *
+                              draw_command_count,
+                              sizeof(DrawElementsIndirectCommand));
+  glEndQuery(GL_TIME_ELAPSED);
+
+  GLint time_elapsed = -1;
+  glGetQueryObjectiv(renderer->query_multi_draw_elements_indirect_time_elapsed,
+                     GL_QUERY_RESULT, &time_elapsed);
+  LOG_INFO("Multi draw indirect time elapsed: %d ns", time_elapsed);
 }
 
 void renderer_dispatch_indexed(struct Renderer *renderer, uint32_t offset,
