@@ -63,8 +63,8 @@ uint64_t time_to_nanosecs(TimeT timepoint);
 #define BeginScopedTimer(name)                                                 \
   static const char *timer_name_##name = (#name);                              \
   TimeT start_##name = time_now();                                             \
-  TimeT end_##name = {0};                                                      \
-  TimeT elapsed_##name = {0};
+  TimeT end_##name = {};                                                       \
+  TimeT elapsed_##name = {};
 
 #define AppendScopedTimer(name)                                                \
   end_##name = time_now();                                                     \

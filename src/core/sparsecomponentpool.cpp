@@ -36,10 +36,10 @@ void pool_init(Pool *pool, const struct Component *descriptor,
   pool->count = 0;
 
   pool->packed =
-      ArenaAlloc(&global_static_allocator, max_entities, EntityIndex);
+      ArenaAlloc<EntityIndex>(&global_static_allocator, max_entities);
 
   pool->sparse =
-      ArenaAlloc(&global_static_allocator, max_entities, EntityIndex);
+      ArenaAlloc<EntityIndex>(&global_static_allocator, max_entities);
 
   for (EntityIndex i = 0; i < max_entities; ++i) {
     pool->sparse[i] = ENTITY_INVALID_INDEX;

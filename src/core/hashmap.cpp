@@ -99,16 +99,17 @@ void hash_map_init(HashMap *map, unsigned int size) {
   }
 
   int size_bytes = sizeof(HashMapEntry) * size;
-  map->entries = malloc(size_bytes);
+  map->entries = (HashMapEntry **)malloc(size_bytes);
   map->size = size;
 
   memset(map->entries, 0x0, size_bytes);
 }
 
-void hash_map_insert(HashMap *map, void *key, size_t key_len, void *value) {
+void hash_map_insert(HashMap *map, const void *key, size_t key_len,
+                     void *value) {
   unsigned int index = hash(key, key_len) % map->size;
 
-  HashMapEntry *entry = malloc(sizeof(HashMapEntry));
+  HashMapEntry *entry = (HashMapEntry *)malloc(sizeof(HashMapEntry));
   entry->value = value;
   entry->next = 0;
   entry->key_len = key_len;
@@ -122,7 +123,7 @@ void hash_map_insert(HashMap *map, void *key, size_t key_len, void *value) {
 
   HashMapEntry *iter = map->entries[index];
   while (iter->next != 0) {
-    iter = iter->next;
+    iter = (HashMapEntry *)iter->next;
   }
 
   iter->next = entry;
@@ -132,7 +133,7 @@ void hash_map_insert_copy(HashMap *map, void *key, size_t key_len, void *value,
                           size_t value_len) {
   unsigned int index = hash(key, key_len) % map->size;
 
-  HashMapEntry *entry = malloc(sizeof(HashMapEntry));
+  HashMapEntry *entry = (HashMapEntry *)malloc(sizeof(HashMapEntry));
   entry->value = value;
   entry->next = 0;
   entry->key_len = key_len;
@@ -150,13 +151,13 @@ void hash_map_insert_copy(HashMap *map, void *key, size_t key_len, void *value,
 
   HashMapEntry *iter = map->entries[index];
   while (iter->next != 0) {
-    iter = iter->next;
+    iter = (HashMapEntry *)iter->next;
   }
 
   iter->next = entry;
 }
 
-int hash_map_get(HashMap *map, void *key, size_t key_len, void **value) {
+int hash_map_get(HashMap *map, const void *key, size_t key_len, void **value) {
   unsigned int index = hash(key, key_len) % map->size;
   HashMapEntry *entry = map->entries[index];
   if (!entry) {
@@ -170,7 +171,7 @@ int hash_map_get(HashMap *map, void *key, size_t key_len, void **value) {
       return 1;
     }
 
-    entry = entry->next;
+    entry = (HashMapEntry *)entry->next;
   }
 
   return 0;
@@ -192,7 +193,7 @@ void *hash_map_remove(HashMap *map, void *ptr, unsigned int len) {
       if (!previous) {
         // We removed the first head and need
         // to update head
-        *head = iter->next;
+        *head = (HashMapEntry *)iter->next;
       } else {
         // Unlink
         previous->next = iter->next;
@@ -207,7 +208,7 @@ void *hash_map_remove(HashMap *map, void *ptr, unsigned int len) {
     }
 
     previous = iter;
-    iter = iter->next;
+    iter = (HashMapEntry *)iter->next;
   }
 
   return value;
@@ -226,7 +227,7 @@ void hash_map_print(HashMap *map) {
         printf("\n\t%d --- value %p current %p => next %p\n", chain,
                (void *)iter->value, (void *)iter, (void *)iter->next);
         chain++;
-        iter = iter->next;
+        iter = (HashMapEntry *)iter->next;
       }
     }
   }
@@ -244,7 +245,7 @@ void hash_map_print_func(HashMap *map, HashMapPrinterFunc printer) {
         printf("\t%d: ", chain);
         printer(iter->key, iter->key_len, iter->value);
         chain++;
-        iter = iter->next;
+        iter = (HashMapEntry *)iter->next;
       }
     }
   }
@@ -257,7 +258,7 @@ void hash_map_destroy(HashMap *map) {
       if (entry->value) {
         free(entry->value);
       }
-      entry = entry->next;
+      entry = (HashMapEntry *)entry->next;
       free(entry);
     }
   }

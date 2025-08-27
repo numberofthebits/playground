@@ -14,7 +14,9 @@
 #include "core/vec.h"
 #include "core/worker.h"
 
+extern "C" {
 #include <glad/glad.h>
+}
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -30,31 +32,6 @@ typedef struct {
   uint8_t render_layer;
 } RenderData;
 
-void CALLING_CONVENTION gl_debug_callback(GLenum source, GLenum type, GLuint id,
-                                          GLenum severity, GLsizei length,
-                                          const GLchar *message,
-                                          const void *userParam) {
-  (void)source;
-  (void)type;
-  (void)id;
-  (void)length;
-  (void)userParam;
-  switch (severity) {
-  case GL_DEBUG_SEVERITY_HIGH:
-    LOG_GL_HIGH(message);
-    break;
-  case GL_DEBUG_SEVERITY_MEDIUM:
-    LOG_GL_MEDIUM(message);
-    break;
-  case GL_DEBUG_SEVERITY_LOW:
-    LOG_GL_LOW(message);
-    break;
-  case GL_DEBUG_SEVERITY_NOTIFICATION:
-    LOG_GL_NOTIFY(message);
-    break;
-  }
-}
-
 static GLuint compile_shader(const char *src, GLenum type) {
   GLint src_len = (GLint)strlen(src);
   GLuint handle = glCreateShader(type);
@@ -69,7 +46,7 @@ static GLuint compile_shader(const char *src, GLenum type) {
     int log_len = 0;
     glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_len);
     if (log_len) {
-      GLchar *log_buf = malloc(log_len);
+      GLchar *log_buf = (GLchar *)malloc(log_len);
       GLsizei actual_len = 0;
       glGetShaderInfoLog(handle, log_len, &actual_len, log_buf);
       LOG_EXIT("Failed to compile shader: %s\n%s", log_buf, src);
@@ -105,7 +82,7 @@ static GLuint create_program(GLuint *shaders, int count) {
     // Includes null-terminator
     glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
     if (log_len) {
-      GLchar *log_buf = malloc(log_len);
+      GLchar *log_buf = (GLchar *)malloc(log_len);
       GLsizei actual_len = 0;
       glGetProgramInfoLog(prog, log_len, &actual_len, log_buf);
       LOG_EXIT("Failed to validate program:\n%s", log_buf);
@@ -146,8 +123,8 @@ static GLint get_uniform_location_checked(GLuint program, const char *name) {
 }
 
 static int render_data_order_comp(const void *lhs, const void *rhs) {
-  const RenderData *a = lhs;
-  const RenderData *b = rhs;
+  const RenderData *a = (RenderData *)lhs;
+  const RenderData *b = (RenderData *)rhs;
 
   if (a->render_layer < b->render_layer) {
     return -1;
@@ -270,7 +247,7 @@ typedef struct {
 } RenderUpdateRangeArgs;
 
 static void render_update_range(void *job_params) {
-  RenderUpdateRangeArgs *range_args = job_params;
+  RenderUpdateRangeArgs *range_args = (RenderUpdateRangeArgs *)job_params;
 
   LOG_INFO("Processing range [%d,%d>", range_args->begin, range_args->end);
   for (int i = range_args->begin; i < range_args->end; ++i) {
@@ -352,12 +329,12 @@ static void render_update(Registry *reg, struct SystemBase *sys,
   Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
 
   RenderData *render_data =
-      ArenaAlloc(&frame_allocator, sys->entities.size, RenderData);
+      ArenaAlloc<RenderData>(&frame_allocator, sys->entities.size);
 
   // 'NUM_THREADS' + 1 because we also need to deal with the remainder
   // after evenly distributing work
   RenderUpdateRangeArgs *job_args =
-      ArenaAlloc(&frame_allocator, NUM_THREADS + 1, RenderUpdateRangeArgs);
+      ArenaAlloc<RenderUpdateRangeArgs>(&frame_allocator, NUM_THREADS + 1);
 
   int batch_size = sys->entities.size / NUM_THREADS;
 
@@ -406,7 +383,7 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
 
   void *prog_ptr = 0;
   if (hash_map_get(&system->programs, &program_id, sizeof(program_id),
-                   prog_ptr)) {
+                   &prog_ptr)) {
     return;
   }
 
@@ -426,10 +403,10 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
       size_t buffer_size = 1024 * 1024;
 
       AssetShader shader_asset;
-      shader_asset.source_buffer =
-          (Buffer){.data = stack_alloc(&stack_allocator, buffer_size),
-                   .capacity = buffer_size,
-                   .used = 0};
+      shader_asset.source_buffer = {
+          .data = StackAlloc<uint8_t>(&stack_allocator, buffer_size),
+          .capacity = buffer_size,
+          .used = 0};
 
       if (!assets_load_shader(system->base.services.assets,
                               program.shader_ids[i], &shader_asset)) {
@@ -467,15 +444,8 @@ void render_system_create_program(RenderSystem *system, AssetId program_id) {
                   (void *)(uintptr_t)program_handle);
 }
 
-void render_system_global_init() {
-  gladLoadGL();
-  glDebugMessageCallback(&gl_debug_callback, 0);
-  glEnable(GL_DEBUG_OUTPUT);
-}
-
 static struct Renderer *create_tile_renderer() {
-  struct Renderer *tile_renderer = (struct Renderer *)ArenaAlloc(
-      &global_static_allocator, 1, struct Renderer);
+  Renderer *tile_renderer = ArenaAlloc<Renderer>(&global_static_allocator, 1);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -563,8 +533,8 @@ static struct Renderer *create_tile_renderer() {
 }
 
 struct Renderer *create_debug_renderer() {
-  struct Renderer *debug_renderer = (struct Renderer *)ArenaAlloc(
-      &global_static_allocator, 1, struct Renderer);
+  Renderer *debug_renderer =
+      (struct Renderer *)ArenaAlloc<Renderer>(&global_static_allocator, 1);
 
   struct VertexAttributeDescriptor attrib_desc[2];
   attrib_desc[0].vertex_attribute = 0;
@@ -624,7 +594,7 @@ RenderSystem *render_system_create(Services *services, int window_w,
   // TODO: This is per renderer data. Should be set up when invoking each
   // individual renderer
 
-  RenderSystem *system = ArenaAlloc(&global_static_allocator, 1, RenderSystem);
+  RenderSystem *system = ArenaAlloc<RenderSystem>(&global_static_allocator, 1);
   /* RenderSystem *system = */
   /*     arena_alloc(&global_static_allocator, sizeof(RenderSystem), 1, 4); */
   system_base_init(
@@ -693,7 +663,7 @@ static void render_system_create_material(RenderSystem *system,
 
     void *data = 0;
 
-    AssetTexture texture = {0};
+    AssetTexture texture = {};
     if (!assets_load_texture(system->base.services.assets,
                              material_asset.texture_id, &texture, &data)) {
       LOG_EXIT("Failed to load texture asset '%d'", material_asset.texture_id);
@@ -811,7 +781,7 @@ void render_system_load_texture(RenderSystem *system, AssetId asset_id) {
 
 static void render_system_create_map_mesh(RenderSystem *system,
                                           AssetId asset_id) {
-  AssetMap map_asset = {0};
+  AssetMap map_asset = {};
   if (!assets_load_map(system->base.services.assets, asset_id, &map_asset)) {
     LOG_ERROR("Failed to create map mesh");
     return;
@@ -876,11 +846,11 @@ void render_system_framebuffer_size_changed(RenderSystem *system,
 
 void render_system_handle_framebuffer_size_changed(struct SystemBase *base,
                                                    struct Event e) {
-  if (!is_expected_event_id(OS_FramebufferSizeChanged, e.id)) {
+  if (!is_expected_event_id(OS_FramebufferSizeChanged, (EventType)e.id)) {
     return;
   }
 
-  OSFramebufferSizeChanged *ev = e.event_data;
+  OSFramebufferSizeChanged *ev = (OSFramebufferSizeChanged *)e.event_data;
 
   render_system_framebuffer_size_changed((RenderSystem *)base, ev->size.x,
                                          ev->size.y);
@@ -890,7 +860,7 @@ void render_system_handle_camera_position_changed(struct SystemBase *system,
                                                   struct Event e) {
   (void)e;
   struct RenderSystem *render_sys = (struct RenderSystem *)system;
-  CameraUpdatedEventData *event_data = e.event_data;
+  CameraUpdatedEventData *event_data = (CameraUpdatedEventData *)e.event_data;
 
   render_sys->camera.view_projection = event_data->view_projection;
   render_sys->camera.view = event_data->view;
@@ -962,7 +932,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
         PoolGetComponent(transform_pool, TransformComponent, e.index);
     CollisionComponent *cc =
         PoolGetComponent(collision_pool, CollisionComponent, e.index);
-    Vec3f pos[4] = {0};
+    Vec3f pos[4] = {};
     float w = cc->width / 2.f;
     float h = cc->height / 2.f;
 

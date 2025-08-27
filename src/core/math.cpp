@@ -13,15 +13,13 @@
 
 #define MESH_INTERSECT_RAY_EPSILON 0.01f
 
-float vec2f_dot(Vec2f *restrict a, Vec2f *restrict b) {
-  return a->x * b->x + a->y * b->y;
-}
+float vec2f_dot(Vec2f *a, Vec2f *b) { return a->x * b->x + a->y * b->y; }
 
-float vec3f_dot(Vec3f *restrict a, Vec3f *restrict b) {
+float vec3f_dot(Vec3f *a, Vec3f *b) {
   return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-Vec3f cross(Vec3f *restrict a, Vec3f *restrict b) {
+Vec3f cross(Vec3f *a, Vec3f *b) {
   Vec3f result;
   result.x = a->y * b->z - a->z * b->y;
   result.y = a->z * b->x - a->x * b->z;
@@ -106,17 +104,7 @@ Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up) {
   Vec3f r = cross(&u, &d);
   Vec3f t = {vec3f_dot(pos, &r), vec3f_dot(pos, &u), vec3f_dot(pos, &d)};
 
-  /*
-  Mat4x4 m = {{r.x, u.x, d.x, 0.0,
-               r.y, u.y, d.y, 0.0,
-               r.z, u.z, d.z, 0.0,
-               -t.x, -t.y, -t.z, 1.0}};
-  */
   Mat4x4 m;
-  /* m.columns[0] = (Vec4f){r.x, r.y, r.z, -t.x}; */
-  /* m.columns[1] = (Vec4f){u.x, u.y, u.z, -t.y}; */
-  /* m.columns[2] = (Vec4f){d.x, d.y, d.z, -t.z}; */
-  /* m.columns[3] = (Vec4f){0.f, 0.f, 0.f, 1.f}; */
   m.columns[0] = (Vec4f){.data = {r.x, u.x, d.x, 0.0}};
   m.columns[1] = (Vec4f){.data = {r.y, u.y, d.y, 0.0}};
   m.columns[2] = (Vec4f){.data = {r.z, u.z, d.z, 0.0}};
@@ -271,8 +259,7 @@ float mat3_determinant(Mat3x3 *m) {
          m->data[0] * m->data[5] * m->data[7];
 }
 
-inline float mat4_mul_intrin_impl(const Vec4f *restrict row,
-                                  const Vec4f *restrict col) {
+inline float mat4_mul_intrin_impl(const Vec4f *row, const Vec4f *col) {
   __m128 rcol = _mm_load_ps(&row->x);
 
   __m128 rrow = _mm_load_ps(&col->x);
@@ -287,27 +274,27 @@ inline float mat4_mul_intrin_impl(const Vec4f *restrict row,
   return _mm_cvtss_f32(res);
 }
 
-Mat4x4 mat4_mul(Mat4x4 *restrict a, Mat4x4 *restrict b) {
+Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
   Vec4f a_rows[4];
-  a_rows[0] = (Vec4f){.x = a->columns[0].x,
-                      .y = a->columns[1].x,
-                      .z = a->columns[2].x,
-                      .w = a->columns[3].x};
+  a_rows[0] = {.x = a->columns[0].x,
+               .y = a->columns[1].x,
+               .z = a->columns[2].x,
+               .w = a->columns[3].x};
 
-  a_rows[1] = (Vec4f){.x = a->columns[0].y,
-                      .y = a->columns[1].y,
-                      .z = a->columns[2].y,
-                      .w = a->columns[3].y};
+  a_rows[1] = {.x = a->columns[0].y,
+               .y = a->columns[1].y,
+               .z = a->columns[2].y,
+               .w = a->columns[3].y};
 
-  a_rows[2] = (Vec4f){.x = a->columns[0].z,
-                      .y = a->columns[1].z,
-                      .z = a->columns[2].z,
-                      .w = a->columns[3].z};
+  a_rows[2] = {.x = a->columns[0].z,
+               .y = a->columns[1].z,
+               .z = a->columns[2].z,
+               .w = a->columns[3].z};
 
-  a_rows[3] = (Vec4f){.x = a->columns[0].w,
-                      .y = a->columns[1].w,
-                      .z = a->columns[2].w,
-                      .w = a->columns[3].w};
+  a_rows[3] = {.x = a->columns[0].w,
+               .y = a->columns[1].w,
+               .z = a->columns[2].w,
+               .w = a->columns[3].w};
 
   Mat4x4 m;
 
@@ -353,7 +340,7 @@ Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b) {
 }
 */
 Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
-  Vec4f result = {0};
+  Vec4f result = {{{}}};
   /* for (int i = 0; i < 4; ++i) { */
   /*   for (int j = 0; j < 4; ++j) { */
   /* result.x = m->data[0] * v->x + m->data[1] * v->y + m->data[2] * v->z + */
@@ -381,7 +368,7 @@ Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v) {
   return result;
 }
 
-int intersect_rectf(Rectf *restrict a, Rectf *restrict b) {
+int intersect_rectf(Rectf *a, Rectf *b) {
   float aw = a->width / 2.f;
   float ah = a->height / 2.f;
   float bw = b->width / 2.f;
@@ -464,9 +451,9 @@ int mesh_transform_intersect_ray(Mesh *mesh, Ray3f *ray, Mat4x4 *transform,
     Vec3f *p2 = &mesh->vertices[mesh->triangles[i].index_v2];
 
     // Ugh... so much copying.
-    Vec4f p0_ = {.x = p0->x, .y = p0->y, .z = p0->z, 1.f};
-    Vec4f p1_ = {.x = p1->x, .y = p1->y, .z = p1->z, 1.f};
-    Vec4f p2_ = {.x = p2->x, .y = p2->y, .z = p2->z, 1.f};
+    Vec4f p0_ = {.x = p0->x, .y = p0->y, .z = p0->z, .w = 1.f};
+    Vec4f p1_ = {.x = p1->x, .y = p1->y, .z = p1->z, .w = 1.f};
+    Vec4f p2_ = {.x = p2->x, .y = p2->y, .z = p2->z, .w = 1.f};
 
     p0_ = mat4_mul_vec(transform, &p0_);
     p1_ = mat4_mul_vec(transform, &p1_);
@@ -488,10 +475,10 @@ int mesh_transform_intersect_ray(Mesh *mesh, Ray3f *ray, Mat4x4 *transform,
 void mesh_init(Mesh *mesh, uint32_t size_vertices, uint32_t size_edges,
                uint32_t size_triangles) {
   mesh->vertices =
-      ArenaAlloc(&global_static_allocator, size_vertices, Vertex3f);
-  mesh->edges = ArenaAlloc(&global_static_allocator, size_edges, Edge);
+      ArenaAlloc<Vertex3f>(&global_static_allocator, size_vertices);
+  mesh->edges = ArenaAlloc<Edge>(&global_static_allocator, size_edges);
   mesh->triangles =
-      ArenaAlloc(&global_static_allocator, size_triangles, Triangle);
+      ArenaAlloc<Triangle>(&global_static_allocator, size_triangles);
 
   mesh->size_vertices = size_vertices;
   mesh->size_edges = size_edges;
@@ -598,7 +585,7 @@ static void math_test_mesh_gen() {
   float det = mat3_determinant(&mat3);
   Assert(det == -12.f);
 
-  Mesh mesh = {0};
+  Mesh mesh = {};
   mesh_init(&mesh, 6, 9, 3);
 
   float s = 1.f;
@@ -617,7 +604,7 @@ static void math_test_mesh_gen() {
 }
 
 static void math_test_mesh_ray_intersect() {
-  Mesh mesh = {0};
+  Mesh mesh = {};
   mesh_init(&mesh, 9, 9, 3);
 
   float s = 1.f;
@@ -642,7 +629,7 @@ static void math_test_mesh_ray_intersect() {
   Ray3f ray2 = {.origin = {1.f, -1.f, -1.f}, .direction = {0.f, 0.f, 1.f}};
   Ray3f ray3 = {.origin = {1.f, -1.f, 1.f}, .direction = {0.f, 0.f, -1.f}};
 
-  MeshRayIntersection out = {0};
+  MeshRayIntersection out = {};
   Assert(mesh_intersect_ray(&mesh, &ray0, &out));
   Assert(mesh_intersect_ray(&mesh, &ray1, &out));
   Assert(mesh_intersect_ray(&mesh, &ray2, &out));

@@ -7,6 +7,7 @@
 #include "types.h"
 
 #include <assert.h>
+#include <cstring>
 #include <stdalign.h>
 #include <stddef.h>
 
@@ -59,7 +60,7 @@ static void entity_id_pool_init(struct EntityIdPool *entity_ids,
   LOG_INFO("Create entity ID pool size %zu", max_entity_count);
 
   entity_ids->pool =
-      ArenaAlloc(&global_static_allocator, max_entity_count, EntityIndex);
+      ArenaAlloc<EntityIndex>(&global_static_allocator, max_entity_count);
   entity_ids->size = max_entity_count;
   entity_ids->used = 0;
 
@@ -168,13 +169,15 @@ void registry_init(Registry *reg, size_t max_entity_count,
   /* reg->count_to_add = 0; */
 
   reg->to_remove =
-      ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
+      ArenaAlloc<Entity>(&global_static_allocator, max_entity_count);
+
   reg->count_to_remove = 0;
 
   reg->entity_component_signatures =
-      ArenaAlloc(&global_static_allocator, max_entity_count, SignatureT);
+      ArenaAlloc<SignatureT>(&global_static_allocator, max_entity_count);
+
   reg->entity_flags =
-      ArenaAlloc(&global_static_allocator, max_entity_count, EntityFlags);
+      ArenaAlloc<EntityFlags>(&global_static_allocator, max_entity_count);
 
   reg->num_systems = 0;
 
@@ -182,7 +185,7 @@ void registry_init(Registry *reg, size_t max_entity_count,
   reg->components.components = components;
 
   reg->staged_add.to_add =
-      ArenaAlloc(&global_static_allocator, max_entity_count, Entity);
+      ArenaAlloc<Entity>(&global_static_allocator, max_entity_count);
 
   clear_staged_entities_add(reg);
 }
@@ -398,7 +401,7 @@ int registry_entity_has_component(Registry *reg, Entity e, int component_bit) {
   return reg->entity_component_signatures[e.index] & component_bit;
 }
 
-void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
+void registry_entity_tag(Registry *reg, Entity entity, const char *tag) {
   unsigned long long len = strlen(tag);
   if (registry_entity_has_tag(reg, entity, tag)) {
     LOG_WARN("Entity ID %d (index %d) already has tag %s", entity.id,
@@ -407,9 +410,9 @@ void registry_entity_tag(Registry *reg, Entity entity, char *tag) {
   }
 
   hash_map_insert(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity),
-                  tag);
+                  (char *)tag);
   // It's nasty, but whatever
-  Entity *e = malloc(sizeof(Entity));
+  Entity *e = (Entity *)malloc(sizeof(Entity));
   *e = entity;
   hash_map_insert(&reg->entity_tags.tag_entity_map, tag, len, e);
 }
@@ -421,11 +424,11 @@ void registry_entity_untag(Registry *reg, Entity entity) {
                     &val)) {
     return;
   }
-  char *value = hash_map_remove(&reg->entity_tags.entity_tag_map, &entity,
-                                sizeof(entity));
+  char *value = (char *)hash_map_remove(&reg->entity_tags.entity_tag_map,
+                                        &entity, sizeof(entity));
   if (value) {
-    Entity *e = hash_map_remove(&reg->entity_tags.tag_entity_map, (char *)value,
-                                strlen(value));
+    Entity *e = (Entity *)hash_map_remove(&reg->entity_tags.tag_entity_map,
+                                          (char *)value, strlen(value));
     if (e) {
       free(e);
     } else {
@@ -435,7 +438,7 @@ void registry_entity_untag(Registry *reg, Entity entity) {
   }
 }
 
-void registry_entity_group(Registry *reg, Entity entity, char *group) {
+void registry_entity_group(Registry *reg, Entity entity, const char *group) {
 
   if (registry_entity_in_group(reg, entity, group)) {
     LOG_WARN("Entity ID %d (index %d) already in group %s", entity.id,
@@ -444,12 +447,14 @@ void registry_entity_group(Registry *reg, Entity entity, char *group) {
   }
 
   unsigned long long len = strlen(group);
+  //  hash_map_insert(&reg->entity_groups.entity_group_map, &entity,
+  //  sizeof(entity),
   hash_map_insert(&reg->entity_groups.entity_group_map, &entity, sizeof(entity),
-                  group);
+                  (char *)group);
 
   void *entity_vec_ptr;
   // Check if we already have a group with this name
-  if (hash_map_get(&reg->entity_groups.group_entity_map, group, len,
+  if (hash_map_get(&reg->entity_groups.group_entity_map, (char *)group, len,
                    &entity_vec_ptr)) {
     // If we do, get the vector and insert our value
 
@@ -457,7 +462,7 @@ void registry_entity_group(Registry *reg, Entity entity, char *group) {
     VEC_PUSH_T(vec, Entity, entity);
   } else {
     // Create a vector and stuff it in the map
-    Vec *v = malloc(sizeof(Vec));
+    Vec *v = (Vec *)malloc(sizeof(Vec));
     vec_init(v);
     VEC_PUSH_T(v, Entity, entity);
     hash_map_insert(&reg->entity_groups.group_entity_map, group, len, v);
@@ -477,9 +482,9 @@ void registry_entity_ungroup(Registry *reg, Entity entity) {
                   sizeof(entity));
 
   void *vptr = 0;
-  if (hash_map_get(&reg->entity_groups.group_entity_map, group, strlen(group),
-                   &vptr)) {
-    Vec *v = vptr;
+  if (hash_map_get(&reg->entity_groups.group_entity_map, (const char *)group,
+                   std::strlen((const char *)group), &vptr)) {
+    Vec *v = (Vec *)vptr;
     if (v) {
       for (int i = 0; i < v->size; ++i) {
         Entity *e = VEC_GET_T_PTR(v, Entity, i);
@@ -492,7 +497,7 @@ void registry_entity_ungroup(Registry *reg, Entity entity) {
   }
 }
 
-int registry_entity_has_tag(Registry *reg, Entity entity, char *tag) {
+int registry_entity_has_tag(Registry *reg, Entity entity, const char *tag) {
   void *found_tag = 0;
   if (!hash_map_get(&reg->entity_tags.entity_tag_map, &entity, sizeof(entity),
                     &found_tag)) {
@@ -502,7 +507,7 @@ int registry_entity_has_tag(Registry *reg, Entity entity, char *tag) {
   return strcmp((char *)found_tag, tag) == 0;
 }
 
-int registry_entity_in_group(Registry *reg, Entity entity, char *group) {
+int registry_entity_in_group(Registry *reg, Entity entity, const char *group) {
   unsigned long long len = strlen(group);
   void *ptr = 0;
   if (!hash_map_get(&reg->entity_groups.group_entity_map, group, len, &ptr)) {

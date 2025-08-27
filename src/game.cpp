@@ -15,8 +15,11 @@
 #include "core/systembase.h"
 #include "core/worker.h"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 #include <GLFW/glfw3.h>
-// #include <glad/glad.h>
 #include <stdalign.h>
 #include <stdio.h>
 
@@ -241,7 +244,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action,
   LOG_INFO("key %d scancode %d action %d mods %d", key, scancode, action, mods);
   (void)scancode;
   (void)mods;
-  Game *game = glfwGetWindowUserPointer(window);
+  Game *game = (Game *)glfwGetWindowUserPointer(window);
 
   struct InputSystem *input_system = (struct InputSystem *)registry_get_system(
       &game->registry, INPUT_SYSTEM_BIT);
@@ -275,7 +278,7 @@ static void framebuffer_size_callback(GLFWwindow *window, int width,
     return;
   }
 
-  Game *game = glfwGetWindowUserPointer(window);
+  Game *game = (Game *)glfwGetWindowUserPointer(window);
 
   if (width <= 0 || height <= 0 || width >= 0xffff || height > 0xffff) {
     LOG_ERROR("Invalid framebuffer size %d %d", width, height);
@@ -301,7 +304,7 @@ static void window_size_callback(GLFWwindow *window, int width, int height) {
     return;
   }
 
-  Game *game = glfwGetWindowUserPointer(window);
+  Game *game = (Game *)glfwGetWindowUserPointer(window);
   if (game) {
     game_window_size_changed(game, width, height);
   } else {
@@ -318,7 +321,7 @@ Game *game_create() {
   stack_init(&stack_allocator, &global_static_allocator,
              STACK_ALLOCATOR_DEFAULT_THREAD_LOCAL_STACK_SIZE);
 
-  Game *game = ArenaAlloc(&global_static_allocator, 1, Game);
+  Game *game = ArenaAlloc<Game>(&global_static_allocator, 1);
 
   work_queue_init(&game->work_queue);
 
@@ -359,7 +362,17 @@ Game *game_create() {
 
   glfwMakeContextCurrent(window);
 
-  render_system_global_init();
+  renderer_global_init();
+
+  ImGui::CreateContext(NULL);
+
+  if (!ImGui_ImplGlfw_InitForOpenGL(window, true)) {
+    LOG_EXIT("Failed to init Imgui Glfw");
+  }
+
+  if (!ImGui_ImplOpenGL3_Init(nullptr)) {
+    LOG_EXIT("Failed to init Imgui GL3 backend");
+  }
 
   glfwSwapInterval(1);
   glfwSetKeyCallback(window, &key_callback);
@@ -406,7 +419,10 @@ Game *game_create() {
   //       Doesn't adjust ortho projection currently, which it has to?
   Vec2f camera_area = {8.f, 8.f};
   Vec3f camera_position = {0.f, 0.f, 0.f};
-  Camera camera = {.area = camera_area, .position = camera_position};
+  Camera camera = {};
+  camera.position = camera_position;
+  camera.area = camera_area;
+
   game->camera_movement_system =
       camera_movement_system_create(&game->services, &camera);
   game->projectile_emitter_system =
@@ -473,7 +489,7 @@ void map_load(Game *game, AssetId asset_id) {
   Assets *assets = &game->assets;
   Registry *registry = &game->registry;
 
-  AssetMap map_asset = {0};
+  AssetMap map_asset = {};
   if (!assets_load_map(assets, asset_id, &map_asset)) {
     LOG_EXIT("Failed to load map asset");
   }
@@ -488,7 +504,7 @@ void map_load(Game *game, AssetId asset_id) {
     for (uint32_t col = 0; col < map_asset.size_world.x; ++col) {
       Entity e = registry_entity_create(registry);
 
-      TransformComponent tc = {0};
+      TransformComponent tc = {};
       tc.scale = 1.f;
       tc.pos.x = col;
       tc.pos.y = row;
@@ -544,7 +560,7 @@ void map_load(Game *game, AssetId asset_id) {
 /*   Vec2f tex_coord_scale = {.x = 1.f / atlas_cols_f, .y = 1.f / atlas_rows_f};
  */
 
-/*   MeshComponent mc = {0}; */
+/*   MeshComponent mc = {}; */
 /*   mc.mesh.vertices = (Vertex3f *)ArenaAlloc(&global_static_allocator, */
 /*                                             total_number_of_vertices,
  * Vertex3f); */
@@ -588,7 +604,7 @@ void map_load(Game *game, AssetId asset_id) {
 /*                    gl draw call to use. */
 /*    *\/ */
 
-/*   Vertex3f quad[4] = {0}; */
+/*   Vertex3f quad[4] = {}; */
 
 /*   // These are constant for each triangle */
 /*   Vec2f uv[4] = {{0.f, 0.f}, {1.f, 0.f}, {0.f, 1.f}, {1.f, 1.f}}; */
@@ -692,7 +708,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     Entity truck = registry_entity_create(registry);
     registry_entity_group(registry, truck, "enemies");
 
-    TransformComponent tc = {0};
+    TransformComponent tc = {};
     tc.pos.x = 0.5;
     tc.pos.y = 4.0;
     tc.pos.z = 1.0f;
@@ -760,7 +776,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     Entity chopper = registry_entity_create(registry);
     registry_entity_set_flags(registry, chopper, ENTITY_FRIENDLY);
 
-    TransformComponent tc = {0};
+    TransformComponent tc = {};
     tc.pos.x = 0.0f;
     tc.pos.y = 0.0f;
     tc.pos.z = 1.0f;
@@ -781,22 +797,22 @@ void load_units(Registry *registry, struct Assets *assets) {
     pc.velocity.x = 0.01f;
     pc.velocity.y = 0.01f;
 
-    AnimationComponent ac = {0};
+    AnimationComponent ac = {};
     ac.frames_per_animation_frame = 5;
     ac.num_animation_frames = 2;
     ac.num_frames_width = 2;
     ac.num_frames_height = 4;
     ac.is_playing = 1;
 
-    InputComponent ic = {0};
+    InputComponent ic = {};
 
     CollisionComponent cc;
     cc.width = 1.f;
     cc.height = 1.f;
 
-    CameraMovementComponent cmc = {0};
+    CameraMovementComponent cmc = {};
 
-    HealthComponent hc = {0};
+    HealthComponent hc = {};
     hc.health = 100;
 
     TextComponent text;
@@ -804,7 +820,7 @@ void load_units(Registry *registry, struct Assets *assets) {
     text.len = strlen(text.text);
     text.flags = 0;
     text.scale_factor = 1.f;
-    text.color = (Vec4u8){.r = 0, .g = 0, .b = 255, .a = 255};
+    text.color = {.r = 0, .g = 0, .b = 255, .a = 255};
 
     registry_entity_component_add(registry, chopper, RENDER_COMPONENT_BIT, &rc);
     registry_entity_component_add(registry, chopper, TRANSFORM_COMPONENT_BIT,
@@ -828,14 +844,14 @@ void load_units(Registry *registry, struct Assets *assets) {
 
   Entity level_overlay = registry_entity_create(registry);
 
-  TextComponent text = {0};
+  TextComponent text = {};
   text.text = "OVERLAY TEXT Level 1";
   text.len = strlen(text.text);
   text.flags |= TEXT_COMPONENT_FLAG_SCREEN_SPACE;
   text.scale_factor = 1.f;
-  text.color = (Vec4u8){.r = 0.f, .g = 255.f, .b = 0.f, .a = 255.f};
+  text.color = {.r = 0, .g = 255, .b = 0, .a = 255};
 
-  TransformComponent xform = {0};
+  TransformComponent xform = {};
   xform.pos.x = 0.0f;
   xform.pos.y = 0.0f;
   xform.pos.z = 0.0f;
@@ -856,7 +872,7 @@ static void game_load_level_assets(Game *game, LevelAssets *level_assets) {
       level_assets->materials_count +
       level_assets->fonts_count; // + level_assets->maps_count;
   size_t total_asset_bytes = total_asset_count * sizeof(Asset);
-  Asset *assets = stack_alloc(&stack_allocator, total_asset_bytes);
+  Asset *assets = StackAlloc<Asset>(&stack_allocator, total_asset_bytes);
 
   size_t asset_index = 0;
   for (size_t i = 0; i < level_assets->textures_count; ++i) {
@@ -933,7 +949,7 @@ void game_setup(Game *game) {
   /* map_load(&game->map, &game->registry, &game->assets); */
 
   /* /\* map_write_meta(&game->map, "./assets/tilemaps/jungle.meta"); *\/ */
-  /* /\* Map lol = {0}; *\/ */
+  /* /\* Map lol = {}; *\/ */
   /* /\* map_read_meta(&lol, "./assets/tilemaps/jungle.meta"); *\/ */
 
   /* load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map); */
@@ -1021,7 +1037,7 @@ void game_update(Game *game) {
   LOG_INFO("************ BEGIN DEFERRED EVENTS ***************");
   for (size_t i = 0; i < game->event_bus.num_deferred_events; ++i) {
     LOG_INFO("%zu Type: %s", i,
-             event_type_name(game->event_bus.deferred_events[i].id));
+             event_type_name((EventType)game->event_bus.deferred_events[i].id));
   }
 
   LOG_INFO("************ END DEFFERED EVENTS ***************");
@@ -1054,6 +1070,14 @@ void game_run(Game *game) {
           &game->registry, RENDER_SYSTEM_BIT);
       render_system_debug(render_system, &game->registry);
     }
+
+    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+    bool open_demo_window = true;
+    ImGui::ShowDemoWindow(&open_demo_window);
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     BeginScopedTimer(swap_buffers);
     glfwSwapBuffers(game->window);

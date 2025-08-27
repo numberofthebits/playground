@@ -24,13 +24,14 @@ size_t hash(const void *ptr, size_t len);
 // Size is unique entries size
 void hash_map_init(HashMap *map, unsigned int size);
 
-void hash_map_insert(HashMap *map, void *key, size_t key_len, void *value_ptr);
+void hash_map_insert(HashMap *map, const void *key, size_t key_len,
+                     void *value_ptr);
 
 // Abuse the pointer storage to store an actual value, avoiding a pointer chase
 void hash_map_insert_copy(HashMap *map, void *key, size_t key_len, void *value,
                           size_t value_len);
 
-int hash_map_get(HashMap *map, void *key, size_t key_len, void **value);
+int hash_map_get(HashMap *map, const void *key, size_t key_len, void **value);
 
 void *hash_map_remove(HashMap *map, void *ptr, unsigned int len);
 

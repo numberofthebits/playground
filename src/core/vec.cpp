@@ -7,7 +7,7 @@
 
 void chunk_print_hex(Chunk *c) {
   LOG_INFO("%p:", (char *)c->ptr);
-  for (int i = 0; i < c->size; ++i) {
+  for (size_t i = 0; i < c->size; ++i) {
     if (i % 8 == 0) {
       LOG_INFO("");
     }

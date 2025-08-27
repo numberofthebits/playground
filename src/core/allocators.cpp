@@ -19,9 +19,8 @@ struct ArenaAllocator frame_allocator;
 
 thread_local struct StackAllocator stack_allocator;
 
-static inline ptrdiff_t offset_to_aligned(void *ptr, size_t s,
-                                          size_t alignment) {
-  uintptr_t res = (uintptr_t)(ptr + s) % alignment;
+inline ptrdiff_t offset_to_aligned(void *ptr, size_t s, size_t alignment) {
+  uintptr_t res = ((uintptr_t)ptr + s) % alignment;
 
   if (!res) {
     return res;
@@ -39,7 +38,7 @@ static inline char *round_to_aligned_ptr(unsigned char *ptr, size_t alignment) {
   const size_t a = alignment - 1;
   const uintptr_t b = (uintptr_t)(ptr + a);
   const uintptr_t c = b & ~a;
-  return (void *)c;
+  return (char *)c;
 }
 
 /* static inline AllocImplResult alloc_impl(void *ptr, size_t s, */
@@ -78,7 +77,7 @@ void arena_init(struct ArenaAllocator *allocator, size_t capacity) {
     return;
   }
 
-  allocator->base = malloc(capacity);
+  allocator->base = (uint8_t *)malloc(capacity);
   allocator->capacity = capacity;
   allocator->used = 0;
 }
@@ -108,7 +107,7 @@ void *arena_alloc(struct ArenaAllocator *allocator, size_t element_size,
   void *aligned_ptr =
       round_to_aligned_ptr(allocator->base + allocator->used, alignment);
   void *unaligned_ptr = allocator->base + allocator->used;
-  ptrdiff_t alignment_bump = aligned_ptr - unaligned_ptr;
+  ptrdiff_t alignment_bump = (char *)aligned_ptr - (char *)unaligned_ptr;
 
   const size_t total_bytes = count_bytes + alignment_bump;
 
@@ -155,7 +154,8 @@ SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
   }
 
   SubArenaAllocator sub_arena;
-  sub_arena.base = arena_alloc(allocator, 1, s, alignof(max_align_t));
+  sub_arena.base =
+      (uint8_t *)arena_alloc(allocator, 1, s, alignof(max_align_t));
   sub_arena.capacity = s;
   sub_arena.used = 0;
 
@@ -188,7 +188,7 @@ void *arena_subarena_alloc(struct SubArenaAllocator *allocator,
   void *aligned_ptr =
       round_to_aligned_ptr(allocator->base + allocator->used, alignment);
   void *unaligned_ptr = allocator->base + allocator->used;
-  ptrdiff_t alignment_bump = aligned_ptr - unaligned_ptr;
+  ptrdiff_t alignment_bump = (char *)aligned_ptr - (char *)unaligned_ptr;
 
   const size_t total_bytes = count_bytes + alignment_bump;
 
@@ -263,7 +263,7 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s) {
 
   // Assume 'base' is always aligned and 'used' will always
   // be rounded up to a valid alignment
-  void *allocated_ptr = allocator->base + allocator->used;
+  void *allocated_ptr = (char *)allocator->base + allocator->used;
   allocator->used += size_rounded_up;
 
   return allocated_ptr;
@@ -271,7 +271,8 @@ void *stack_alloc(struct StackAllocator *allocator, size_t s) {
 
 int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,
                                     size_t size_rounded_up) {
-  return ptr + size_rounded_up == allocator->base + allocator->used;
+  return (char *)ptr + size_rounded_up ==
+         (char *)allocator->base + allocator->used;
 }
 
 void stack_dealloc(struct StackAllocator *allocator, void *ptr, size_t s) {
@@ -333,10 +334,10 @@ void stack_test() {
 
   int test_int = 0xf0e0d0c0;
 
-  struct ArenaAllocator arena = {0};
+  struct ArenaAllocator arena = {};
   arena_init(&arena, 1024 * 1024 * 32);
 
-  struct StackAllocator stack = {0};
+  struct StackAllocator stack = {};
   stack_init(&stack, &arena, 1024 * 1024 * 16);
 
   int *int_ptr = stack_alloc(&stack, sizeof(int));

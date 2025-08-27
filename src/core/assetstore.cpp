@@ -43,7 +43,7 @@ AssetFilePath assets_make_asset_file_path(const char *file_path) {
              ASSET_FILE_PATH_MAX);
   }
 
-  AssetFilePath asset_path = {0};
+  AssetFilePath asset_path = {};
   strcpy(asset_path.path, file_path);
   asset_path.len = len;
 
@@ -110,7 +110,7 @@ static int enumerate_textures_callback(const FileSystemListResult *result,
     return FILE_CALLBACK_RESULT_CONTINUE;
   }
 
-  struct Assets *assets = user_data;
+  struct Assets *assets = (struct Assets *)user_data;
 
   AssetId id = assets_make_id_str(result->file_name);
   AssetName name = assets_make_asset_name_str(result->file_name);
@@ -121,7 +121,7 @@ static int enumerate_textures_callback(const FileSystemListResult *result,
   return FILE_CALLBACK_RESULT_CONTINUE;
 }
 
-static int extension_to_shader_type(const char *extension) {
+static AssetShaderType extension_to_shader_type(const char *extension) {
   if (!extension) {
     return AssetShaderTypeUnknown;
   }
@@ -247,10 +247,10 @@ static void parse_shader_program_entry(AssetShaderProgram *program,
 }
 
 static AssetShaderProgram parse_shader_program(const char *file_path) {
-  AssetShaderProgram program = {0};
+  AssetShaderProgram program = {};
   size_t buffer_size = 1024 * 1024;
 
-  Buffer buffer = {.data = stack_alloc(&stack_allocator, buffer_size),
+  Buffer buffer = {.data = StackAlloc<uint8_t>(&stack_allocator, buffer_size),
                    .capacity = buffer_size,
                    .used = 0};
 
@@ -309,7 +309,7 @@ static int enumerate_shaders_callback(const FileSystemListResult *result,
     return FILE_CALLBACK_RESULT_CONTINUE;
   }
 
-  struct Assets *assets = context;
+  struct Assets *assets = (struct Assets *)context;
 
   AssetName name = assets_make_asset_name_str(result->file_name);
   AssetId id = assets_make_id_str(result->file_name);
@@ -341,7 +341,7 @@ static int enumerate_tilemaps_callback(const FileSystemListResult *result,
     LOG_EXIT("Invalid file system list result");
   }
 
-  struct Assets *assets = context;
+  struct Assets *assets = (struct Assets *)context;
 
   if (strcmp(result->extension, ".meta") != 0) {
     LOG_INFO("Ignoring tilemap file '%s'", result->file_path);
@@ -363,7 +363,7 @@ static int enumerate_materials_callback(const FileSystemListResult *result,
     LOG_EXIT("Invalid file system list result");
   }
 
-  struct Assets *assets = context;
+  struct Assets *assets = (struct Assets *)context;
 
   AssetId id = assets_make_id_str(result->file_name);
   AssetName name = assets_make_asset_name_str(result->file_name);
@@ -381,7 +381,7 @@ static int enumerate_fonts_callback(const FileSystemListResult *result,
     LOG_EXIT("Invalid file system list result");
   }
 
-  struct Assets *assets = context;
+  struct Assets *assets = (struct Assets *)context;
 
   AssetId id = assets_make_id_str(result->file_name);
   AssetName name = assets_make_asset_name_str(result->file_name);
@@ -559,7 +559,7 @@ static int parse_material(Buffer *buffer, AssetMaterial *material) {
   int ret = 0;
   ParseState state = {.buffer = buffer, .offset = 0};
   while (!parse_is_done(&state)) {
-    KeyValueRaw raw = {0};
+    KeyValueRaw raw = {};
 
     int status = get_next_key_value_raw(&state, &raw);
     switch (status) {
@@ -592,8 +592,8 @@ static int parse_material(Buffer *buffer, AssetMaterial *material) {
 
 static int load_material(const char *file_path, AssetMaterial *material) {
   size_t buffer_size = 1024 * 1024;
-  Buffer buffer = {0};
-  buffer.data = stack_alloc(&stack_allocator, buffer_size);
+  Buffer buffer = {};
+  buffer.data = StackAlloc<uint8_t>(&stack_allocator, buffer_size);
   buffer.capacity = 1024 * 1024;
 
   if (!file_read_all_buffer_text(file_path, &buffer)) {
@@ -626,7 +626,7 @@ static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
   ParseState parser = {.buffer = buffer, .offset = 0};
   size_t num_parsed = 0;
   while (!parse_is_done(&parser)) {
-    KeyValueRaw raw = {0};
+    KeyValueRaw raw = {};
     int status = get_next_key_value_raw(&parser, &raw);
     switch (status) {
     case PARSER_OK:
@@ -638,7 +638,7 @@ static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
         ++num_parsed;
       } else if (strncmp(raw.key_begin, "size_tile_map",
                          strlen("size_tile_map")) == 0) {
-        if (!parse_array_u32(raw.value_begin, raw.value_len, 2,
+        if (!parse_array_u32(raw.value_begin, raw.value_len, 2UL,
                              &map->size_tilemap.x)) {
           return 0;
         }
@@ -651,10 +651,10 @@ static int parse_map_meta(Buffer *buffer, struct SubArenaAllocator *sub_arena,
       } else if (strncmp(raw.key_begin, "tilemap_indices",
                          strlen("tilemap_indices")) == 0) {
         map->num_indices = map->size_world.x * map->size_world.y;
-        map->indices = SubArenaAlloc(sub_arena, map->num_indices, Vec2u8);
+        map->indices = SubArenaAlloc<Vec2u8>(sub_arena, map->num_indices);
 
         uint8_t *packed_tilemap_coords =
-            stack_alloc(&stack_allocator, map->num_indices);
+            StackAlloc<uint8_t>(&stack_allocator, map->num_indices);
         if (!parse_array_u8(raw.value_begin, raw.value_len, map->num_indices,
                             packed_tilemap_coords)) {
           return 0;
@@ -693,8 +693,8 @@ int assets_load_map(struct Assets *assets, AssetId asset_id, AssetMap *map) {
   }
 
   size_t buffer_size = 1024 * 1024;
-  Buffer buffer = {0};
-  buffer.data = stack_alloc(&stack_allocator, buffer_size);
+  Buffer buffer = {};
+  buffer.data = StackAlloc<uint8_t>(&stack_allocator, buffer_size);
   buffer.capacity = buffer_size;
 
   buffer.used = file_read_all_buffer_text(asset_meta->file_path.path, &buffer);
@@ -728,11 +728,11 @@ int assets_load_font(struct Assets *assets, AssetId id, AssetFont *font) {
   }
 
   uint8_t *file_buf =
-      SubArenaAlloc(&assets->temp_data, (size_t)file_size, uint8_t);
+      SubArenaAlloc<uint8_t>(&assets->temp_data, (size_t)file_size);
 
   font->id = id;
-  font->font_data =
-      (Buffer){.data = file_buf, .capacity = (size_t)file_size, .used = 0};
+  font->font_data = {
+      .data = file_buf, .capacity = (size_t)file_size, .used = 0};
   if (!file_read_all_buffer_binary(asset_meta->file_path.path,
                                    font->font_data.data,
                                    font->font_data.capacity)) {
@@ -773,7 +773,7 @@ void parse_material_test() {
       "texture=truck-ford-right.png\ncolor=255,254,253,252,\n";
   Buffer buffer;
   buffer.data = (unsigned char *)material_str;
-  AssetMaterial material = {0};
+  AssetMaterial material = {};
   buffer.capacity = strlen(material_str);
   buffer.used = buffer.capacity;
 
@@ -792,7 +792,7 @@ void assetstore_test() {
 
   /* parse_material_test(); */
   /* parse_shader_program("./assets/shaders/tilemap.prog"); */
-  /* AssetShaderProgram tilemap = {0}; */
+  /* AssetShaderProgram tilemap = {}; */
   /* tilemap.id =
    * assets_make_id_str("tilemap.prog"); */
 
@@ -816,11 +816,11 @@ void assetstore_test() {
 
   /* fp = fopen("./assets/shaders/tilemap.prog",
    * "r+b"); */
-  /* AssetShaderProgram prog2 = {0}; */
+  /* AssetShaderProgram prog2 = {}; */
   /* fread(&prog2, 1, sizeof(prog2), fp); */
   /* fclose(fp); */
 
-  /* AssetShaderProgram unit = {0}; */
+  /* AssetShaderProgram unit = {}; */
   /* unit.id = assets_make_id_str("unit.prog");
    */
   /* assets_shader_program_set_shader(&unit,
@@ -838,7 +838,7 @@ void assetstore_test() {
   /* fclose(fp); */
   /* Assert(ret == sizeof(unit)); */
 
-  /* AssetShaderProgram collision_debug = {0}; */
+  /* AssetShaderProgram collision_debug = {}; */
   /* collision_debug.id =
    * assets_make_id_str("collision_debug.prog");
    */

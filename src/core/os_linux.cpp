@@ -31,7 +31,7 @@ void time_init(void) {
 }
 
 TimeT time_now(void) {
-  TimeT now = {0};
+  TimeT now = {};
   if (clock_gettime(CLOCK_MONOTONIC_RAW, &now) < 0) {
     LOG_ERROR("Failed to get time");
   }

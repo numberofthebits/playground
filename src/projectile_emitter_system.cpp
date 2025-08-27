@@ -29,14 +29,14 @@ void create_projectile(ProjectileEmitterComponent *component,
   Vec2f dir = random_direction();
   Entity e = registry_entity_create(registry);
 
-  TransformComponent tc = {0};
+  TransformComponent tc = {};
   tc.pos.x = origin.x + dir.x;
   tc.pos.y = origin.y + dir.y;
   tc.pos.z = 1.f;
   tc.scale = 0.1f;
   tc.rotation = 0.f;
 
-  PhysicsComponent pc = {0};
+  PhysicsComponent pc = {};
   pc.velocity.x = dir.x * PROJECTILE_VELOCITY_SCALE;
   pc.velocity.y = dir.y * PROJECTILE_VELOCITY_SCALE;
 
@@ -49,7 +49,7 @@ void create_projectile(ProjectileEmitterComponent *component,
   rc.texture_atlas_size.y = 4;
   rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_AIR;
 
-  TimeComponent ttc = {0};
+  TimeComponent ttc = {};
   ttc.created = spawn_time;
   ttc.expires = time_add(ttc.created, component->projectile_duration);
 
@@ -100,7 +100,7 @@ void projectile_emitter_system_update(Registry *registry,
 
 ProjectileEmitterSystem *projectile_emitter_system_create(Services *services) {
   ProjectileEmitterSystem *sys =
-      ArenaAlloc(&global_static_allocator, 1, ProjectileEmitterSystem);
+      ArenaAlloc<ProjectileEmitterSystem>(&global_static_allocator, 1);
 
   int component_flags = PROJECTILE_EMITTER_COMPONENT_BIT |
                         TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;

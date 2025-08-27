@@ -11,7 +11,7 @@
 
 struct InputSystem *input_system_create(Services *services) {
   struct InputSystem *system =
-      ArenaAlloc(&global_static_allocator, 1, struct InputSystem);
+      ArenaAlloc<InputSystem>(&global_static_allocator, 1);
 
   // This system isn't interested in any components.
   // It only consumes input from OS and produces

@@ -29,9 +29,15 @@ void arena_dealloc_all(struct ArenaAllocator *allocator);
 
 void arena_free(struct ArenaAllocator *allocator);
 
-// Allocate memory for for 'count' objects of size sizeof('type')
-#define ArenaAlloc(allocator, count, type)                                     \
-  arena_alloc(allocator, sizeof(type), count, alignof(type));
+/* // Allocate memory for for 'count' objects of size sizeof('type') */
+/* #define ArenaAlloc(allocator, count, type) \ */
+/*   arena_alloc(allocator, sizeof(type), count, alignof(type)); */
+
+// Did this just to avoid having to explicitly cast every usage of ArenaAlloc
+// when moving from C to C++.
+template <typename T> T *ArenaAlloc(ArenaAllocator *allocator, size_t count) {
+  return (T *)arena_alloc(allocator, sizeof(T), count, alignof(T));
+}
 
 SubArenaAllocator arena_subarena_create(struct ArenaAllocator *allocator,
                                         size_t s);
@@ -40,8 +46,13 @@ void *arena_subarena_alloc(struct SubArenaAllocator *allocator,
                            size_t element_size, size_t element_count,
                            size_t alignment);
 
-#define SubArenaAlloc(allocator, count, type)                                  \
-  arena_subarena_alloc(allocator, sizeof(type), count, alignof(type));
+// #define SubArenaAlloc(allocator, count, type)                                  \
+//   arena_subarena_alloc(allocator, sizeof(type), count, alignof(type));
+
+template <typename T>
+T *SubArenaAlloc(SubArenaAllocator *allocator, size_t count) {
+  return (T *)arena_subarena_alloc(allocator, sizeof(T), count, alignof(T));
+}
 
 void arena_subarena_dealloc_all(struct SubArenaAllocator *allocator);
 
@@ -67,6 +78,11 @@ void stack_init(struct StackAllocator *stack, struct ArenaAllocator *allocator,
                 size_t capacity);
 
 void *stack_alloc(struct StackAllocator *allocator, size_t s);
+
+template <typename T, typename Allocator>
+T *StackAlloc(Allocator *allocator, size_t s) {
+  return (T *)stack_alloc(allocator, s);
+}
 
 // Returns non-null if true
 int stack_is_most_recent_allocation(struct StackAllocator *allocator, void *ptr,

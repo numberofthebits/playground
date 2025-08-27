@@ -3,8 +3,6 @@
 
 #include "util.h"
 
-#include "log.h"
-
 #define PARSER_DELIMITER_KEY_VALUE '='
 #define PARSER_DELIMITER_VALUE ','
 #define PARSER_DELIMITER_KEY_VALUE_PAIR '\n'

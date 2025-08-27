@@ -5,8 +5,9 @@
 #include "log.h"
 #include "math.h"
 
+extern "C" {
 #include <glad/glad.h>
-
+}
 #include <stdint.h>
 
 #define MAX_MATERIALS 10000
@@ -262,6 +263,8 @@ void interleave_attributes(struct Interleave *interleave);
 unsigned int gl_type_byte_size(GLenum type);
 
 GLuint calc_stride(struct VertexAttributeDescriptor *descriptors, int count);
+
+void renderer_global_init();
 
 void renderer_init(struct Renderer *renderer,
                    struct RendererParameters *params);

@@ -1,5 +1,7 @@
 #include "hit_detection_system.h"
 
+#include "events.h"
+
 static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
                                         size_t frame_nr) {
   (void)frame_nr;
@@ -21,7 +23,7 @@ static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
       Vec3f axis = {.x = 0.f, .y = 0.f, .z = 1.f};
       mat4_transform(&t, &axis, transform->rotation, transform->scale,
                      &transform->pos);
-      MeshRayIntersection intersection = {0};
+      MeshRayIntersection intersection = {};
       if (mesh_transform_intersect_ray(&mesh->mesh, &system->rays[r], &t,
                                        &intersection)) {
 
@@ -44,13 +46,13 @@ static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
 
 HitDetectionSystem *hit_detection_system_create(Services *services) {
   HitDetectionSystem *system =
-      ArenaAlloc(&global_static_allocator, 1, HitDetectionSystem);
+      ArenaAlloc<HitDetectionSystem>(&global_static_allocator, 1);
 
   system_base_init((struct SystemBase *)system, HIT_DETECTION_SYSTEM_BIT,
                    &hit_detection_system_update,
                    MESH_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services,
                    "HitDetectionSystem");
-  system->rays = ArenaAlloc(&global_static_allocator, 1, Ray3f);
+  system->rays = ArenaAlloc<Ray3f>(&global_static_allocator, 1);
   system->num_rays = 0;
 
   return system;
@@ -60,7 +62,7 @@ void hit_detection_system_handle_cursor_moved(struct SystemBase *base,
                                               Event e) {
   HitDetectionSystem *system = (HitDetectionSystem *)base;
 
-  if (!is_expected_event_id(InputSystem_CursorMoved, e.id)) {
+  if (!is_expected_event_id(InputSystem_CursorMoved, (EventType)e.id)) {
     return;
   }
 
@@ -69,9 +71,9 @@ void hit_detection_system_handle_cursor_moved(struct SystemBase *base,
     return;
   }
 
-  InputSystemCursorMoved *event = e.event_data;
-
-  Vec3f normalized_cursor_pos = {.x = event->pos.x, event->pos.y, 0.f};
+  InputSystemCursorMoved *event = (InputSystemCursorMoved *)e.event_data;
+  Vec3f normalized_cursor_pos = {
+      .x = event->pos.x, .y = event->pos.y, .z = 0.f};
   Vec3f ray_direction = {.x = 0.f, .y = 0.f, .z = -1.f};
 
   Ray3f *ray = &system->rays[system->num_rays++];

@@ -36,7 +36,7 @@ static stbtt_packedchar packed_chars[TEXT_SYSTEM_ASCII_TABLE_SIZE];
 
 static GLuint64 text_system_create_font_atlas(TextSystem *system,
                                               AssetId asset_id) {
-  AssetFont font = {0};
+  AssetFont font = {};
   if (!assets_load_font(system->base.services.assets, asset_id, &font)) {
     LOG_EXIT("Failed to load font");
   }
@@ -44,7 +44,8 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
   stbtt_pack_context pack_ctx;
   size_t bitmap_data_size =
       TEXT_SYSTEM_ATLAS_PX_WIDTH * TEXT_SYSTEM_ATLAS_PX_HEIGHT;
-  unsigned char *bitmap_data = stack_alloc(&stack_allocator, bitmap_data_size);
+  unsigned char *bitmap_data =
+      StackAlloc<unsigned char>(&stack_allocator, bitmap_data_size);
 
   stbtt_PackBegin(&pack_ctx, bitmap_data, TEXT_SYSTEM_ATLAS_PX_WIDTH,
                   TEXT_SYSTEM_ATLAS_PX_HEIGHT, 0, 1, 0);
@@ -52,12 +53,12 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
   int font_index = 0;
 
   size_t size_ascii_table = TEXT_SYSTEM_ASCII_TABLE_SIZE * sizeof(int);
-  int *ascii_table = stack_alloc(&stack_allocator, size_ascii_table);
+  int *ascii_table = StackAlloc<int>(&stack_allocator, size_ascii_table);
   for (int i = 0; i < TEXT_SYSTEM_ASCII_TABLE_SIZE; ++i) {
     ascii_table[i] = i;
   }
 
-  stbtt_pack_range range[1] = {0};
+  stbtt_pack_range range[1] = {};
   range[0].font_size = 20.f;
   range[0].first_unicode_codepoint_in_range = 0;
   range[0].array_of_unicode_codepoints = ascii_table;
@@ -107,8 +108,10 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
   Pool *text_pool = registry_get_pool(registry, TEXT_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
 
-  Vec3f *vbo_pos = renderer_map_vertex_buffer(&system->text_renderer, 0);
-  Vec2f *vbo_uv = renderer_map_vertex_buffer(&system->text_renderer, 1);
+  Vec3f *vbo_pos =
+      (Vec3f *)renderer_map_vertex_buffer(&system->text_renderer, 0);
+  Vec2f *vbo_uv =
+      (Vec2f *)renderer_map_vertex_buffer(&system->text_renderer, 1);
 
   float sf = 1.f / 50.f;
   Vec3f scale_factor = {sf, sf, 1.f};
@@ -131,13 +134,13 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
     mat4_identity(&translate);
     mat4_identity(&scale);
 
-    Vec3f pos = {0};
+    Vec3f pos = {};
 
     if (tc->flags & TEXT_COMPONENT_FLAG_SCREEN_SPACE) {
-      pos = (Vec3f){.x = 0.f, .y = 3.f, .z = 0.f};
+      pos = {.x = 0.f, .y = 3.f, .z = 0.f};
       mat4_identity(&draw_command_data->view_matrix);
     } else {
-      pos = (Vec3f){.x = xform->pos.x, .y = xform->pos.y, 0.f};
+      pos = {.x = xform->pos.x, .y = xform->pos.y, .z = 0.f};
       draw_command_data->view_matrix = system->view_matrix;
     }
 
@@ -148,7 +151,7 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
     draw_command_data->color = tc->color;
 
     // Quad uses top left and bottom right convention
-    stbtt_aligned_quad quad = {0};
+    stbtt_aligned_quad quad = {};
 
     float xpos = 0.f;
     float ypos = 0.f;
@@ -256,8 +259,7 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 }
 
 TextSystem *text_system_create(Services *services) {
-  TextSystem *system =
-      ArenaAlloc(&global_static_allocator, 1, struct TextSystem);
+  TextSystem *system = ArenaAlloc<TextSystem>(&global_static_allocator, 1);
 
   system_base_init((struct SystemBase *)system, TEXT_SYSTEM_BIT,
                    &text_system_update, TEXT_COMPONENT_BIT, services,
@@ -319,7 +321,7 @@ TextSystem *text_system_create(Services *services) {
                            sizeof(DrawCommandDataText));
 
   uint16_t *index_buffer =
-      renderer_map_element_array_buffer(&system->text_renderer);
+      (uint16_t *)renderer_map_element_array_buffer(&system->text_renderer);
 
   // Indices are 6 at a time per quad, but the vertices they point
   // to are only 4, so we write 6 indices at a time, but the vertices
@@ -380,7 +382,8 @@ void text_system_handle_camera_position_changed(struct SystemBase *system,
                                                 struct Event e) {
   (void)e;
   TextSystem *text_sys = (TextSystem *)system;
-  CameraUpdatedEventData *pos_changed_event = e.event_data;
+  CameraUpdatedEventData *pos_changed_event =
+      (CameraUpdatedEventData *)e.event_data;
 
   text_sys->view_projection_matrix = pos_changed_event->view_projection;
   text_sys->view_matrix = pos_changed_event->view;

@@ -1,5 +1,7 @@
 #include "keyvalueparser.h"
 
+#include "log.h"
+
 #include <string.h>
 
 static int offset_to_char(const char *str, size_t len, char c, size_t *out) {
@@ -20,7 +22,7 @@ static int offset_to_char(const char *str, size_t len, char c, size_t *out) {
 int get_next_key_value_raw(ParseState *state, KeyValueRaw *raw) {
 
   const char *begin = (const char *)state->buffer->data + state->offset;
-  *raw = (KeyValueRaw){0};
+  *raw = {};
   size_t line_len = 0;
   if (!offset_to_char(begin, state->buffer->used,
                       PARSER_DELIMITER_KEY_VALUE_PAIR, &line_len)) {
@@ -51,8 +53,7 @@ int get_next_key_value_raw(ParseState *state, KeyValueRaw *raw) {
   return PARSER_OK;
 }
 
-#ifdef BUILD_TESTS
-// Values out must be able to hold 'expected_count'
+//  Values out must be able to hold 'expected_count'
 int parse_array_int(const char *string_val, size_t string_len,
                     size_t expected_count, int *values_out) {
   size_t offset_begin = 0;
@@ -120,6 +121,7 @@ int parse_array_u32(const char *string_val, size_t string_len,
   return count == expected_count;
 }
 
+#ifdef BUILD_TESTS
 void test_parser() {
   const char *data =
       "size_world=25,20,\nsize_tile_map=10,3,\ntilemap_texture=jungle.png\n";
@@ -130,19 +132,20 @@ void test_parser() {
 
   ParseState parser = {.buffer = &buffer, .offset = 0};
   size_t num_parsed = 0;
+
   while (!parse_is_done(&parser)) {
     KeyValueRaw raw;
     Assert(get_next_key_value_raw(&parser, &raw) != 0);
 
     if (strncmp(raw.key_begin, "size_world", strlen("size_world")) == 0) {
-      int values[2] = {0};
+      int values[2] = {};
       Assert(parse_array_int(raw.value_begin, raw.value_len, 2, values) != 0);
       Assert(values[0] == 25);
       Assert(values[1] == 20);
       ++num_parsed;
     } else if (strncmp(raw.key_begin, "size_tile_map",
                        strlen("size_tile_map")) == 0) {
-      int values[2] = {0};
+      int values[2] = {};
       Assert(parse_array_int(raw.value_begin, raw.value_len, 2, values) != 0);
       Assert(values[0] == 10);
       Assert(values[1] == 3);

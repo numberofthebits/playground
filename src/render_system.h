@@ -9,7 +9,9 @@
 #include "core/types.h"
 #include "core/vec.h"
 
+extern "C" {
 #include <glad/glad.h>
+}
 
 #include <stdint.h>
 
@@ -55,8 +57,6 @@ struct RenderSystem {
   GLuint query_time_elapsed;
 };
 typedef struct RenderSystem RenderSystem;
-
-void render_system_global_init();
 
 RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h);

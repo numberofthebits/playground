@@ -37,7 +37,7 @@ static inline void camera_movement_system_update(Registry *reg,
                                                  struct SystemBase *base,
                                                  size_t frame_nr) {
   (void)frame_nr;
-  Entity *ptr = base->entities.storage.ptr;
+  Entity *ptr = (Entity *)base->entities.storage.ptr;
   Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
   CameraMovementSystem *cms = (CameraMovementSystem *)base;
 
@@ -88,7 +88,7 @@ static inline void camera_movement_system_update(Registry *reg,
 CameraMovementSystem *camera_movement_system_create(Services *services,
                                                     Camera *camera) {
   CameraMovementSystem *sys =
-      ArenaAlloc(&global_static_allocator, 1, CameraMovementSystem);
+      ArenaAlloc<CameraMovementSystem>(&global_static_allocator, 1);
 
   system_base_init((struct SystemBase *)sys, CAMERA_MOVEMENT_SYSTEM_BIT,
                    camera_movement_system_update,

@@ -8,7 +8,7 @@
 
 #define INPUT_SYSTEM_MAX_KEY_STATES 512
 
-typedef enum KeyFlags {
+typedef enum KeyFlags : int {
   KeyFlag_Released = 0x0,
   KeyFlag_Pressed = 0x1,
   // If IsToggle, pressed state is reset to
@@ -17,7 +17,7 @@ typedef enum KeyFlags {
 } KeyFlags;
 
 typedef struct KeyState {
-  KeyFlags flags;
+  int flags;
 } KeyState;
 
 typedef struct KeyStateEventData {

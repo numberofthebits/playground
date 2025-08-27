@@ -72,7 +72,7 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
 
 struct CollisionSystem *collision_system_create(Services *services) {
   struct CollisionSystem *system =
-      ArenaAlloc(&global_static_allocator, 1, struct CollisionSystem);
+      ArenaAlloc<CollisionSystem>(&global_static_allocator, 1);
 
   system_base_init((struct SystemBase *)system, COLLISION_SYSTEM_BIT,
                    &collision_update,

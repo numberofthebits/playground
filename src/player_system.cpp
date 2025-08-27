@@ -38,7 +38,7 @@ void player_system_reset(struct PlayerSystem *system) {
 
 struct PlayerSystem *player_system_create(Services *services) {
   struct PlayerSystem *system =
-      ArenaAlloc(&global_static_allocator, 1, struct PlayerSystem);
+      ArenaAlloc<PlayerSystem>(&global_static_allocator, 1);
 
   int component_flags =
       INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;
@@ -58,7 +58,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
 
   Vec2f projectile_dir = {sinf(angle), cosf(angle)};
 
-  TransformComponent tc = {0};
+  TransformComponent tc = {};
   // Offset to avoid self collision
   tc.pos.x = player_pos.x + projectile_dir.x;
   tc.pos.y = player_pos.y + projectile_dir.y;
@@ -66,7 +66,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   tc.scale = 0.1f;
   tc.rotation = 0.f;
 
-  PhysicsComponent pc = {0};
+  PhysicsComponent pc = {};
   pc.velocity.x = projectile_dir.x * PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT.x;
   pc.velocity.y = projectile_dir.y * PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT.y;
 
@@ -79,7 +79,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   rc.texture_atlas_size.x = 1;
   rc.texture_atlas_size.y = 1;
 
-  TimeComponent ttc = {0};
+  TimeComponent ttc = {};
   ttc.created = time_now();
   TimeT expires = time_from_secs(5);
   ttc.expires = time_add(ttc.created, expires);

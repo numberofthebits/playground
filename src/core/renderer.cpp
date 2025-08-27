@@ -69,6 +69,37 @@ GLuint calc_stride(struct VertexAttributeDescriptor *descriptors, int count) {
   return stride;
 }
 
+void CALLING_CONVENTION gl_debug_callback(GLenum source, GLenum type, GLuint id,
+                                          GLenum severity, GLsizei length,
+                                          const GLchar *message,
+                                          const void *userParam) {
+  (void)source;
+  (void)type;
+  (void)id;
+  (void)length;
+  (void)userParam;
+  switch (severity) {
+  case GL_DEBUG_SEVERITY_HIGH:
+    LOG_GL_HIGH(message);
+    break;
+  case GL_DEBUG_SEVERITY_MEDIUM:
+    LOG_GL_MEDIUM(message);
+    break;
+  case GL_DEBUG_SEVERITY_LOW:
+    LOG_GL_LOW(message);
+    break;
+  case GL_DEBUG_SEVERITY_NOTIFICATION:
+    LOG_GL_NOTIFY(message);
+    break;
+  }
+}
+
+void renderer_global_init() {
+  gladLoadGL();
+  glDebugMessageCallback(&gl_debug_callback, 0);
+  glEnable(GL_DEBUG_OUTPUT);
+}
+
 void renderer_init(struct Renderer *renderer,
                    struct RendererParameters *params) {
   memset(renderer, 0x0, sizeof(struct Renderer));
@@ -387,7 +418,7 @@ static GLuint renderer_create_program_impl(GLuint *shaders, int count) {
     // Includes null-terminator
     glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
     if (log_len) {
-      GLchar *log_buf = malloc(log_len);
+      GLchar *log_buf = (GLchar *)malloc(log_len);
       GLsizei actual_len = 0;
       glGetProgramInfoLog(prog, log_len, &actual_len, log_buf);
       LOG_EXIT("Failed to validate program:\n%s", log_buf);
@@ -415,7 +446,7 @@ GLuint renderer_compile_shader(const char *src, GLenum type) {
     int log_len = 0;
     glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_len);
     if (log_len) {
-      GLchar *log_buf = malloc(log_len);
+      GLchar *log_buf = (GLchar *)malloc(log_len);
       GLsizei actual_len = 0;
       glGetShaderInfoLog(handle, log_len, &actual_len, log_buf);
       LOG_EXIT("Failed to compile shader: %s\n%s", log_buf, src);
@@ -447,10 +478,10 @@ GLuint renderer_create_program(struct Renderer *renderer, struct Assets *assets,
       size_t buffer_size = 1024 * 1024;
 
       AssetShader shader_asset;
-      shader_asset.source_buffer =
-          (Buffer){.data = stack_alloc(&stack_allocator, buffer_size),
-                   .capacity = buffer_size,
-                   .used = 0};
+      shader_asset.source_buffer = {
+          .data = StackAlloc<uint8_t>(&stack_allocator, buffer_size),
+          .capacity = buffer_size,
+          .used = 0};
 
       if (!assets_load_shader(assets, program.shader_ids[i], &shader_asset)) {
         LOG_EXIT(

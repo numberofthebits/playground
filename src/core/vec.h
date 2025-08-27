@@ -5,7 +5,7 @@
 
 struct Chunk_t {
   void *ptr;
-  int size;
+  size_t size;
 };
 typedef struct Chunk_t Chunk;
 
@@ -59,7 +59,7 @@ void vec_destroy(Vec *v);
       vec_reserve((vec), new_capacity_t * sizeof(type));                       \
       (vec)->capacity = new_capacity_t;                                        \
     }                                                                          \
-    type *ptr = ((vec)->storage.ptr);                                          \
+    type *ptr = (type *)((vec)->storage.ptr);                                  \
     ptr += (vec)->size;                                                        \
     *ptr = (value);                                                            \
     (vec)->size += 1;                                                          \

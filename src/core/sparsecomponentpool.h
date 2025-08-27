@@ -38,9 +38,9 @@ static inline void *pool_get(Pool *pool, EntityIndex index,
     return 0;
   }
 
-  int packed_index = pool->sparse[index];
+  size_t packed_index = pool->sparse[index];
 
-  return &pool->data[packed_index * element_size];
+  return &((char *)(pool->data))[packed_index * element_size];
 }
 
 #define PoolGetComponent(pool, type, index)                                    \

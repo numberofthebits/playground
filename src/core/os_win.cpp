@@ -42,7 +42,7 @@ void make_file_path(const char *dir, const char *file_name, char *path_buf) {
 
 void file_system_list(const char *directory, const char *filter,
                       IterCallback callback, void *context) {
-  char search_pattern[1024] = {0};
+  char search_pattern[1024] = {};
   strcat(search_pattern, directory);
   if (filter) {
     strcat(search_pattern, filter);
@@ -56,8 +56,8 @@ void file_system_list(const char *directory, const char *filter,
     return;
   } else {
     for (;;) {
-      FileSystemListResult result = {0};
-      char path_buf[PATH_BUF_MAX] = {0};
+      FileSystemListResult result = {};
+      char path_buf[PATH_BUF_MAX] = {};
       make_file_path(directory, find_file_data.cFileName, path_buf);
 
       result.file_path = path_buf;
@@ -92,7 +92,7 @@ TimeT time_now() {
 }
 
 TimeT time_elapsed(TimeT start, TimeT end) {
-  TimeT result = {0};
+  TimeT result = {};
   result.QuadPart = end.QuadPart - start.QuadPart;
 
   return result;
@@ -122,7 +122,7 @@ TimeT time_to_secs(TimeT timepoint) {
 }
 
 TimeT time_from_secs(int seconds) {
-  TimeT result = {0};
+  TimeT result = {};
   result.QuadPart = seconds * performance_counter_frequency.QuadPart;
 
   return result;
@@ -146,7 +146,7 @@ uint64_t time_to_nanosecs(TimeT timepoint) {
 }
 
 TimeT time_add(TimeT a, TimeT b) {
-  TimeT result = {0};
+  TimeT result = {};
   result.QuadPart = a.QuadPart + b.QuadPart;
   return result;
 }

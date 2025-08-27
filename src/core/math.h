@@ -93,9 +93,9 @@ typedef struct {
   float data[12];
 } Mat3x3;
 
-typedef struct Mat4x4 {
+typedef struct alignas(16) Mat4x4 {
   //  alignas(16) float data[16];
-  alignas(16) union {
+  union {
     Vec4f columns[4];
     float data[16];
   };
@@ -157,11 +157,11 @@ typedef struct {
 int vec3f_cmp_eq(Vec3f *a, Vec3f *b);
 
 static inline Vec2f vec2f_add(Vec2f a, Vec2f b) {
-  return (Vec2f){.x = a.x + b.x, .y = a.y + b.y};
+  return {.x = a.x + b.x, .y = a.y + b.y};
 }
 
 static inline Vec2f vec2f_mul(Vec2f a, Vec2f b) {
-  return (Vec2f){.x = a.x * b.x, .y = a.y * b.y};
+  return {.x = a.x * b.x, .y = a.y * b.y};
 }
 
 float vec2f_dot(Vec2f *a, Vec2f *b);
@@ -207,11 +207,11 @@ void mat4_rotate(Mat4x4 *mat, Vec3f *axis, float radians);
 void mat4_transform(Mat4x4 *mat, Vec3f *axis, float angle, float scale,
                     Vec3f *pos);
 
-Mat4x4 mat4_mul(Mat4x4 *restrict a, Mat4x4 *restrict b);
+Mat4x4 mat4_mul(Mat4x4 *a, Mat4x4 *b);
 
 Vec4f mat4_mul_vec(Mat4x4 *m, Vec4f *v);
 
-int intersect_rectf(Rectf *restrict a, Rectf *restrict b);
+int intersect_rectf(Rectf *a, Rectf *b);
 
 int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
                        MeshRayIntersection *intersect_out);

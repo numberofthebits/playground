@@ -105,17 +105,17 @@ void registry_entity_component_remove(Registry *reg, Entity e,
 /*
  Entity tag
  */
-void registry_entity_tag(Registry *reg, Entity entity, char *tag);
+void registry_entity_tag(Registry *reg, Entity entity, const char *tag);
 void registry_entity_untag(Registry *reg, Entity entity);
-int registry_entity_has_tag(Registry *reg, Entity e, char *tag);
+int registry_entity_has_tag(Registry *reg, Entity e, const char *tag);
 
 /*
  Entity group
  */
-int registry_entity_in_group(Registry *reg, Entity e, char *group);
-void registry_entity_group(Registry *reg, Entity entity, char *group);
+int registry_entity_in_group(Registry *reg, Entity e, const char *group);
+void registry_entity_group(Registry *reg, Entity entity, const char *group);
 void registry_entity_ungroup(Registry *reg, Entity entity);
-Vec *registry_entity_group_get(Registry *reg, char *group);
+Vec *registry_entity_group_get(Registry *reg, const char *group);
 
 /*
  Entity flag
