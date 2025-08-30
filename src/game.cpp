@@ -76,6 +76,8 @@ struct Game_t {
   struct RenderSystem *render_system;
   DamageSystem *damage_system;
   TextSystem *text_system;
+
+  ImGuiContext *imgui_context;
 };
 
 /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap")); */
@@ -364,7 +366,8 @@ Game *game_create() {
 
   renderer_global_init();
 
-  ImGui::CreateContext(NULL);
+  game->imgui_context = ImGui::CreateContext(NULL);
+  ImGui::SetCurrentContext(game->imgui_context);
 
   if (!ImGui_ImplGlfw_InitForOpenGL(window, true)) {
     LOG_EXIT("Failed to init Imgui Glfw");
@@ -945,15 +948,6 @@ void game_setup(Game *game) {
 
   game_load_level_assets(game, &level_assets);
 
-  /* map_init(&game->map); */
-  /* map_load(&game->map, &game->registry, &game->assets); */
-
-  /* /\* map_write_meta(&game->map, "./assets/tilemaps/jungle.meta"); *\/ */
-  /* /\* Map lol = {}; *\/ */
-  /* /\* map_read_meta(&lol, "./assets/tilemaps/jungle.meta"); *\/ */
-
-  /* load_tile_map_layout("./assets/tilemaps/jungle.map", &game->map); */
-
   load_units(&game->registry, &game->assets);
 
   CameraMovementSystem *camera_movement_system =
@@ -964,28 +958,6 @@ void game_setup(Game *game) {
 
   // Push our initial entities before entering main loop
   registry_entity_commit_entities(&game->registry);
-
-  /* PreparedResources prep; */
-  /* prep.program_ids = vec_create(); */
-  /* prep.material_ids = vec_create(); */
-
-  /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("tilemap")); */
-  /* VEC_PUSH_T(&prep.program_ids, AssetId, assets_make_id_str("unit")); */
-  /* VEC_PUSH_T(&prep.program_ids, AssetId,
-   * assets_make_id_str("collision_debug")); */
-
-  /* VEC_PUSH_T(&prep.material_ids, AssetId,
-   * assets_make_id_str("truck-blue-mat")); */
-  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("jungle-mat"));
-   */
-  /* VEC_PUSH_T(&prep.material_ids, AssetId,
-   * assets_make_id_str("chopper-udlr")); */
-  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("bullet-mat"));
-   */
-  /* VEC_PUSH_T(&prep.material_ids, AssetId, assets_make_id_str("plain-red"));
-   */
-
-  /* render_system_prepare_resources(game->render_system, &prep); */
 }
 
 void game_update(Game *game) {
@@ -1048,13 +1020,27 @@ void game_update(Game *game) {
   event_bus_reset(&game->event_bus);
 }
 
-void game_run(Game *game) {
+static void game_ui() {
+  static bool show_stats_window = true;
+  if (ImGui::Begin("Stats", &show_stats_window)) {
+    for (size_t i = 0; i < stats.count; ++i) {
+      ImGui::Text("Time '%s': %llu µs", stats.durations[i].name,
+                  stats.durations[i].value);
+    }
+  }
+  ImGui::End();
+}
 
+void game_run(Game *game) {
+  DeclareScopedTimerPlot(frame_time);
+  DeclareScopedTimer(update_time);
+  DeclareScopedTimer(swap_buffers);
   LOG_INFO("Main loop");
   game->state |= GAME_RUNNING;
 
   while ((game->state & GAME_RUNNING) != 0) {
     LOG_INFO("###### FRAME %zu #####", game->frame_counter);
+
     BeginScopedTimer(frame_time);
 
     glfwPollEvents();
@@ -1071,11 +1057,15 @@ void game_run(Game *game) {
       render_system_debug(render_system, &game->registry);
     }
 
+    AppendScopedTimer(frame_time);
+    PrintScopedTimer(frame_time);
+
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    bool open_demo_window = true;
-    ImGui::ShowDemoWindow(&open_demo_window);
+    // bool open_demo_window = true;
+    //    ImGui::ShowDemoWindow(&open_demo_window);
+    game_ui();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -1085,10 +1075,6 @@ void game_run(Game *game) {
     PrintScopedTimer(swap_buffers);
 
     game->frame_counter++;
-
-    AppendScopedTimer(frame_time);
-    PrintScopedTimer(frame_time);
-
     // Last time checked, each logged line takes 20microsecs.
     // That's alot.
     //    LOG_INFO("Time spent logging %llu microsecs", time_logging);

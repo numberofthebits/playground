@@ -148,24 +148,25 @@ void work_queue_sync(struct WorkQueue *queue) {
 void print_string(void *args) { LOG_INFO("%s", (const char *)args); }
 
 void work_queue_test() {
-  struct WorkQueue *queue = malloc(sizeof(struct WorkQueue));
+  struct WorkQueue *queue = (WorkQueue *)malloc(sizeof(struct WorkQueue));
 
   if (!work_queue_init(queue)) {
     LOG_EXIT("Failed to init work queue");
   }
-  Sleep(5000);
   LOG_INFO("Queue jobs");
 
-  work_queue_push(queue, &print_string, "hello a");
-  work_queue_push(queue, &print_string, "hello b");
-  work_queue_push(queue, &print_string, "hello c");
-  work_queue_push(queue, &print_string, "hello d");
-  work_queue_push(queue, &print_string, "hello e");
-  work_queue_push(queue, &print_string, "hello f");
-  work_queue_push(queue, &print_string, "hello g");
-  work_queue_push(queue, &print_string, "hello h");
-  work_queue_push(queue, &print_string, "hello j");
+  work_queue_push(queue, &print_string, (void *)"hello a");
+  work_queue_push(queue, &print_string, (void *)"hello b");
+  work_queue_push(queue, &print_string, (void *)"hello c");
+  work_queue_push(queue, &print_string, (void *)"hello d");
+  work_queue_push(queue, &print_string, (void *)"hello e");
+  work_queue_push(queue, &print_string, (void *)"hello f");
+  work_queue_push(queue, &print_string, (void *)"hello g");
+  work_queue_push(queue, &print_string, (void *)"hello h");
+  work_queue_push(queue, &print_string, (void *)"hello j");
 
   work_queue_sync(queue);
+
+  free(queue);
 }
 #endif

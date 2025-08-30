@@ -63,6 +63,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/services.h
   ${PROJECT_SOURCE_DIR}/src/core/sparsecomponentpool.cpp
   ${PROJECT_SOURCE_DIR}/src/core/sparsecomponentpool.h
+  ${PROJECT_SOURCE_DIR}/src/core/statistics.cpp
+  ${PROJECT_SOURCE_DIR}/src/core/statistics.h  
   ${PROJECT_SOURCE_DIR}/src/core/systembase.cpp
   ${PROJECT_SOURCE_DIR}/src/core/systembase.h
   ${PROJECT_SOURCE_DIR}/src/core/types.h

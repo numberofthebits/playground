@@ -7,6 +7,7 @@
 #include "keyvalueparser.h"
 #include "math.h"
 #include "sparsecomponentpool.h"
+#include "statistics.h"
 #include "worker.h"
 
 static inline void run_tests() {
@@ -15,6 +16,7 @@ static inline void run_tests() {
   stack_init(&stack_allocator, &global_static_allocator, 1024 * 1024 * 8);
   test_parser();
   stack_test();
+  test_statistics();
   //  assetstore_test();
   /* registry_test(); */
   /* work_queue_test(); */

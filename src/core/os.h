@@ -59,9 +59,27 @@ uint64_t time_to_millisecs(TimeT timepoint);
 uint64_t time_to_microsecs(TimeT timepoint);
 uint64_t time_to_nanosecs(TimeT timepoint);
 
+/* #ifdef ENABLE_DEBUG_TIMERS */
+/* #define BeginScopedTimer(name) \ */
+/*   static const char *timer_name_##name = (#name); \ */
+/*   TimeT start_##name = time_now(); \ */
+/*   TimeT end_##name = {}; \ */
+/*   TimeT elapsed_##name = {}; */
+
+/* #define PrintScopedTimer(name) \ */
+/*   LOG_INFO("Timer '%s': %ld", timer_name_##name, \ */
+/*            time_to_microsecs(elapsed_##name)); */
+
 #ifdef ENABLE_DEBUG_TIMERS
+#include "statistics.h"
+
+#define DeclareScopedTimerPlot(name)                                           \
+  static Duration *timer_name_##name = statistics_reserve_entry(#name);
+
+#define DeclareScopedTimer(name)                                               \
+  static Duration *timer_name_##name = statistics_reserve_entry(#name);
+
 #define BeginScopedTimer(name)                                                 \
-  static const char *timer_name_##name = (#name);                              \
   TimeT start_##name = time_now();                                             \
   TimeT end_##name = {};                                                       \
   TimeT elapsed_##name = {};
@@ -71,10 +89,10 @@ uint64_t time_to_nanosecs(TimeT timepoint);
   elapsed_##name = time_elapsed(start_##name, end_##name);
 
 #define PrintScopedTimer(name)                                                 \
-  LOG_INFO("Timer '%s': %ld", timer_name_##name,                               \
-           time_to_microsecs(elapsed_##name));
+  timer_name_##name->value = time_to_microsecs(elapsed_##name);
 
 #define FuncTimer(name, func)                                                  \
+  DeclareScopedTimer(_##name);                                                 \
   BeginScopedTimer(_##name);                                                   \
   func;                                                                        \
   AppendScopedTimer(_##name);                                                  \

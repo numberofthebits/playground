@@ -317,7 +317,7 @@ typedef struct {
 
 static void test_offset_to_align() {
   size_t alignment = alignof(max_align_t);
-  char *ptr = malloc(1024);
+  char *ptr = (char *)malloc(1024);
 
   for (size_t i = 0; i < alignment; ++i) {
     uintptr_t offset =
@@ -340,12 +340,13 @@ void stack_test() {
   struct StackAllocator stack = {};
   stack_init(&stack, &arena, 1024 * 1024 * 16);
 
-  int *int_ptr = stack_alloc(&stack, sizeof(int));
+  int *int_ptr = (int *)stack_alloc(&stack, sizeof(int));
   Assert((uintptr_t)int_ptr % alignof(int) == 0);
   Assert(stack.used == 8); // compulsive alignment to 8
 
   *int_ptr = 0xf0e0d0c0;
-  TestStructPadded *ts = stack_alloc(&stack, sizeof(TestStructPadded));
+  TestStructPadded *ts =
+      (TestStructPadded *)stack_alloc(&stack, sizeof(TestStructPadded));
 
   uintptr_t ts_value = (uintptr_t)ts;
   int alignof_ts = alignof(TestStructPadded);
@@ -363,9 +364,11 @@ void stack_test() {
   Assert(stack_dealloc_checked(&stack, int_ptr, sizeof(int)) == 1);
   Assert(stack.used == 0);
 
-  int *int_ptr_2 = stack_alloc(&stack, sizeof(int));
-  TestStructPadded *ts2 = stack_alloc(&stack, sizeof(TestStructPadded));
-  TestStructLarge *tsl = stack_alloc(&stack, sizeof(TestStructLarge));
+  int *int_ptr_2 = (int *)stack_alloc(&stack, sizeof(int));
+  TestStructPadded *ts2 =
+      (TestStructPadded *)stack_alloc(&stack, sizeof(TestStructPadded));
+  TestStructLarge *tsl =
+      (TestStructLarge *)stack_alloc(&stack, sizeof(TestStructLarge));
   Assert((uintptr_t)int_ptr_2 % alignof(int) == 0);
   *int_ptr_2 = 1;
 

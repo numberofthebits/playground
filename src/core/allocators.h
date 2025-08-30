@@ -8,6 +8,18 @@
 
 #define STACK_ALLOCATOR_DEFAULT_THREAD_LOCAL_STACK_SIZE 1024ULL * 1024ULL * 8ULL
 
+typedef void *(*Allocate)(void *allocator, size_t element_size,
+                          size_t element_count, size_t alignment);
+typedef void (*Deallocate)(void *allocator, void *ptr, size_t s);
+typedef void (*DeallocateAll)(void *allocator);
+
+struct IAllocator {
+  Allocate allocate;
+  Deallocate deallocate;
+  DeallocateAll deallocate_all;
+  void *instance;
+};
+
 struct ArenaAllocator {
   uint8_t *base;
   size_t capacity;

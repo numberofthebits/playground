@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef BUILD_TESTS
-  // run_tests();
+  run_tests();
 #endif
 
   Game *game = game_create();

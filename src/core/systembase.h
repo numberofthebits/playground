@@ -3,6 +3,7 @@
 
 #include "ecs.h"
 #include "services.h"
+#include "statistics.h"
 #include "types.h"
 #include "vec.h"
 
@@ -45,6 +46,7 @@ struct SystemBase {
 
   int flag;             /*SystemBit*/
   int evaluation_order; // unused
+  Duration *update_elapsed;
 };
 typedef struct SystemBase SystemBase;
 

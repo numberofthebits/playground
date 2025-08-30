@@ -319,6 +319,7 @@ static void render_update_range(void *job_params) {
 
 static void render_update(Registry *reg, struct SystemBase *sys,
                           size_t frame_nr) {
+  DeclareScopedTimer(render_update);
   BeginScopedTimer(render_update);
   (void)frame_nr;
 
@@ -373,6 +374,7 @@ static void render_update(Registry *reg, struct SystemBase *sys,
   AppendScopedTimer(render_update);
   PrintScopedTimer(render_update);
 
+  DeclareScopedTimer(render_entities);
   BeginScopedTimer(render_entities);
   render_entities(render_sys, render_data, sys->entities.size);
   AppendScopedTimer(render_entities);

@@ -286,6 +286,8 @@ void registry_entity_remove(Registry *reg, Entity e) {
 }
 
 void registry_entity_commit_entities(Registry *reg) {
+  DeclareScopedTimer(add_entity_to_systems);
+
   for (size_t j = 0; j < reg->count_to_remove; ++j) {
     Entity e = reg->to_remove[j];
     remove_entity_from_systems(reg, e);
@@ -361,6 +363,8 @@ void registry_add_system(Registry *registry, struct SystemBase *systembase) {
   }
   LOG_INFO("Add system %s ID %d", systembase->name, systembase->flag);
   registry->systems[registry->num_systems++] = systembase;
+
+  systembase->update_elapsed = statistics_reserve_entry(systembase->name);
 }
 
 struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
@@ -373,9 +377,13 @@ struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
 }
 
 void registry_update(Registry *reg, size_t frame_index) {
+  (void)frame_index;
+  DeclareScopedTimer(commit_entities);
+
   for (size_t i = 0; i < reg->num_systems; ++i) {
     struct SystemBase *system = reg->systems[i];
     if (system) {
+
 #ifdef ENABLE_DEBUG_TIMERS
       TimeT t0 = time_now();
 #endif
@@ -383,8 +391,9 @@ void registry_update(Registry *reg, size_t frame_index) {
 #ifdef ENABLE_DEBUG_TIMERS
       TimeT t1 = time_now();
       TimeT elapsed = time_elapsed(t0, t1);
-      LOG_INFO("System '%s' update time: %lu microsecs", system->name,
-               time_to_microsecs(elapsed));
+      system->update_elapsed->value = time_to_microsecs(elapsed);
+      // LOG_INFO("System '%s' update time: %lu microsecs", system->name,
+      //          time_to_microsecs(elapsed));
 #endif
     }
   }
