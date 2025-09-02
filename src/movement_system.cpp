@@ -8,8 +8,9 @@
 #include "core/systembase.h"
 
 static void movement_update(Registry *reg, struct SystemBase *system,
-                            size_t frame_nr) {
+                            size_t frame_nr, TimeT now) {
   (void)frame_nr;
+  (void)now;
 
   Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
   Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);

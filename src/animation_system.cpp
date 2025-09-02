@@ -7,9 +7,10 @@
 #include "systems.h"
 
 static void animation_update(Registry *reg, struct SystemBase *system,
-                             size_t frame_nr) {
+                             size_t frame_nr, TimeT frame_time_now) {
   (void)frame_nr;
   (void)system;
+  (void)frame_time_now;
 
   Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
   Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);

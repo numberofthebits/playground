@@ -9,8 +9,9 @@
 #include "core/systembase.h"
 
 static void collision_update(Registry *reg, struct SystemBase *sys,
-                             size_t frame_nr) {
+                             size_t frame_nr, TimeT frame_time_now) {
   (void)frame_nr;
+  (void)frame_time_now;
 
   Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);

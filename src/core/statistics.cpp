@@ -3,16 +3,29 @@
 #include "log.h"
 Statistics stats;
 
-Duration *statistics_reserve_entry(const char *name) {
+Duration *statistics_reserve_duration(const char *name) {
 
-  if (stats.count == STATISTICS_DURATIONS_MAX) {
+  if (stats.num_durations == STATISTICS_DURATIONS_MAX) {
     return nullptr;
   }
-  Duration *dur = &stats.durations[stats.count++];
+  Duration *dur = &stats.durations[stats.num_durations++];
   dur->name = name;
   dur->value = 0;
 
   return dur;
+}
+
+CircularBuffer *statistics_reserve_series(const char *name) {
+  if (stats.num_series == STATISTICS_SERIES_MAX) {
+    return nullptr;
+  }
+  CircularBuffer *buffer = &stats.series[stats.num_series++];
+
+  cbuf_init(buffer);
+
+  buffer->name = name;
+
+  return buffer;
 }
 #ifdef BUILD_TESTS
 static inline void log_cbuf(CircularBuffer *buffer) {
@@ -36,7 +49,7 @@ void test_statistics() {
   uint32_t index = buf.index_read;
   for (uint32_t i = 0; i < buf.size; ++i) {
     LOG_INFO("%d %llu ", i, buf.values[index]);
-    index = cbuf_next(index);
+    index = cbuf_next(&buf, index);
   }
 
   for (int i = 0; i < STATISTICS_CIRCULAR_BUFFER_SIZE; ++i) {
@@ -49,11 +62,5 @@ void test_statistics() {
     cbuf_push(&buf, 10 + i);
     log_cbuf(&buf);
   }
-
-  // for (uint64_t *iter_ = cbuf_begin(&buf); iter_ != cbuf_end(&buf);
-  //      cbuf_next(&buf, iter_)) {
-  //   LOG_INFO("%llu", *iter_);
-  //   ++iter_;
-  // }
 }
 #endif

@@ -5,10 +5,9 @@
 
 #include <stdalign.h>
 #include <threads.h>
-// #include <pthread.h>
 
 #define WORK_QUEUE_MAX_SIZE 100000
-#define WORKER_THREAD_COUNT 7
+#define WORKER_THREAD_COUNT 1
 #define NUM_THREADS (1 + WORKER_THREAD_COUNT)
 
 typedef void (*JobFn)(void *);
@@ -29,17 +28,18 @@ typedef struct {
 
 struct WorkQueue {
   WorkQueueEntry work_queue[WORK_QUEUE_MAX_SIZE];
-  SemaphoreHandle semaphore_handle;
   WorkerThread worker_threads[WORKER_THREAD_COUNT];
 
+  alignas(64) SemaphoreHandle semaphore_handle;
+
   // Producer writes (resets to zero). Consumers read and write.
-  volatile uint32_t work_queue_next;
+  alignas(64) volatile uint32_t work_queue_next;
 
   // Procuder writes and reads. Consumers read
-  volatile uint32_t work_queue_count;
+  alignas(64) volatile uint32_t work_queue_count;
 
   // Producer reads. Consumers write.
-  volatile uint32_t work_queue_completed;
+  alignas(64) volatile uint32_t work_queue_completed;
 };
 
 // Returns 0 on failure

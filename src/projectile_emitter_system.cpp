@@ -74,12 +74,12 @@ void create_projectile(ProjectileEmitterComponent *component,
 }
 
 void projectile_emitter_system_update(Registry *registry,
-                                      struct SystemBase *sys, size_t frame_nr) {
+                                      struct SystemBase *sys, size_t frame_nr,
+                                      TimeT now) {
   (void)frame_nr;
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
   Pool *projectile_pool =
       registry_get_pool(registry, PROJECTILE_EMITTER_COMPONENT_BIT);
-  TimeT now = time_now();
 
   for (int i = 0; i < sys->entities.size; ++i) {
     Entity e = VEC_GET_T(&sys->entities, Entity, i);

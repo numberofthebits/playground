@@ -5,10 +5,11 @@
 #include "entity_flags.h"
 
 void damage_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr) {
+                          size_t frame_nr, TimeT now) {
   (void)registry;
   (void)sys;
   (void)frame_nr;
+  (void)now;
   Pool *health_pool = registry_get_pool(registry, HEALTH_COMPONENT_BIT);
 
   for (int i = 0; i < sys->entities.size; ++i) {

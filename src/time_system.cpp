@@ -8,8 +8,8 @@
 #include "core/os.h"
 #include "core/systembase.h"
 
-static void time_update(Registry *reg, struct SystemBase *sys,
-                        size_t frame_nr) {
+static void time_update(Registry *reg, struct SystemBase *sys, size_t frame_nr,
+                        TimeT time_frame_now) {
   (void)frame_nr;
   Pool *time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
 
@@ -20,7 +20,7 @@ static void time_update(Registry *reg, struct SystemBase *sys,
 
     TimeComponent *tc = PoolGetComponent(time_pool, TimeComponent, e.index);
 
-    if (time_expired(tc->expires)) {
+    if (time_gte(time_frame_now, tc->expires)) {
       registry_entity_remove(reg, e);
     }
   }

@@ -87,8 +87,9 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
 }
 
 void text_system_update(Registry *registry, struct SystemBase *sys,
-                        size_t frame_nr) {
+                        size_t frame_nr, TimeT now) {
   (void)frame_nr;
+  (void)now;
 
   TextSystem *system = (TextSystem *)sys;
 

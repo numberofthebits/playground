@@ -207,7 +207,7 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
   }
 
   CHECK_GL_ERROR();
-  glBeginQuery(GL_TIME_ELAPSED, system->query_time_elapsed);
+  //  glBeginQuery(GL_TIME_ELAPSED, system->query_time_elapsed);
 
   glNamedBufferSubData(system->tile_renderer->multi_draw_indirect_buffer, 0,
                        sizeof(DrawElementsIndirectCommand) * count_in_batch,
@@ -226,12 +226,12 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
 
   CHECK_GL_ERROR();
 
-  glEndQuery(GL_TIME_ELAPSED);
-  GLint time_elapsed_ns = -1;
-  glGetQueryObjectiv(system->query_time_elapsed, GL_QUERY_RESULT,
-                     &time_elapsed_ns);
+  // glEndQuery(GL_TIME_ELAPSED);
+  // GLint time_elapsed_ns = -1;
+  // glGetQueryObjectiv(system->query_time_elapsed, GL_QUERY_RESULT,
+  //                    &time_elapsed_ns);
 
-  LOG_INFO("named buffer sub data elapsed ns %d", time_elapsed_ns);
+  // LOG_INFO("named buffer sub data elapsed ns %d", time_elapsed_ns);
 
   renderer_multi_draw_elements_indirect(system->tile_renderer, count_in_batch);
 }
@@ -318,10 +318,11 @@ static void render_update_range(void *job_params) {
 }
 
 static void render_update(Registry *reg, struct SystemBase *sys,
-                          size_t frame_nr) {
+                          size_t frame_nr, TimeT now) {
+  (void)frame_nr;
+  (void)now;
   DeclareScopedTimer(render_update);
   BeginScopedTimer(render_update);
-  (void)frame_nr;
 
   RenderSystem *render_sys = (RenderSystem *)sys;
   Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
@@ -569,24 +570,6 @@ struct Renderer *create_debug_renderer() {
   return debug_renderer;
 }
 
-/* // TODO: Make it work without a position/center argument first. */
-/* // I haven't tested if a straight translation is actually the right thing */
-/* void recalc_camera(struct OrthoCamera *camera, int width, int height, */
-/*                    float scale, Vec3f *center) { */
-/*   (void)scale; */
-/*   (void)center; */
-/*   float aspect_ratio = (float)width / (float)height; */
-/*   camera->aspect_ratio = aspect_ratio; */
-
-/*   camera->projection = ortho( */
-/*       1.f, -1.f, camera->rect.pos.x + camera->rect.width, camera->rect.pos.x,
- */
-/*       camera->rect.pos.y + camera->rect.height, camera->rect.pos.y); */
-
-/*   mat4_identity(&camera->view); */
-/*   //  mat4_translate(&camera->view, center); */
-/* } */
-
 RenderSystem *render_system_create(Services *services, int window_w,
                                    int window_h, int screen_w, int screen_h) {
   LOG_INFO("Create render system implementation...");
@@ -617,20 +600,6 @@ RenderSystem *render_system_create(Services *services, int window_w,
 
   system->debug_renderer = create_debug_renderer();
   CHECK_GL_ERROR();
-
-  //  Vec3f center = {0.f, 0.f, 0.f};
-  /* system->camera.rect.pos.x = -system->main_framebuffer.width / 2; */
-  /* system->camera.rect.pos.y = -system->main_framebuffer.height / 2; */
-  /* system->camera.rect.width = system->main_framebuffer.width; */
-  /* system->camera.rect.height = system->main_framebuffer.height; */
-
-  /* system->camera.rect.pos.x = -4.f; */
-  /* system->camera.rect.pos.y = -4.f; */
-  /* system->camera.rect.width = 8.f; */
-  /* system->camera.rect.height = 8.f; */
-
-  /* recalc_camera(&system->camera, system->main_framebuffer.width, */
-  /*               system->main_framebuffer.height, 25.f, &center); */
 
   render_system_framebuffer_size_changed(system, system->main_framebuffer.width,
                                          system->main_framebuffer.height);

@@ -1015,7 +1015,7 @@ void game_update(Game *game) {
   LOG_INFO("************ END DEFFERED EVENTS ***************");
   event_bus_process_deferred(&game->event_bus);
 
-  registry_update(&game->registry, game->frame_counter);
+  registry_update(&game->registry, game->frame_counter, time_now());
 
   event_bus_reset(&game->event_bus);
 }
@@ -1023,16 +1023,38 @@ void game_update(Game *game) {
 static void game_ui() {
   static bool show_stats_window = true;
   if (ImGui::Begin("Stats", &show_stats_window)) {
-    for (size_t i = 0; i < stats.count; ++i) {
+    for (uint32_t i = 0; i < stats.num_durations; ++i) {
       ImGui::Text("Time '%s': %llu µs", stats.durations[i].name,
                   stats.durations[i].value);
+    }
+
+    // Handle plotting stuff
+    for (uint32_t i = 0; i < stats.num_series; ++i) {
+      CircularBuffer *buffer = &stats.series[i];
+      float *converted =
+          (float *)stack_alloc(&stack_allocator, sizeof(float) * buffer->size);
+
+      float sum = 0.f;
+      uint32_t index = buffer->index_read;
+      for (uint32_t c = 0; c < buffer->size; ++c) {
+        float val = ((float)buffer->values[index]) / 1000.f;
+        sum += val;
+        converted[c] = ((float)buffer->values[index]) / 1000.f;
+        index = cbuf_next(buffer, index);
+      }
+
+      ImGui::PlotLines(buffer->name, converted, buffer->size, 0, "ms", FLT_MIN,
+                       20.f, ImVec2(400.f, 100.f));
+      stack_dealloc(&stack_allocator, converted, sizeof(float) * buffer->size);
+
+      ImGui::Text("Avg: %f ms", sum / (float)buffer->size);
     }
   }
   ImGui::End();
 }
 
 void game_run(Game *game) {
-  DeclareScopedTimerPlot(frame_time);
+  DeclareScopedTimerSeries(frame_time);
   DeclareScopedTimer(update_time);
   DeclareScopedTimer(swap_buffers);
   LOG_INFO("Main loop");
@@ -1057,8 +1079,7 @@ void game_run(Game *game) {
       render_system_debug(render_system, &game->registry);
     }
 
-    AppendScopedTimer(frame_time);
-    PrintScopedTimer(frame_time);
+    AppendScopedTimerSeries(frame_time);
 
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();

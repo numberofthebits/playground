@@ -3,8 +3,10 @@
 #include "events.h"
 
 static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
-                                        size_t frame_nr) {
+                                        size_t frame_nr, TimeT now) {
   (void)frame_nr;
+  (void)now;
+
   HitDetectionSystem *system = (HitDetectionSystem *)base;
   Pool *mesh_pool = registry_get_pool(reg, MESH_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);

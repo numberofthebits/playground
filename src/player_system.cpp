@@ -51,7 +51,7 @@ struct PlayerSystem *player_system_create(Services *services) {
 }
 
 static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
-                                           float angle) {
+                                           float angle, TimeT now) {
   Entity e = registry_entity_create(registry);
 
   registry_entity_group(registry, e, "projectile");
@@ -80,7 +80,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   rc.texture_atlas_size.y = 1;
 
   TimeComponent ttc = {};
-  ttc.created = time_now();
+  ttc.created = now;
   TimeT expires = time_from_secs(5);
   ttc.expires = time_add(ttc.created, expires);
 
@@ -102,7 +102,7 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
 }
 
 void player_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr) {
+                          size_t frame_nr, TimeT now) {
   (void)frame_nr;
   struct PlayerSystem *player_system = (struct PlayerSystem *)sys;
   Pool *physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
@@ -120,7 +120,8 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 
     // NOTE: It would probably be fine to spawn 1 bullet per frame
     for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
-      player_system_spawn_projectile(registry, tc->pos, player_system->angle);
+      player_system_spawn_projectile(registry, tc->pos, player_system->angle,
+                                     now);
     }
 
     pc->velocity.x +=

@@ -73,11 +73,21 @@ uint64_t time_to_nanosecs(TimeT timepoint);
 #ifdef ENABLE_DEBUG_TIMERS
 #include "statistics.h"
 
-#define DeclareScopedTimerPlot(name)                                           \
-  static Duration *timer_name_##name = statistics_reserve_entry(#name);
+#define DeclareScopedTimerSeries(name)                                         \
+  static CircularBuffer *timer_name_##name = statistics_reserve_series(#name);
+
+#define BeginScopedTimerSeries(name)                                           \
+  TimeT start_##name = time_now();                                             \
+  TimeT end_##name = {};                                                       \
+  TimeT elapsed_##name = {};
+
+#define AppendScopedTimerSeries(name)                                          \
+  end_##name = time_now();                                                     \
+  elapsed_##name = time_elapsed(start_##name, end_##name);                     \
+  cbuf_push(timer_name_##name, time_to_microsecs(elapsed_##name));
 
 #define DeclareScopedTimer(name)                                               \
-  static Duration *timer_name_##name = statistics_reserve_entry(#name);
+  static Duration *timer_name_##name = statistics_reserve_duration(#name);
 
 #define BeginScopedTimer(name)                                                 \
   TimeT start_##name = time_now();                                             \

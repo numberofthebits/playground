@@ -364,7 +364,7 @@ void registry_add_system(Registry *registry, struct SystemBase *systembase) {
   LOG_INFO("Add system %s ID %d", systembase->name, systembase->flag);
   registry->systems[registry->num_systems++] = systembase;
 
-  systembase->update_elapsed = statistics_reserve_entry(systembase->name);
+  systembase->update_elapsed = statistics_reserve_duration(systembase->name);
 }
 
 struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
@@ -376,7 +376,7 @@ struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
   return 0;
 }
 
-void registry_update(Registry *reg, size_t frame_index) {
+void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now) {
   (void)frame_index;
   DeclareScopedTimer(commit_entities);
 
@@ -387,7 +387,7 @@ void registry_update(Registry *reg, size_t frame_index) {
 #ifdef ENABLE_DEBUG_TIMERS
       TimeT t0 = time_now();
 #endif
-      system->update_fn(reg, system, frame_index);
+      system->update_fn(reg, system, frame_index, frame_time_now);
 #ifdef ENABLE_DEBUG_TIMERS
       TimeT t1 = time_now();
       TimeT elapsed = time_elapsed(t0, t1);

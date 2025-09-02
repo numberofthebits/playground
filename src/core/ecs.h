@@ -88,7 +88,7 @@ void registry_add_system(Registry *reg, struct SystemBase *s);
 struct SystemBase *registry_get_system(Registry *reg, int system_id);
 
 // Process 'to_add' and 'to_remove' lists
-void registry_update(Registry *reg, size_t frame_index);
+void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now);
 
 /*******************
   Entity API

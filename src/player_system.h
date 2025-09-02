@@ -26,7 +26,7 @@ typedef struct PlayerSystem {
 struct PlayerSystem *player_system_create(Services *services);
 
 void player_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr);
+                          size_t frame_nr, TimeT now);
 
 void player_system_handle_event(struct SystemBase *system, struct Event e);
 

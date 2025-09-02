@@ -2,17 +2,31 @@
 #define SYSTEMBASE_H
 
 #include "ecs.h"
+#include "os.h"
 #include "services.h"
 #include "statistics.h"
 #include "types.h"
 #include "vec.h"
-
 #include <stdalign.h>
+
+#define REQUIRED_COMPONENT_ACCESS_READ_ONLY 1
+#define REQUIRED_COMPONENT_ACCESS_READ_WRITE 2
+#define REQUIRED_COMPONENT_ACCESS_WRITE_ONLY 3
 
 typedef struct SystemBase SystemBase;
 typedef struct Registry_t Registry;
 
-typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t);
+typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t, TimeT);
+
+#define COMPONENT_ACCESS_READ 0x1
+#define COMPONENT_ACCESS_WRITE 0x2
+#define COMPONENT_ACCESS_READ_WRITE                                            \
+  (COMPONENT_ACCESS_READ | COMPONENT_ACCESS_WRITE)
+
+struct RequiredComponent {
+  int component_flag;
+  int access_flags;
+};
 
 /* SystemBase defines invariants for concrete systems such that
    the entity component system (ECS) can work with systems in a general manner.
