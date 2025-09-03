@@ -31,10 +31,13 @@ struct MovementSystem *movement_system_create(Services *services) {
   struct MovementSystem *system =
       ArenaAlloc<MovementSystem>(&global_static_allocator, 1);
 
+  RequiredComponents components = {
+      .signature = TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT,
+      .read_access_flags = PHYSICS_COMPONENT_BIT,
+      .write_access_flags = TRANSFORM_COMPONENT_BIT};
+
   system_base_init((struct SystemBase *)system, MOVEMENT_SYSTEM_BIT,
-                   &movement_update,
-                   TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT, services,
-                   "MovementSystem");
+                   &movement_update, components, services, "MovementSystem");
 
   return system;
 }

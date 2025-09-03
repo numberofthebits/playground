@@ -62,10 +62,14 @@ struct AnimationSystem *animation_system_create(Services *services) {
   struct AnimationSystem *system =
       ArenaAlloc<AnimationSystem>(&global_static_allocator, 1);
 
-  system_base_init(
-      (struct SystemBase *)system, ANIMATION_SYSTEM_BIT, &animation_update,
-      ANIMATION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | RENDER_COMPONENT_BIT,
-      services, "AnimationSystem");
+  RequiredComponents components = {
+      .signature = ANIMATION_COMPONENT_BIT | PHYSICS_COMPONENT_BIT |
+                   RENDER_COMPONENT_BIT,
+      .read_access_flags = ANIMATION_COMPONENT_BIT | PHYSICS_COMPONENT_BIT,
+      .write_access_flags = ANIMATION_COMPONENT_BIT};
+
+  system_base_init((struct SystemBase *)system, ANIMATION_SYSTEM_BIT,
+                   &animation_update, components, services, "AnimationSystem");
 
   return system;
 }

@@ -262,9 +262,13 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 TextSystem *text_system_create(Services *services) {
   TextSystem *system = ArenaAlloc<TextSystem>(&global_static_allocator, 1);
 
+  RequiredComponents components = {.signature = TEXT_COMPONENT_BIT,
+                                   .read_access_flags = TEXT_COMPONENT_BIT |
+                                                        TRANSFORM_COMPONENT_BIT,
+                                   .write_access_flags = 0};
+
   system_base_init((struct SystemBase *)system, TEXT_SYSTEM_BIT,
-                   &text_system_update, TEXT_COMPONENT_BIT, services,
-                   "TextSystem");
+                   &text_system_update, components, services, "TextSystem");
 
   system->base.services = *services;
 

@@ -61,8 +61,10 @@ struct InputSystem *input_system_create(Services *services) {
   // This system isn't interested in any components.
   // It only consumes input from OS and produces
   // events.
+  RequiredComponents components{};
+
   system_base_init((struct SystemBase *)system, INPUT_SYSTEM_BIT,
-                   &input_system_update, 0, services, "InputSystem");
+                   &input_system_update, components, services, "InputSystem");
 
   memset(system->keys, 0x0, sizeof(system->keys));
   memset(system->events, 0x0, sizeof(system->events));

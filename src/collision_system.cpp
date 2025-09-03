@@ -75,10 +75,13 @@ struct CollisionSystem *collision_system_create(Services *services) {
   struct CollisionSystem *system =
       ArenaAlloc<CollisionSystem>(&global_static_allocator, 1);
 
+  RequiredComponents components = {
+      .signature = COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .read_access_flags = COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .write_access_flags = 0};
+
   system_base_init((struct SystemBase *)system, COLLISION_SYSTEM_BIT,
-                   &collision_update,
-                   COLLISION_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services,
-                   "CollisionSystem");
+                   &collision_update, components, services, "CollisionSystem");
 
   return system;
 }

@@ -40,11 +40,14 @@ struct PlayerSystem *player_system_create(Services *services) {
   struct PlayerSystem *system =
       ArenaAlloc<PlayerSystem>(&global_static_allocator, 1);
 
-  int component_flags =
-      INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;
+  RequiredComponents components{
+      .signature =
+          INPUT_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT,
+      .read_access_flags = INPUT_COMPONENT_BIT,
+      .write_access_flags = TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT};
+
   system_base_init((struct SystemBase *)system, PLAYER_SYSTEM_BIT,
-                   &player_system_update, component_flags, services,
-                   "PlayerSystem");
+                   &player_system_update, components, services, "PlayerSystem");
 
   player_system_reset(system);
   return system;

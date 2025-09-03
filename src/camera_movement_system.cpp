@@ -93,10 +93,14 @@ CameraMovementSystem *camera_movement_system_create(Services *services,
   CameraMovementSystem *sys =
       ArenaAlloc<CameraMovementSystem>(&global_static_allocator, 1);
 
+  RequiredComponents components = {
+      .signature = TRANSFORM_COMPONENT_BIT | CAMERA_MOVEMENT_COMPONENT_BIT,
+      .read_access_flags = TRANSFORM_COMPONENT_BIT,
+      .write_access_flags = CAMERA_MOVEMENT_COMPONENT_BIT};
+
   system_base_init((struct SystemBase *)sys, CAMERA_MOVEMENT_SYSTEM_BIT,
-                   camera_movement_system_update,
-                   TRANSFORM_COMPONENT_BIT | CAMERA_MOVEMENT_COMPONENT_BIT,
-                   services, "CameraMovementSystem");
+                   camera_movement_system_update, components, services,
+                   "CameraMovementSystem");
 
   sys->camera = *camera;
 

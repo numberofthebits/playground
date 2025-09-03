@@ -102,10 +102,15 @@ ProjectileEmitterSystem *projectile_emitter_system_create(Services *services) {
   ProjectileEmitterSystem *sys =
       ArenaAlloc<ProjectileEmitterSystem>(&global_static_allocator, 1);
 
-  int component_flags = PROJECTILE_EMITTER_COMPONENT_BIT |
-                        TRANSFORM_COMPONENT_BIT | PHYSICS_COMPONENT_BIT;
+  RequiredComponents components = {
+      .signature = PROJECTILE_EMITTER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT |
+                   PHYSICS_COMPONENT_BIT,
+      .read_access_flags =
+          PROJECTILE_EMITTER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .write_access_flags = PROJECTILE_EMITTER_COMPONENT_BIT};
+
   system_base_init((struct SystemBase *)sys, PROJECTILE_EMITTER_SYSTEM_BIT,
-                   &projectile_emitter_system_update, component_flags, services,
+                   &projectile_emitter_system_update, components, services,
                    "ProjectileEmitterSystem");
   return sys;
 }

@@ -84,9 +84,13 @@ void damage_system_handle_event(struct SystemBase *sys, struct Event e) {
 
 DamageSystem *damage_system_create(Services *services) {
   DamageSystem *sys = ArenaAlloc<DamageSystem>(&global_static_allocator, 1);
+
+  RequiredComponents components = {.signature = HEALTH_COMPONENT_BIT,
+                                   .read_access_flags = HEALTH_COMPONENT_BIT,
+                                   .write_access_flags = HEALTH_COMPONENT_BIT};
+
   system_base_init((struct SystemBase *)sys, DAMAGE_SYSTEM_BIT,
-                   &damage_system_update, HEALTH_COMPONENT_BIT, services,
-                   "DamageSystem");
+                   &damage_system_update, components, services, "DamageSystem");
 
   return sys;
 }

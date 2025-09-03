@@ -18,14 +18,15 @@ typedef struct Registry_t Registry;
 
 typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t, TimeT);
 
-#define COMPONENT_ACCESS_READ 0x1
-#define COMPONENT_ACCESS_WRITE 0x2
-#define COMPONENT_ACCESS_READ_WRITE                                            \
-  (COMPONENT_ACCESS_READ | COMPONENT_ACCESS_WRITE)
+struct RequiredComponents {
+  // The signature is a bitwise OR'ed set of component flags
+  ComponentSignatureT signature;
 
-struct RequiredComponent {
-  int component_flag;
-  int access_flags;
+  // Read access bit flags corresponding to component bit flags
+  ComponentReadAccessT read_access_flags;
+
+  // Write acccess bit flags corresponding to component bit flag
+  ComponentWriteAccessT write_access_flags;
 };
 
 /* SystemBase defines invariants for concrete systems such that
@@ -37,8 +38,9 @@ struct RequiredComponent {
    because we don't want anything in core to know about specific systems.
  */
 struct SystemBase {
-  // The signature is a bitwise OR'ed set of component flags
-  SignatureT signature;
+  // Describe which components this system deals with, and what type of
+  // access is required
+  RequiredComponents components;
 
   // Dynamic array of Entity types
   Vec entities;
@@ -66,7 +68,7 @@ typedef struct SystemBase SystemBase;
 
 // This MUST be called for each concrete system implementation
 void system_base_init(struct SystemBase *system, int system_id,
-                      pfnSystemUpdate update_fn, int required_component_flags,
+                      pfnSystemUpdate update_fn, RequiredComponents components,
                       Services *services, const char *name);
 
 void system_add_entity(struct SystemBase *system, Entity entity);

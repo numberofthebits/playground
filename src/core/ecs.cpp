@@ -173,8 +173,8 @@ void registry_init(Registry *reg, size_t max_entity_count,
 
   reg->count_to_remove = 0;
 
-  reg->entity_component_signatures =
-      ArenaAlloc<SignatureT>(&global_static_allocator, max_entity_count);
+  reg->entity_component_signatures = ArenaAlloc<ComponentSignatureT>(
+      &global_static_allocator, max_entity_count);
 
   reg->entity_flags =
       ArenaAlloc<EntityFlags>(&global_static_allocator, max_entity_count);
@@ -208,12 +208,12 @@ Entity registry_entity_create(Registry *reg) {
 
 static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
 
-  SignatureT entity_signature =
+  ComponentSignatureT entity_signature =
       registry->entity_component_signatures[entity.index];
 
   for (size_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
-    SignatureT system_signature = system->signature;
+    ComponentSignatureT system_signature = system->components.signature;
 
     if (!system || !system_signature) {
       continue;
@@ -228,13 +228,19 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
 
 static void remove_entity_from_systems(Registry *registry, Entity entity) {
   size_t entity_index = entity.index;
-  SignatureT entity_signature =
+  ComponentSignatureT entity_signature =
       registry->entity_component_signatures[entity_index];
 
   for (size_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
-    SignatureT system_signature = system->signature;
-    if (!system || !system_signature) {
+
+    if (!system) {
+      continue;
+    }
+
+    ComponentSignatureT system_signature = system->components.signature;
+
+    if (!system_signature) {
       continue;
     }
 
@@ -254,11 +260,12 @@ void registry_entity_add(Registry *reg, Entity e) {
   reg->staged_add.to_add[reg->staged_add.count_to_add++] = e;
 
   /* LOG_INFO("Add entity ID %d index %zu", e.id, e.index); */
-  SignatureT entity_signature = reg->entity_component_signatures[e.index];
+  ComponentSignatureT entity_signature =
+      reg->entity_component_signatures[e.index];
 
   for (size_t i = 0; i < reg->num_systems; ++i) {
     struct SystemBase *system = reg->systems[i];
-    SignatureT system_signature = system->signature;
+    ComponentSignatureT system_signature = system->components.signature;
     if (!system || !system_signature) {
       continue;
     }
@@ -340,7 +347,8 @@ void registry_entity_component_add(Registry *reg, Entity e, int component_bit,
 
   pool_insert(pool, e, data);
 
-  SignatureT *entity_signature = &reg->entity_component_signatures[e.index];
+  ComponentSignatureT *entity_signature =
+      &reg->entity_component_signatures[e.index];
   *entity_signature |= component_bit;
 }
 

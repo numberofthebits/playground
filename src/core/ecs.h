@@ -63,7 +63,7 @@ struct Registry_t {
   size_t count_to_remove;
 
   // Array must must be 'num_entities' size always
-  SignatureT *entity_component_signatures;
+  ComponentSignatureT *entity_component_signatures;
 
   // Array must be 'num_entities' size always
   EntityFlags *entity_flags;

@@ -50,9 +50,13 @@ HitDetectionSystem *hit_detection_system_create(Services *services) {
   HitDetectionSystem *system =
       ArenaAlloc<HitDetectionSystem>(&global_static_allocator, 1);
 
+  RequiredComponents components = {
+      .signature = MESH_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .read_access_flags = MESH_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .write_access_flags = 0};
+
   system_base_init((struct SystemBase *)system, HIT_DETECTION_SYSTEM_BIT,
-                   &hit_detection_system_update,
-                   MESH_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services,
+                   &hit_detection_system_update, components, services,
                    "HitDetectionSystem");
   system->rays = ArenaAlloc<Ray3f>(&global_static_allocator, 1);
   system->num_rays = 0;

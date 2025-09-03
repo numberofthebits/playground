@@ -576,15 +576,15 @@ RenderSystem *render_system_create(Services *services, int window_w,
   (void)screen_w;
   (void)screen_h;
 
-  // TODO: This is per renderer data. Should be set up when invoking each
-  // individual renderer
-
   RenderSystem *system = ArenaAlloc<RenderSystem>(&global_static_allocator, 1);
-  /* RenderSystem *system = */
-  /*     arena_alloc(&global_static_allocator, sizeof(RenderSystem), 1, 4); */
-  system_base_init(
-      (struct SystemBase *)system, RENDER_SYSTEM_BIT, &render_update,
-      RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT, services, "RenderSystem");
+
+  RequiredComponents components{
+      .signature = RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .read_access_flags = RENDER_COMPONENT_BIT | TRANSFORM_COMPONENT_BIT,
+      .write_access_flags = 0};
+
+  system_base_init((struct SystemBase *)system, RENDER_SYSTEM_BIT,
+                   &render_update, components, services, "RenderSystem");
 
   system->base.services = *services;
   system->materials = vec_create();

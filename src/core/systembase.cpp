@@ -18,10 +18,11 @@ static EntityIndex find_entity_index(Vec *entities, Entity e) {
 }
 
 void system_base_init(struct SystemBase *system, int system_flag,
-                      pfnSystemUpdate update_fn, int required_component_flags,
+                      pfnSystemUpdate update_fn,
+                      RequiredComponents required_components,
                       Services *services, const char *name) {
   system->flag = system_flag;
-  system->signature = required_component_flags;
+  system->components = required_components;
   system->update_fn = update_fn;
   system->entities = vec_create();
   system->services = *services;
