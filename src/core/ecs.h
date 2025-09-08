@@ -1,6 +1,7 @@
 #ifndef ECS_H
 #define ECS_H
 
+#include "allocators.h"
 #include "assetstore.h"
 #include "componentbase.h"
 #include "hashmap.h"
@@ -13,6 +14,10 @@
 
 struct SystemBase;
 
+struct SystemUpdateGroup {
+  SystemBase *systems[SYSTEMS_MAX];
+  size_t count;
+};
 // Track our entity indexes so we can reuse destroyed entities
 // Note this is not a component pool
 struct EntityIdPool {
@@ -89,6 +94,10 @@ struct SystemBase *registry_get_system(Registry *reg, int system_id);
 
 // Process 'to_add' and 'to_remove' lists
 void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now);
+
+// Build a naive parallellization of system execution order
+FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX>
+registry_resolve_systems_update_order(Registry *registry);
 
 /*******************
   Entity API

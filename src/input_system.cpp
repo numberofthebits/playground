@@ -1,5 +1,6 @@
 #include "input_system.h"
 
+#include "components.h"
 #include "events.h"
 #include "systems.h"
 
@@ -61,7 +62,9 @@ struct InputSystem *input_system_create(Services *services) {
   // This system isn't interested in any components.
   // It only consumes input from OS and produces
   // events.
-  RequiredComponents components{};
+  RequiredComponents components{.signature = 0,
+                                .read_access_flags = 0,
+                                .write_access_flags = INPUT_COMPONENT_BIT};
 
   system_base_init((struct SystemBase *)system, INPUT_SYSTEM_BIT,
                    &input_system_update, components, services, "InputSystem");

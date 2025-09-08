@@ -39,3 +39,19 @@ size_t component_size(struct Components *components, int flag) {
 const char *component_name(struct Components *components, int index) {
   return components->components[index].name;
 }
+const char *component_name_bit(Components *components, int component_bit) {
+  int index = component_index(components, component_bit);
+  if (index < 0) {
+    return nullptr;
+  }
+  return component_name(components, index);
+}
+void component_log_bitmask(Components *components, ComponentBitmaskT bitmask) {
+  for (size_t i = 0; i < components->num_components; i += 1) {
+    ComponentBitmaskT bit = 0x1 << i;
+    if (bitmask & bit) {
+      int index = component_index(components, bit);
+      LOG_INFO("Bitflag %d: '%s'", bit, component_name(components, index));
+    }
+  }
+}

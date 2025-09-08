@@ -2,6 +2,7 @@
 
 #include "allocators.h"
 #include "componentbase.h"
+#include "core/allocators.h"
 #include "log.h"
 #include "systembase.h"
 #include "types.h"
@@ -349,6 +350,7 @@ void registry_entity_component_add(Registry *reg, Entity e, int component_bit,
 
   ComponentSignatureT *entity_signature =
       &reg->entity_component_signatures[e.index];
+
   *entity_signature |= component_bit;
 }
 
@@ -384,27 +386,167 @@ struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
   return 0;
 }
 
+static void remove_from_group(SystemUpdateGroup *group, SystemBase *sys) {
+  if (group->count == 0) {
+    LOG_WARN("Group is empty");
+    return;
+  }
+
+  for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+    if (sys == nullptr) {
+      continue;
+    }
+
+    if (sys == group->systems[i]) {
+      LOG_INFO("Removing system '%s'", sys->name);
+      group->systems[i] = nullptr;
+      // group->systems[i] = group->systems[group->count - 1];
+      // group->systems[group->count - 1] = 0;
+      group->count--;
+      return;
+    }
+  }
+}
+
+FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX>
+registry_resolve_systems_update_order(Registry *registry) {
+
+  SystemUpdateGroup remaining = {};
+
+  for (size_t i = 0; i < registry->num_systems; ++i) {
+    remaining.systems[i] = registry->systems[i];
+  }
+
+  remaining.count = registry->num_systems;
+
+  // // Allocate for worst case, which is a completely serial evaluation
+  // // of systems
+  FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX> groups(&stack_allocator);
+  groups.push({});
+  // size_t num_processed_systems = 0;
+
+  ComponentBitmaskT ready_components = 0;
+
+  // If system has no reads, it can be evaluated immediately
+  for (size_t i = 0; i < remaining.count; ++i) {
+    if (registry->systems[i]->components.read_access_flags == 0) {
+      SystemUpdateGroup *group = groups.top();
+      group->systems[group->count++] = registry->systems[i];
+      ready_components |= registry->systems[i]->components.write_access_flags;
+      remove_from_group(&remaining, registry->systems[i]);
+    }
+  }
+
+  // If component is never written to, it is ready to be consumed systems
+  for (ComponentBitmaskT b = 0; b < registry->components.num_components;
+       b += 1) {
+    ComponentBitmaskT bit = 0x1 << b;
+    bool component_has_writes = false;
+    for (size_t i = 0; i < registry->num_systems; ++i) {
+      if (bit & registry->systems[i]->components.write_access_flags) {
+        component_has_writes = true;
+        break;
+      }
+    }
+
+    if (!component_has_writes) {
+      LOG_INFO("Component '%s' has no writes",
+               component_name_bit(&registry->components, bit));
+
+      ready_components |= bit;
+    } else {
+      LOG_INFO("Component '%s' has writes",
+               component_name_bit(&registry->components, bit));
+    }
+  }
+
+  static int iteration = 0;
+  // we have systems remaining
+  while (remaining.count != 0) {
+    LOG_INFO("**************** ITERATION %d ***************", iteration++);
+    LOG_INFO("Ready components:");
+    component_log_bitmask(&registry->components, ready_components);
+
+    groups.push({});
+    // For each remaining system, figure out what can now be
+    // processed
+    SystemUpdateGroup *group = groups.top();
+
+    ComponentBitmaskT ready_this_iteration = 0;
+
+    for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+      if (remaining.systems[i] == nullptr) {
+        continue;
+      }
+
+      LOG_INFO("System '%s' read access", remaining.systems[i]->name);
+      component_log_bitmask(&registry->components,
+                            remaining.systems[i]->components.read_access_flags);
+      LOG_INFO("System '%s' write access", remaining.systems[i]->name);
+      component_log_bitmask(
+          &registry->components,
+          remaining.systems[i]->components.write_access_flags);
+
+      // Check if this system's read dependencies are satisfied
+      if ((remaining.systems[i]->components.read_access_flags &
+           ready_components) ==
+          (remaining.systems[i]->components.read_access_flags)) {
+
+        // Append this systems written components to our set of
+        // available component bits
+        ready_this_iteration |=
+            remaining.systems[i]->components.write_access_flags;
+
+        // Add this system to current group
+        group->systems[group->count++] = remaining.systems[i];
+
+        remove_from_group(&remaining, remaining.systems[i]);
+      }
+    }
+    ready_components |= ready_this_iteration;
+  }
+
+  SystemUpdateGroup *group = groups.head();
+  for (size_t i = 0; i < groups.size(); ++i) {
+    LOG_INFO("Evaluation step %zu:", i);
+    for (size_t j = 0; j < group->count; ++j) {
+      LOG_INFO("'%s'", group->systems[j]->name);
+    }
+    group++;
+  }
+
+  return groups;
+}
+
 void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now) {
+
+  (void)frame_time_now;
   (void)frame_index;
   DeclareScopedTimer(commit_entities);
 
-  for (size_t i = 0; i < reg->num_systems; ++i) {
-    struct SystemBase *system = reg->systems[i];
-    if (system) {
+  // auto update_groups = resolve_systems_update_order(reg);
+  // auto iter = update_groups.head();
+  // for (size_t i = 0; i < update_groups.size(); ++i) {
+  //   reg->
+  // }
 
-#ifdef ENABLE_DEBUG_TIMERS
-      TimeT t0 = time_now();
-#endif
-      system->update_fn(reg, system, frame_index, frame_time_now);
-#ifdef ENABLE_DEBUG_TIMERS
-      TimeT t1 = time_now();
-      TimeT elapsed = time_elapsed(t0, t1);
-      system->update_elapsed->value = time_to_microsecs(elapsed);
-      // LOG_INFO("System '%s' update time: %lu microsecs", system->name,
-      //          time_to_microsecs(elapsed));
-#endif
-    }
-  }
+  //   for (size_t i = 0; i < reg->num_systems; ++i) {
+  //     struct SystemBase *system = reg->systems[i];
+  //     if (system) {
+
+  // #ifdef ENABLE_DEBUG_TIMERS
+  //       TimeT t0 = time_now();
+  // #endif
+  //       system->update_fn(reg, system, frame_index, frame_time_now);
+  // #ifdef ENABLE_DEBUG_TIMERS
+  //       TimeT t1 = time_now();
+  //       TimeT elapsed = time_elapsed(t0, t1);
+  //       system->update_elapsed->value = time_to_microsecs(elapsed);
+  //       // LOG_INFO("System '%s' update time: %lu microsecs", system->name,
+  //       //          time_to_microsecs(elapsed));
+  // #endif
+  //     }
+  //   }
 
   BeginScopedTimer(commit_entities);
 

@@ -86,7 +86,7 @@ DamageSystem *damage_system_create(Services *services) {
   DamageSystem *sys = ArenaAlloc<DamageSystem>(&global_static_allocator, 1);
 
   RequiredComponents components = {.signature = HEALTH_COMPONENT_BIT,
-                                   .read_access_flags = HEALTH_COMPONENT_BIT,
+                                   .read_access_flags = COLLISION_COMPONENT_BIT,
                                    .write_access_flags = HEALTH_COMPONENT_BIT};
 
   system_base_init((struct SystemBase *)sys, DAMAGE_SYSTEM_BIT,

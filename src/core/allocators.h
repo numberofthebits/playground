@@ -1,6 +1,8 @@
 #ifndef ARENAALLOCATOR_H
 #define ARENAALLOCATOR_H
 
+#include "log.h"
+
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -91,8 +93,7 @@ void stack_init(struct StackAllocator *stack, struct ArenaAllocator *allocator,
 
 void *stack_alloc(struct StackAllocator *allocator, size_t s);
 
-template <typename T, typename Allocator>
-T *StackAlloc(Allocator *allocator, size_t s) {
+template <typename T> T *StackAlloc(StackAllocator *allocator, size_t s) {
   return (T *)stack_alloc(allocator, s);
 }
 
@@ -109,6 +110,64 @@ int stack_dealloc_checked(struct StackAllocator *allocator, void *ptr,
 // better be sure none of them are in use before allocating
 // again
 void stack_dealloc_all(struct StackAllocator *allocator);
+
+template <typename T, uint32_t CapacityT> struct FixedSizeStack {
+  T *base;
+  int64_t index_head;
+  StackAllocator *allocator;
+
+  inline FixedSizeStack(StackAllocator *allocator_)
+      : base(StackAlloc<T>(allocator_, sizeof(T) * CapacityT)), index_head(-1),
+        allocator(allocator_) {}
+
+  inline bool empty() { return index_head == -1; }
+
+  inline size_t size() { return index_head >= 0 ? (size_t)index_head + 1 : 0; };
+
+  inline void push(T value) {
+    if (index_head + 1 >= CapacityT) {
+      LOG_EXIT("Stack of capacity %zu (sizeof(T) = %d) would overflow. base %p "
+               "size %zu",
+               CapacityT, sizeof(T), this->base, index_head);
+    }
+
+    index_head += 1;
+    *(this->base + index_head) = value;
+  }
+
+  inline void pop() {
+    if (index_head < 0) {
+      LOG_EXIT(
+          "Stack of capacity %zu (sizeof(T) = %d) would underflow. base %p "
+          "size %zi",
+          CapacityT, sizeof(T), this->base, index_head);
+    }
+
+    index_head -= 1;
+  }
+
+  inline T *top() {
+    if (index_head < 0) {
+      LOG_EXIT("Stack of capacity %zu (sizeof(T) = %d) would is empty. base %p "
+               "size %zi",
+               CapacityT, sizeof(T), this->base, index_head);
+    }
+
+    return (this->base + index_head);
+  }
+
+  inline T *head() {
+    if (index_head < 0) {
+      return nullptr;
+    }
+
+    return this->base;
+  }
+
+  inline ~FixedSizeStack() {
+    stack_dealloc(this->allocator, this->base, sizeof(T) * CapacityT);
+  }
+};
 
 #ifdef BUILD_TESTS
 void stack_test();

@@ -1,6 +1,8 @@
 #ifndef COMPONENT_BASE_H
 #define COMPONENT_BASE_H
 
+#include "types.h"
+
 #include <stdint.h>
 
 // TODO: Capping components at 30 could be silly. It should be however many we
@@ -34,5 +36,9 @@ size_t component_size(struct Components *components, int component_bit);
 int component_table_size(struct Components *components);
 
 const char *component_name(struct Components *components, int index);
+
+const char *component_name_bit(Components *components, int component_bit);
+
+void component_log_bitmask(Components *components, ComponentBitmaskT bitmask);
 
 #endif

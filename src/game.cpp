@@ -377,7 +377,8 @@ Game *game_create() {
     LOG_EXIT("Failed to init Imgui GL3 backend");
   }
 
-  glfwSwapInterval(1);
+  //  glfwSwapInterval(1);
+  glfwSwapInterval(0);
   glfwSetKeyCallback(window, &key_callback);
   glfwSetFramebufferSizeCallback(window, &framebuffer_size_callback);
   glfwSetWindowSizeCallback(window, &window_size_callback);
@@ -960,6 +961,31 @@ void game_setup(Game *game) {
   registry_entity_commit_entities(&game->registry);
 }
 
+struct SystemUpdateArgs {
+  Registry *registry;
+  SystemBase *system;
+  TimeT now;
+  size_t frame_number;
+};
+
+static void system_update_fn(void *args_) {
+
+#ifdef ENABLE_DEBUG_TIMERS
+  TimeT t0 = time_now();
+#endif
+  SystemUpdateArgs *args = (SystemUpdateArgs *)args_;
+  args->system->update_fn(args->registry, args->system, args->frame_number,
+                          args->now);
+
+#ifdef ENABLE_DEBUG_TIMERS
+  TimeT t1 = time_now();
+  TimeT elapsed = time_elapsed(t0, t1);
+  args->system->update_elapsed->value = time_to_microsecs(elapsed);
+  LOG_INFO("System '%s' update time: %lu microsecs", args->system->name,
+           time_to_microsecs(elapsed));
+#endif
+}
+
 void game_update(Game *game) {
   arena_dealloc_all(&frame_allocator);
 
@@ -1015,6 +1041,41 @@ void game_update(Game *game) {
   LOG_INFO("************ END DEFFERED EVENTS ***************");
   event_bus_process_deferred(&game->event_bus);
 
+  auto system_update_groups =
+      registry_resolve_systems_update_order(&game->registry);
+
+  auto iter = system_update_groups.base;
+
+  auto now = time_now();
+
+  for (size_t i = 0; i < system_update_groups.size(); ++i) {
+    for (size_t j = 0; j < iter->count; ++j) {
+      if (iter->systems[j]->flag == TEXT_SYSTEM_BIT ||
+          iter->systems[j]->flag == RENDER_SYSTEM_BIT) {
+        continue;
+      }
+      SystemUpdateArgs *args =
+          ArenaAlloc<SystemUpdateArgs>(&frame_allocator, 1);
+      args->registry = &game->registry;
+      args->system = iter->systems[j];
+      args->now = now;
+      args->frame_number = game->frame_counter;
+
+      work_queue_push(&game->work_queue, system_update_fn, args);
+    }
+
+    work_queue_sync(&game->work_queue);
+    ++iter;
+  }
+
+  auto text_system = registry_get_system(&game->registry, TEXT_SYSTEM_BIT);
+  auto render_system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
+
+  text_system->update_fn(&game->registry, text_system, game->frame_counter,
+                         now);
+  render_system->update_fn(&game->registry, render_system, game->frame_counter,
+                           now);
+
   registry_update(&game->registry, game->frame_counter, time_now());
 
   event_bus_reset(&game->event_bus);
@@ -1044,7 +1105,7 @@ static void game_ui() {
       }
 
       ImGui::PlotLines(buffer->name, converted, buffer->size, 0, "ms", FLT_MIN,
-                       20.f, ImVec2(400.f, 100.f));
+                       33.f, ImVec2(400.f, 100.f));
       stack_dealloc(&stack_allocator, converted, sizeof(float) * buffer->size);
 
       ImGui::Text("Avg: %f ms", sum / (float)buffer->size);

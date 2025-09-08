@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #define WORK_QUEUE_MAX_SIZE 100000
-#define WORKER_THREAD_COUNT 1
+#define WORKER_THREAD_COUNT 7
 #define NUM_THREADS (1 + WORKER_THREAD_COUNT)
 
 typedef void (*JobFn)(void *);

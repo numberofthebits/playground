@@ -21,9 +21,10 @@ typedef struct {
 } ImageMeta;
 
 typedef size_t AssetId;
-typedef uint32_t ComponentSignatureT;
-typedef uint32_t ComponentReadAccessT;
-typedef uint32_t ComponentWriteAccessT;
+typedef uint32_t ComponentBitmaskT;
+typedef ComponentBitmaskT ComponentSignatureT;
+typedef ComponentBitmaskT ComponentReadAccessT;
+typedef ComponentBitmaskT ComponentWriteAccessT;
 typedef int EntityId;
 typedef size_t EntityIndex;
 typedef uint64_t EntityFlags;

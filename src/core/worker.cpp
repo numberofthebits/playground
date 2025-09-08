@@ -11,7 +11,7 @@
 // what to do, i.e. some caller picked up next unit of work
 // before we could
 static int work_queue_process(struct WorkQueue *queue, int thread_index) {
-
+  (void)thread_index;
   uint32_t original_next_queue_index = queue->work_queue_next;
   if (original_next_queue_index < queue->work_queue_count) {
 
@@ -24,7 +24,7 @@ static int work_queue_process(struct WorkQueue *queue, int thread_index) {
       // Pull out our unit of work
       WorkQueueEntry entry = queue->work_queue[actual_index];
 
-      LOG_INFO("Thread %d doing work entry %d", thread_index, actual_index);
+      // LOG_INFO("Thread %d doing work entry %d", thread_index, actual_index);
       entry.job_fn(entry.job_args);
 
       // TODO: Replace with something general
