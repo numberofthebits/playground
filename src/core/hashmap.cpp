@@ -129,34 +129,6 @@ void hash_map_insert(HashMap *map, const void *key, size_t key_len,
   iter->next = entry;
 }
 
-void hash_map_insert_copy(HashMap *map, void *key, size_t key_len, void *value,
-                          size_t value_len) {
-  unsigned int index = hash(key, key_len) % map->size;
-
-  HashMapEntry *entry = (HashMapEntry *)malloc(sizeof(HashMapEntry));
-  entry->value = value;
-  entry->next = 0;
-  entry->key_len = key_len;
-
-  entry->key = malloc(key_len);
-  memcpy(entry->key, key, key_len);
-
-  entry->value = malloc(value_len);
-  memcpy(entry->value, value, value_len);
-
-  if (!map->entries[index]) {
-    map->entries[index] = entry;
-    return;
-  }
-
-  HashMapEntry *iter = map->entries[index];
-  while (iter->next != 0) {
-    iter = (HashMapEntry *)iter->next;
-  }
-
-  iter->next = entry;
-}
-
 int hash_map_get(HashMap *map, const void *key, size_t key_len, void **value) {
   unsigned int index = hash(key, key_len) % map->size;
   HashMapEntry *entry = map->entries[index];

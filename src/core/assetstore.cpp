@@ -71,8 +71,6 @@ static void insert_asset_meta(struct Assets *assets, AssetId id, AssetType type,
   meta.file_path = *file_path;
 
   VEC_PUSH_T(&assets->asset_meta, AssetMeta, meta);
-  /* hash_map_insert_copy(&assets->asset_meta, &id, sizeof(id), &meta, */
-  /*                     sizeof(meta)); */
 }
 
 static int load_texture_data(const char *file_path, AssetTexture *texture,
