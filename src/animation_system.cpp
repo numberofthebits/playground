@@ -6,20 +6,20 @@
 #include "core/systembase.h"
 #include "systems.h"
 
-static void animation_update(Registry *reg, struct SystemBase *system,
-                             size_t frame_nr, TimeT frame_time_now) {
-  (void)frame_nr;
-  (void)system;
-  (void)frame_time_now;
+#define MILLISECS_PER_FRAME 100
 
-  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
-  Pool *animation_pool = registry_get_pool(reg, ANIMATION_COMPONENT_BIT);
-  //  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  Pool *physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
+static void animation_update(SystemUpdateArgs update_args) {
 
-  Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
+  Pool *render_pool =
+      registry_get_pool(update_args.registry, RENDER_COMPONENT_BIT);
+  Pool *animation_pool =
+      registry_get_pool(update_args.registry, ANIMATION_COMPONENT_BIT);
+  Pool *physics_pool =
+      registry_get_pool(update_args.registry, PHYSICS_COMPONENT_BIT);
 
-  for (int i = 0; i < system->entities.size; ++i) {
+  Entity *entities = VEC_ITER_BEGIN_T(&update_args.system->entities, Entity);
+
+  for (int i = 0; i < update_args.system->entities.size; ++i) {
     Entity entity = entities[i];
     RenderComponent *rc =
         PoolGetComponent(render_pool, RenderComponent, entity.index);
@@ -30,8 +30,12 @@ static void animation_update(Registry *reg, struct SystemBase *system,
     PhysicsComponent *pc =
         PoolGetComponent(physics_pool, PhysicsComponent, entity.index);
 
-    size_t animation_frame_nr = (frame_nr / ac->frames_per_animation_frame) %
-                                ac->num_animation_frames * ac->is_playing;
+    auto microsecs = time_to_millisecs(update_args.now);
+
+    auto fratio = microsecs / MILLISECS_PER_FRAME;
+    size_t iratio = size_t(fratio);
+    size_t animation_frame_nr =
+        iratio % ac->num_animation_frames * ac->is_playing;
 
     // X is our animation playing in time
     rc->texture_atlas_index.x = animation_frame_nr;
@@ -39,7 +43,7 @@ static void animation_update(Registry *reg, struct SystemBase *system,
     // Y is WHICH animation is playing. I.e. where is our unit
     // headed
     if (fabsf(pc->velocity.x) > fabsf(pc->velocity.y)) {
-      if (pc->velocity.x >= 0) {
+      if (pc->velocity.x >= 0.f) {
         // right
         rc->texture_atlas_index.y = 1;
       } else {
@@ -47,7 +51,7 @@ static void animation_update(Registry *reg, struct SystemBase *system,
         rc->texture_atlas_index.y = 3;
       }
     } else {
-      if (pc->velocity.y >= 0) {
+      if (pc->velocity.y >= 0.f) {
         // up
         rc->texture_atlas_index.y = 0;
       } else {

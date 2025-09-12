@@ -2,19 +2,17 @@
 
 #include "events.h"
 
-static void hit_detection_system_update(Registry *reg, struct SystemBase *base,
-                                        size_t frame_nr, TimeT now) {
-  (void)frame_nr;
-  (void)now;
+static void hit_detection_system_update(SystemUpdateArgs args) {
 
-  HitDetectionSystem *system = (HitDetectionSystem *)base;
-  Pool *mesh_pool = registry_get_pool(reg, MESH_COMPONENT_BIT);
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  Entity *entities = VEC_ITER_BEGIN_T(&base->entities, Entity);
-  struct EventBus *event_bus = base->services.event_bus;
+  HitDetectionSystem *system = (HitDetectionSystem *)args.system;
+  Pool *mesh_pool = registry_get_pool(args.registry, MESH_COMPONENT_BIT);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
+  struct EventBus *event_bus = args.system->services.event_bus;
 
   for (size_t r = 0; r < system->num_rays; ++r) {
-    for (int i = 0; i < base->entities.size; ++i) {
+    for (int i = 0; i < args.system->entities.size; ++i) {
       Entity entity = entities[i];
       MeshComponent *mesh =
           PoolGetComponent(mesh_pool, MeshComponent, entity.index);

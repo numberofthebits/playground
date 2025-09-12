@@ -9,14 +9,18 @@
 #include "vec.h"
 #include <stdalign.h>
 
-#define REQUIRED_COMPONENT_ACCESS_READ_ONLY 1
-#define REQUIRED_COMPONENT_ACCESS_READ_WRITE 2
-#define REQUIRED_COMPONENT_ACCESS_WRITE_ONLY 3
-
 typedef struct SystemBase SystemBase;
 typedef struct Registry_t Registry;
 
-typedef void (*pfnSystemUpdate)(Registry *, struct SystemBase *, size_t, TimeT);
+struct SystemUpdateArgs {
+  SystemBase *system;
+  Registry *registry;
+  TimeT now;
+  TimeT delta;
+  size_t frame_nr;
+};
+
+typedef void (*pfnSystemUpdate)(SystemUpdateArgs);
 
 struct RequiredComponents {
   // The signature is a bitwise OR'ed set of component flags
@@ -60,8 +64,7 @@ struct SystemBase {
   // Human readable name of the system. Makes logs more readable.
   const char *name;
 
-  int flag;             /*SystemBit*/
-  int evaluation_order; // unused
+  int flag; /*SystemBit*/
   Duration *update_elapsed;
 };
 typedef struct SystemBase SystemBase;

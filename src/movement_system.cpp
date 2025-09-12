@@ -7,16 +7,14 @@
 #include "core/ecs.h"
 #include "core/systembase.h"
 
-static void movement_update(Registry *reg, struct SystemBase *system,
-                            size_t frame_nr, TimeT now) {
-  (void)frame_nr;
-  (void)now;
+static void movement_update(SystemUpdateArgs args) {
 
-  Entity *entities = VEC_ITER_BEGIN_T(&system->entities, Entity);
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  Pool *physics_pool = registry_get_pool(reg, PHYSICS_COMPONENT_BIT);
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
+  Pool *physics_pool = registry_get_pool(args.registry, PHYSICS_COMPONENT_BIT);
 
-  for (int i = 0; i < system->entities.size; ++i) {
+  for (int i = 0; i < args.system->entities.size; ++i) {
     Entity e = entities[i];
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, e.index);

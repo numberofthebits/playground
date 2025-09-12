@@ -54,7 +54,6 @@ void input_system_set_cursor_pos(InputSystem *input_system, uint16_t x,
                                  uint16_t y, uint16_t framebuffer_width,
                                  uint16_t framebuffer_height);
 
-void input_system_update(Registry *registry, struct SystemBase *sys,
-                         size_t frame_nr, TimeT now);
+void input_system_update(SystemUpdateArgs args);
 
 #endif

@@ -13,8 +13,7 @@ typedef struct {
 
 DamageSystem *damage_system_create(Services *services);
 
-void damage_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr);
+void damage_system_update(SystemUpdateArgs args);
 
 void damage_system_handle_event(struct SystemBase *system, struct Event e);
 

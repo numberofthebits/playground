@@ -27,8 +27,7 @@ typedef struct CameraMovementSystem {
   Vec2u32 world_size;
 } CameraMovementSystem;
 
-void camera_movement_system_update(Registry *reg, struct SystemBase *base,
-                                   size_t frame_nr);
+void camera_movement_system_update(SystemUpdateArgs args);
 
 CameraMovementSystem *camera_movement_system_create(Services *services,
                                                     Camera *camera);

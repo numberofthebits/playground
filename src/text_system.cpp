@@ -86,28 +86,20 @@ static GLuint64 text_system_create_font_atlas(TextSystem *system,
   return handle_font_atlas_texture;
 }
 
-void text_system_update(Registry *registry, struct SystemBase *sys,
-                        size_t frame_nr, TimeT now) {
-  (void)frame_nr;
-  (void)now;
+void text_system_update(SystemUpdateArgs args) {
 
-  TextSystem *system = (TextSystem *)sys;
+  TextSystem *system = (TextSystem *)args.system;
 
   renderer_use(&system->text_renderer);
 
   glUseProgram(system->program_id);
 
-  /* glUniformMatrix4fv(system->loc_viewproj, 1, GL_FALSE, */
-  /*                    system->view_projection_matrix.data); */
-
-  /* glUniformMatrix4fv(system->loc_view, 1, GL_FALSE,
-   * system->view_matrix.data); */
-
   glUniformMatrix4fv(system->loc_proj, 1, GL_FALSE,
                      system->projection_matrix.data);
 
-  Pool *text_pool = registry_get_pool(registry, TEXT_COMPONENT_BIT);
-  Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+  Pool *text_pool = registry_get_pool(args.registry, TEXT_COMPONENT_BIT);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
 
   Vec3f *vbo_pos =
       (Vec3f *)renderer_map_vertex_buffer(&system->text_renderer, 0);
@@ -118,12 +110,12 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
   Vec3f scale_factor = {sf, sf, 1.f};
   uint32_t num_glyphs_total = 0;
 
-  for (int i = 0; i < sys->entities.size; ++i) {
+  for (int i = 0; i < args.system->entities.size; ++i) {
 
     DrawElementsIndirectCommand *draw_command = &system->draw_commands[i];
     DrawCommandDataText *draw_command_data = &system->draw_command_data[i];
 
-    Entity entity = VEC_GET_T(&sys->entities, Entity, i);
+    Entity entity = VEC_GET_T(&args.system->entities, Entity, i);
 
     TextComponent *tc =
         PoolGetComponent(text_pool, TextComponent, entity.index);
@@ -239,22 +231,23 @@ void text_system_update(Registry *registry, struct SystemBase *sys,
 
   CHECK_GL_ERROR();
   glNamedBufferSubData(system->text_renderer.multi_draw_indirect_buffer, 0,
-                       sizeof(DrawElementsIndirectCommand) * sys->entities.size,
+                       sizeof(DrawElementsIndirectCommand) *
+                           args.system->entities.size,
                        system->draw_commands);
   CHECK_GL_ERROR();
 
   glNamedBufferSubData(
       system->text_renderer.shader_storage_buffer_objects.buffer_object[0], 0,
-      sizeof(DrawCommandDataText) * sys->entities.size,
+      sizeof(DrawCommandDataText) * args.system->entities.size,
       system->draw_command_data);
   CHECK_GL_ERROR();
 
   renderer_multi_draw_elements_indirect(&system->text_renderer,
-                                        sys->entities.size);
+                                        args.system->entities.size);
   // DrawElements takes number of indices, NOT number of primitives.
   //  renderer_dispatch_indexed(&system->text_renderer, 0, sys->entities.size);
   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, 0, // *indirect *
-                              sys->entities.size,
+                              args.system->entities.size,
                               sizeof(DrawElementsIndirectCommand));
   CHECK_GL_ERROR();
 }

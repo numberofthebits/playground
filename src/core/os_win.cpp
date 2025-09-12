@@ -1,13 +1,10 @@
 #include "os.h"
 
 #define WIN32_LEAN_AND_MEAN
-#define TICK_TO_MILLISECS 1000
-#define TICK_TO_MICROSECS 1000000
-#define TICK_TO_NANOSECS 1000000000
-#define MICROSECS_TO_TICKS 1 / 1000000
-#define TICKS_PER_SECOND 1000
-#define SECS_TO_TICKS 1000000000
-#define TICKS_TO_SECS 1.0f / (float)(SECS_TO_TICKS)
+#define SECS_TO_MILLISECS 1000
+#define SECS_TO_MICROSECS 1000000
+#define SECS_TO_NANOSECS 1000000000
+
 #define PATH_BUF_MAX 1024
 
 #include "log.h"
@@ -117,7 +114,8 @@ int time_expired(TimeT expires_at) {
 }
 
 TimeT time_to_secs(TimeT timepoint) {
-  timepoint.QuadPart = (LONGLONG)((float)timepoint.QuadPart * TICKS_TO_SECS);
+  timepoint.QuadPart =
+      timepoint.QuadPart / performance_counter_frequency.QuadPart;
   return timepoint;
 }
 
@@ -131,17 +129,17 @@ TimeT time_from_secs(int seconds) {
 int time_gte(TimeT a, TimeT b) { return a.QuadPart > b.QuadPart; }
 
 uint64_t time_to_millisecs(TimeT timepoint) {
-  return timepoint.QuadPart * TICK_TO_MILLISECS /
+  return timepoint.QuadPart * SECS_TO_MILLISECS /
          performance_counter_frequency.QuadPart;
 }
 
 uint64_t time_to_microsecs(TimeT timepoint) {
-  return timepoint.QuadPart * TICK_TO_MICROSECS /
+  return timepoint.QuadPart * SECS_TO_MICROSECS /
          performance_counter_frequency.QuadPart;
 }
 
 uint64_t time_to_nanosecs(TimeT timepoint) {
-  return timepoint.QuadPart * TICK_TO_NANOSECS /
+  return timepoint.QuadPart * SECS_TO_NANOSECS /
          performance_counter_frequency.QuadPart;
 }
 

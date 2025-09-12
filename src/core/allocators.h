@@ -181,4 +181,7 @@ extern struct ArenaAllocator global_static_allocator;
 extern struct ArenaAllocator frame_allocator;
 
 extern thread_local struct StackAllocator stack_allocator;
+
+extern thread_local const char *thread_name;
+
 #endif

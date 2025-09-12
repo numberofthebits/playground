@@ -798,8 +798,8 @@ void load_units(Registry *registry, struct Assets *assets) {
     rc.render_layer = RENDER_COMPONENT_RENDER_LAYER_AIR;
 
     PhysicsComponent pc;
-    pc.velocity.x = 0.01f;
-    pc.velocity.y = 0.01f;
+    pc.velocity.x = 0.001f;
+    pc.velocity.y = 0.0011f;
 
     AnimationComponent ac = {};
     ac.frames_per_animation_frame = 5;
@@ -961,21 +961,13 @@ void game_setup(Game *game) {
   registry_entity_commit_entities(&game->registry);
 }
 
-struct SystemUpdateArgs {
-  Registry *registry;
-  SystemBase *system;
-  TimeT now;
-  size_t frame_number;
-};
-
 static void system_update_fn(void *args_) {
 
 #ifdef ENABLE_DEBUG_TIMERS
   TimeT t0 = time_now();
 #endif
   SystemUpdateArgs *args = (SystemUpdateArgs *)args_;
-  args->system->update_fn(args->registry, args->system, args->frame_number,
-                          args->now);
+  args->system->update_fn(*args);
 
 #ifdef ENABLE_DEBUG_TIMERS
   TimeT t1 = time_now();
@@ -1032,13 +1024,11 @@ void game_update(Game *game) {
       &game->event_bus, (struct SystemBase *)game->render_system,
       HitDetectionSystem_MeshHit, render_system_handle_hit_detection);
 
-  LOG_INFO("************ BEGIN DEFERRED EVENTS ***************");
   for (size_t i = 0; i < game->event_bus.num_deferred_events; ++i) {
     LOG_INFO("%zu Type: %s", i,
              event_type_name((EventType)game->event_bus.deferred_events[i].id));
   }
 
-  LOG_INFO("************ END DEFFERED EVENTS ***************");
   event_bus_process_deferred(&game->event_bus);
 
   auto system_update_groups =
@@ -1046,7 +1036,9 @@ void game_update(Game *game) {
 
   auto iter = system_update_groups.base;
 
-  auto now = time_now();
+  static const auto time_last = time_now();
+  const auto now = time_now();
+  const auto time_delta = time_elapsed(time_last, now);
 
   for (size_t i = 0; i < system_update_groups.size(); ++i) {
     for (size_t j = 0; j < iter->count; ++j) {
@@ -1054,12 +1046,14 @@ void game_update(Game *game) {
           iter->systems[j]->flag == RENDER_SYSTEM_BIT) {
         continue;
       }
+
       SystemUpdateArgs *args =
           ArenaAlloc<SystemUpdateArgs>(&frame_allocator, 1);
       args->registry = &game->registry;
       args->system = iter->systems[j];
       args->now = now;
-      args->frame_number = game->frame_counter;
+      args->delta = time_delta;
+      args->frame_nr = game->frame_counter;
 
       work_queue_push(&game->work_queue, system_update_fn, args);
     }
@@ -1071,10 +1065,21 @@ void game_update(Game *game) {
   auto text_system = registry_get_system(&game->registry, TEXT_SYSTEM_BIT);
   auto render_system = registry_get_system(&game->registry, RENDER_SYSTEM_BIT);
 
-  text_system->update_fn(&game->registry, text_system, game->frame_counter,
-                         now);
-  render_system->update_fn(&game->registry, render_system, game->frame_counter,
-                           now);
+  render_system->update_fn(SystemUpdateArgs{
+      .system = render_system,
+      .registry = &game->registry,
+      .now = now,
+      .delta = time_delta,
+      .frame_nr = game->frame_counter,
+  });
+
+  text_system->update_fn(SystemUpdateArgs{
+      .system = text_system,
+      .registry = &game->registry,
+      .now = now,
+      .delta = time_delta,
+      .frame_nr = game->frame_counter,
+  });
 
   registry_update(&game->registry, game->frame_counter, time_now());
 

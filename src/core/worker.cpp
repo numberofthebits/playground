@@ -1,7 +1,10 @@
 #include "worker.h"
 
+#include "allocators.h"
 #include "log.h"
 #include "os.h"
+
+#include <cstdio>
 
 #define WORK_QUEUE_PROCESS_RESULT_AGAIN 0
 #define WORK_QUEUE_PROCESS_RESULT_DONE 1
@@ -41,8 +44,8 @@ static int work_queue_process(struct WorkQueue *queue, int thread_index) {
 
 static int worker_thread_main(void *arg) {
   WorkerThread args = *(WorkerThread *)arg;
-  LOG_INFO("Thread %d started", args.thread_index);
-
+  thread_name = args.thread_name;
+  LOG_INFO("Thread %s (%d) started", args.thread_name, args.thread_index);
   for (;;) {
     if (work_queue_process(args.queue, args.thread_index) ==
         WORK_QUEUE_PROCESS_RESULT_DONE) {
@@ -75,15 +78,19 @@ int work_queue_init(struct WorkQueue *queue) {
   LOG_INFO("Creating %d worker threads", WORKER_THREAD_COUNT);
 
   for (size_t i = 0; i < WORKER_THREAD_COUNT; ++i) {
+    auto thread_index = int(i + 1);
     // Reserve thread_index 0 for our main thread
-    queue->worker_threads[i].thread_index = i + 1;
+    queue->worker_threads[i].thread_index = thread_index;
     queue->worker_threads[i].semaphore_handle = queue->semaphore_handle;
     queue->worker_threads[i].queue = queue;
+    sprintf(queue->worker_threads[i].thread_name, "WorkerPoolThread %d",
+            thread_index);
 
     if (thrd_create(&queue->worker_threads[i].thread_handle,
                     &worker_thread_main,
                     &queue->worker_threads[i]) != thrd_success) {
-      LOG_ERROR("Failed to create thread %d", i);
+      LOG_ERROR("Failed to create thread %s %d",
+                queue->worker_threads[i].thread_name);
       return 0;
     }
   }

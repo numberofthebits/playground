@@ -14,8 +14,8 @@
 
 #define PLAYER_ROTATE_ANGLE_DELTA PI_DIV_4 / 8.f;
 
-static Vec2f PLAYER_SYSTEM_PLAYER_VELOCITY_MAX = {0.05f, 0.05f};
-static Vec2f PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT = {0.1f, 0.1f};
+static Vec2f PLAYER_SYSTEM_PLAYER_VELOCITY_MAX = {0.01f, 0.01f};
+static Vec2f PLAYER_SYSTEM_BULLET_VELOCITY_DEFAULT = {0.05f, 0.05f};
 
 static Vec2f clamp_velocity(Vec2f v, Vec2f max) {
   Vec2f clamped = v;
@@ -104,14 +104,15 @@ static void player_system_spawn_projectile(Registry *registry, Vec3f player_pos,
   registry_entity_set_flags(registry, e, ENTITY_PROJECTILE_FRIENDLY);
 }
 
-void player_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr, TimeT now) {
-  (void)frame_nr;
-  struct PlayerSystem *player_system = (struct PlayerSystem *)sys;
-  Pool *physics_pool = registry_get_pool(registry, PHYSICS_COMPONENT_BIT);
-  Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
+void player_system_update(SystemUpdateArgs args) {
+  struct PlayerSystem *player_system = (struct PlayerSystem *)args.system;
+  Pool *physics_pool = registry_get_pool(args.registry, PHYSICS_COMPONENT_BIT);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
 
-  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
+
+  const auto millisecs = float(time_to_millisecs(args.delta));
 
   for (int i = 0; i < player_system->base.entities.size; ++i) {
     Entity entity = entities[i];
@@ -123,14 +124,17 @@ void player_system_update(Registry *registry, struct SystemBase *sys,
 
     // NOTE: It would probably be fine to spawn 1 bullet per frame
     for (size_t j = 0; j < player_system->bullets_spawned; ++j) {
-      player_system_spawn_projectile(registry, tc->pos, player_system->angle,
-                                     now);
+      player_system_spawn_projectile(args.registry, tc->pos,
+                                     player_system->angle, args.now);
     }
 
     pc->velocity.x +=
-        player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX];
+        player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_X_INDEX] *
+        millisecs / 10000.f;
+
     pc->velocity.y +=
-        player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX];
+        player_system->movement[PLAYER_SYSTEM_MOVEMENT_AXIS_Y_INDEX] *
+        millisecs / 10000.f;
 
     pc->velocity =
         clamp_velocity(pc->velocity, PLAYER_SYSTEM_PLAYER_VELOCITY_MAX);

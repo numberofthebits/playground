@@ -10,8 +10,10 @@
 #endif
 
 int main(int argc, char *argv[]) {
+  thread_name = "main";
   (void)argv;
   (void)argc;
+
   // if (!log_init(NULL)) {
   if (!log_init("log.txt")) {
     printf("Failed to initialize logger");

@@ -18,14 +18,10 @@ static inline void clear_key_pressed_flag(KeyState *state) {
   state->flags &= ~KeyFlag_Pressed;
 }
 
-void input_system_update(Registry *registry, struct SystemBase *sys,
-                         size_t frame_nr, TimeT now) {
-  (void)registry;
-  (void)frame_nr;
-  (void)now;
+void input_system_update(SystemUpdateArgs args) {
 
-  struct EventBus *bus = sys->services.event_bus;
-  struct InputSystem *system = (struct InputSystem *)sys;
+  struct EventBus *bus = args.system->services.event_bus;
+  struct InputSystem *system = (struct InputSystem *)args.system;
   size_t num_events = 0;
 
   for (int i = 0; i < INPUT_SYSTEM_MAX_KEY_STATES; ++i) {

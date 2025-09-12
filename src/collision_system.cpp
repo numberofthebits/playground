@@ -8,17 +8,16 @@
 #include "core/ecs.h"
 #include "core/systembase.h"
 
-static void collision_update(Registry *reg, struct SystemBase *sys,
-                             size_t frame_nr, TimeT frame_time_now) {
-  (void)frame_nr;
-  (void)frame_time_now;
+static void collision_update(SystemUpdateArgs args) {
+  Pool *collision_pool =
+      registry_get_pool(args.registry, COLLISION_COMPONENT_BIT);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
 
-  Pool *collision_pool = registry_get_pool(reg, COLLISION_COMPONENT_BIT);
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  struct EventBus *event_bus = sys->services.event_bus;
-  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+  struct EventBus *event_bus = args.system->services.event_bus;
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
 
-  for (int i = 0; i < sys->entities.size; ++i) {
+  for (int i = 0; i < args.system->entities.size; ++i) {
     Entity self = entities[i];
     CollisionComponent *self_collision =
         PoolGetComponent(collision_pool, CollisionComponent, self.index);
@@ -31,7 +30,7 @@ static void collision_update(Registry *reg, struct SystemBase *sys,
     /* self_rect.pos.x += self_transform->pos.x; */
     /* self_rect.pos.y += self_transform->pos.y; */
 
-    for (int j = i; j < sys->entities.size; ++j) {
+    for (int j = i; j < args.system->entities.size; ++j) {
       Entity other = entities[j];
 
       if (other.id == self.id) {

@@ -317,28 +317,27 @@ static void render_update_range(void *job_params) {
   }
 }
 
-static void render_update(Registry *reg, struct SystemBase *sys,
-                          size_t frame_nr, TimeT now) {
-  (void)frame_nr;
-  (void)now;
+static void render_update(SystemUpdateArgs args) {
+
   DeclareScopedTimer(render_update);
   BeginScopedTimer(render_update);
 
-  RenderSystem *render_sys = (RenderSystem *)sys;
-  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+  RenderSystem *render_sys = (RenderSystem *)args.system;
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
 
-  Pool *transform_pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  Pool *render_pool = registry_get_pool(reg, RENDER_COMPONENT_BIT);
+  Pool *transform_pool =
+      registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
+  Pool *render_pool = registry_get_pool(args.registry, RENDER_COMPONENT_BIT);
 
   RenderData *render_data =
-      ArenaAlloc<RenderData>(&frame_allocator, sys->entities.size);
+      ArenaAlloc<RenderData>(&frame_allocator, args.system->entities.size);
 
   // 'NUM_THREADS' + 1 because we also need to deal with the remainder
   // after evenly distributing work
   RenderUpdateRangeArgs *job_args =
       ArenaAlloc<RenderUpdateRangeArgs>(&frame_allocator, NUM_THREADS + 1);
 
-  int batch_size = sys->entities.size / NUM_THREADS;
+  int batch_size = args.system->entities.size / NUM_THREADS;
 
   for (int i = 0; i < NUM_THREADS; ++i) {
 
@@ -351,12 +350,12 @@ static void render_update(Registry *reg, struct SystemBase *sys,
     job_args[i].begin = begin;
     job_args[i].end = end;
 
-    work_queue_push(sys->services.work_queue, &render_update_range,
+    work_queue_push(args.system->services.work_queue, &render_update_range,
                     &job_args[i]);
   }
 
   // Dispatch the leftover work
-  int job_batch_remainder = sys->entities.size % NUM_THREADS;
+  int job_batch_remainder = args.system->entities.size % NUM_THREADS;
   if (job_batch_remainder) {
     job_args[NUM_THREADS].entities = entities;
     job_args[NUM_THREADS].transform_pool = transform_pool;
@@ -366,18 +365,20 @@ static void render_update(Registry *reg, struct SystemBase *sys,
     job_args[NUM_THREADS].end =
         job_args[NUM_THREADS].begin + job_batch_remainder;
 
-    work_queue_push(sys->services.work_queue, &render_update_range,
+    work_queue_push(args.system->services.work_queue, &render_update_range,
                     &job_args[NUM_THREADS]);
   }
 
-  work_queue_sync(sys->services.work_queue);
+  work_queue_sync(args.system->services.work_queue);
 
   AppendScopedTimer(render_update);
   PrintScopedTimer(render_update);
 
   DeclareScopedTimer(render_entities);
   BeginScopedTimer(render_entities);
-  render_entities(render_sys, render_data, sys->entities.size);
+
+  render_entities(render_sys, render_data, args.system->entities.size);
+
   AppendScopedTimer(render_entities);
   PrintScopedTimer(render_entities);
 }

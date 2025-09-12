@@ -33,18 +33,13 @@ static inline Vec3f clamp_camera_pos(Vec3f *object_position, Vec2u32 world_size,
   return camera_pos;
 }
 
-static inline void camera_movement_system_update(Registry *reg,
-                                                 struct SystemBase *base,
-                                                 size_t frame_nr,
-                                                 TimeT frame_time_now) {
-  (void)frame_nr;
-  (void)frame_time_now;
+static inline void camera_movement_system_update(SystemUpdateArgs args) {
 
-  Entity *ptr = (Entity *)base->entities.storage.ptr;
-  Pool *pool = registry_get_pool(reg, TRANSFORM_COMPONENT_BIT);
-  CameraMovementSystem *cms = (CameraMovementSystem *)base;
+  Entity *ptr = (Entity *)args.system->entities.storage.ptr;
+  Pool *pool = registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
+  CameraMovementSystem *cms = (CameraMovementSystem *)args.system;
 
-  for (int i = 0; i < base->entities.size && i < 1; ++i) {
+  for (int i = 0; i < args.system->entities.size && i < 1; ++i) {
 
     Entity e = *(ptr + i);
     TransformComponent *tc =
@@ -84,7 +79,7 @@ static inline void camera_movement_system_update(Registry *reg,
     ev.event_data = &event_data;
     ev.event_data_size = sizeof(event_data);
 
-    event_bus_emit(base->services.event_bus, &ev);
+    event_bus_emit(args.system->services.event_bus, &ev);
   }
 }
 

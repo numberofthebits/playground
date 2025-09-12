@@ -4,22 +4,17 @@
 #include "core/log.h"
 #include "entity_flags.h"
 
-void damage_system_update(Registry *registry, struct SystemBase *sys,
-                          size_t frame_nr, TimeT now) {
-  (void)registry;
-  (void)sys;
-  (void)frame_nr;
-  (void)now;
-  Pool *health_pool = registry_get_pool(registry, HEALTH_COMPONENT_BIT);
+void damage_system_update(SystemUpdateArgs args) {
+  Pool *health_pool = registry_get_pool(args.registry, HEALTH_COMPONENT_BIT);
 
-  for (int i = 0; i < sys->entities.size; ++i) {
-    Entity e = VEC_GET_T(&sys->entities, Entity, i);
+  for (int i = 0; i < args.system->entities.size; ++i) {
+    Entity e = VEC_GET_T(&args.system->entities, Entity, i);
     HealthComponent *hc =
         PoolGetComponent(health_pool, HealthComponent, e.index);
     if (hc->health <= 0) {
       LOG_INFO("Removing Entity id %d index %d reached due to 0 health ", e.id,
                e.index);
-      registry_entity_remove(registry, e);
+      registry_entity_remove(args.registry, e);
     }
   }
 }

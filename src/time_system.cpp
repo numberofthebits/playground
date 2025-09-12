@@ -8,20 +8,18 @@
 #include "core/os.h"
 #include "core/systembase.h"
 
-static void time_update(Registry *reg, struct SystemBase *sys, size_t frame_nr,
-                        TimeT time_frame_now) {
-  (void)frame_nr;
-  Pool *time_pool = registry_get_pool(reg, TIME_COMPONENT_BIT);
+static void time_update(SystemUpdateArgs args) {
+  Pool *time_pool = registry_get_pool(args.registry, TIME_COMPONENT_BIT);
 
-  Entity *entities = VEC_ITER_BEGIN_T(&sys->entities, Entity);
+  Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
 
-  for (int i = 0; i < sys->entities.size; ++i) {
+  for (int i = 0; i < args.system->entities.size; ++i) {
     Entity e = entities[i];
 
     TimeComponent *tc = PoolGetComponent(time_pool, TimeComponent, e.index);
 
-    if (time_gte(time_frame_now, tc->expires)) {
-      registry_entity_remove(reg, e);
+    if (time_gte(args.now, tc->expires)) {
+      registry_entity_remove(args.registry, e);
     }
   }
 }

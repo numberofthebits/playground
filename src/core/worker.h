@@ -17,8 +17,9 @@ struct WorkQueue;
 typedef struct {
   thrd_t thread_handle;
   SemaphoreHandle semaphore_handle;
-  int thread_index;
   struct WorkQueue *queue;
+  int thread_index;
+  char thread_name[32];
 } WorkerThread;
 
 typedef struct {

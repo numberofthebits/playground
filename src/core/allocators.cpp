@@ -18,6 +18,7 @@ struct ArenaAllocator global_static_allocator;
 struct ArenaAllocator frame_allocator;
 
 thread_local struct StackAllocator stack_allocator;
+thread_local const char *thread_name;
 
 inline ptrdiff_t offset_to_aligned(void *ptr, size_t s, size_t alignment) {
   uintptr_t res = ((uintptr_t)ptr + s) % alignment;
