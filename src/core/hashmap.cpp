@@ -1,6 +1,7 @@
 #include "hashmap.h"
 
 #include "log.h"
+#include "util.h"
 
 #include <memory.h>
 #include <stdint.h>
@@ -87,6 +88,25 @@ size_t hash(const void *ptr, size_t len) {
   return (size_t)murmur3_32((uint8_t *)ptr, len, 0);
 }
 
+void hash_map_log(HashMap *map) {
+  for (int i = 0; i < map->size; ++i) {
+    HashMapEntry *entry = map->entries[i];
+
+    if (!entry) {
+      LOG_INFO("Entry %d EMPTY", i);
+      continue;
+    }
+
+    LOG_INFO("Entry %d:", i);
+    while (entry != 0) {
+      LOG_INFO("\tKey: %s",
+               bytes_to_hex_str(entry->key, entry->key_len).c_str());
+      LOG_INFO("\tValue ptr: %p", entry->value);
+      entry = entry->next;
+    }
+  }
+}
+
 void hash_map_init(HashMap *map, unsigned int size) {
   if (!map) {
     LOG_ERROR("Failed to init hash map. Nullptr");
@@ -133,10 +153,13 @@ int hash_map_get(HashMap *map, const void *key, size_t key_len, void **value) {
   unsigned int index = hash(key, key_len) % map->size;
   HashMapEntry *entry = map->entries[index];
   if (!entry) {
+    LOG_WARN("No entry at all for this key at index %d", index);
     return 0;
   }
 
+  size_t entry_count = 0;
   while (entry != 0) {
+    entry_count++;
     size_t min_len = key_len < entry->key_len ? key_len : entry->key_len;
     if (memcmp(key, entry->key, min_len) == 0) {
       *value = entry->value;
@@ -145,6 +168,8 @@ int hash_map_get(HashMap *map, const void *key, size_t key_len, void **value) {
 
     entry = (HashMapEntry *)entry->next;
   }
+
+  LOG_WARN("Searched %zu entries for value and failed", entry_count);
 
   return 0;
 }

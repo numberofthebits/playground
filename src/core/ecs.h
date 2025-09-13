@@ -77,6 +77,8 @@ struct Registry_t {
 
   EntityTags entity_tags;
   EntityGroups entity_groups;
+
+  FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX> system_update_order;
 };
 typedef struct Registry_t Registry;
 
@@ -96,8 +98,7 @@ struct SystemBase *registry_get_system(Registry *reg, int system_id);
 void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now);
 
 // Build a naive parallellization of system execution order
-FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX>
-registry_resolve_systems_update_order(Registry *registry);
+void registry_resolve_systems_update_order(Registry *registry);
 
 /*******************
   Entity API

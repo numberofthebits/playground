@@ -1,5 +1,6 @@
 #include "game.h"
 
+#include "core/allocators.h"
 #include "core/log.h"
 #include "core/worker.h"
 

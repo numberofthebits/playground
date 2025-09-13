@@ -200,7 +200,10 @@ static void render_entities(RenderSystem *system, RenderData *render_data,
     if (found) {
       draw_data->material_index = (unsigned int)(uintptr_t)value;
     } else {
-      LOG_EXIT("Failed to map material id to material index");
+      hash_map_log(&system->material_asset_index_mapping);
+      __debugbreak();
+      LOG_EXIT("Failed to map material id to material index %zu",
+               rd->material_id);
     }
 
     count_in_batch++;

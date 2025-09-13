@@ -1,13 +1,12 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <glad/glad.h>
+
 #include "assetstore.h"
 #include "log.h"
 #include "math.h"
 
-extern "C" {
-#include <glad/glad.h>
-}
 #include <stdint.h>
 
 #define MAX_MATERIALS 10000

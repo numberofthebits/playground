@@ -10,9 +10,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(pikuma_2d_game_engine C CXX)
 
-option(ENABLE_TESTS "Compile test functions" OFF)
+option(ENABLE_TESTS "Compile test functions" ON)
 option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
 option(ENABLE_SANITIZERS "Enable sanitizers" ON)
+
 add_executable(game)
 #target_compile_options(game PRIVATE -fsanitize=addresss,leak,undefined -fno-omit-frame-pointer)
 
@@ -106,7 +107,7 @@ target_sources(game
 )
 
 target_include_directories(game
-  PUBLIC
+  PRIVATE
   ${PROJECT_SOURCE_DIR}/libs/glad/include
   ${PROJECT_SOURCE_DIR}/libs/stb
   ${PROJECT_SOURCE_DIR}/libs
@@ -122,7 +123,7 @@ target_link_libraries(game
 )
 
 if ( CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  message("CLaaaang")
+  message("Using clang/gnu compiler")
   target_compile_options(game
     PRIVATE
     -Wall
@@ -144,18 +145,17 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if (ENABLE_SANITIZERS)
-     message(STATUS "Enabling sanitizers")
-     target_compile_options(game PRIVATE -fsanitize=undefined)
-     target_link_libraries(game PRIVATE clang_rt.ubsan_standalone-x86_64.lib)
+    message(STATUS "UBSAN doesn't work after enabling C++????")
+   #target_compile_options(game PRIVATE -fsanitize=undefined -fsanitize-link-c++-runtime)
   else()
-     message(STATUS "No sanitizers enabled")
-   endif()
+    message(STATUS "No sanitizers enabled")
+  endif()
 
-   # Clang on windows uses -D, not /D
-   target_compile_options(game
-     PRIVATE
-     $<$<PLATFORM_ID:Windows>:-D_CRT_SECURE_NO_WARNINGS>
-   )
+  # Clang on windows uses -D, not /D
+  target_compile_options(game
+    PRIVATE
+    $<$<PLATFORM_ID:Windows>:-D_CRT_SECURE_NO_WARNINGS>
+  )
 endif()
   
 if ( MSVC )

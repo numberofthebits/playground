@@ -408,8 +408,7 @@ static void remove_from_group(SystemUpdateGroup *group, SystemBase *sys) {
   }
 }
 
-FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX>
-registry_resolve_systems_update_order(Registry *registry) {
+void registry_resolve_systems_update_order(Registry *registry) {
 
   SystemUpdateGroup remaining = {};
 
@@ -421,8 +420,9 @@ registry_resolve_systems_update_order(Registry *registry) {
 
   // // Allocate for worst case, which is a completely serial evaluation
   // // of systems
-  FixedSizeStack<SystemUpdateGroup, SYSTEMS_MAX> groups(&stack_allocator);
-  groups.push({});
+  registry->system_update_order.init(&global_static_allocator);
+
+  registry->system_update_order.push({});
   // size_t num_processed_systems = 0;
 
   ComponentBitmaskT ready_components = 0;
@@ -430,7 +430,7 @@ registry_resolve_systems_update_order(Registry *registry) {
   // If system has no reads, it can be evaluated immediately
   for (size_t i = 0; i < remaining.count; ++i) {
     if (registry->systems[i]->components.read_access_flags == 0) {
-      SystemUpdateGroup *group = groups.top();
+      SystemUpdateGroup *group = registry->system_update_order.top();
       group->systems[group->count++] = registry->systems[i];
       ready_components |= registry->systems[i]->components.write_access_flags;
       remove_from_group(&remaining, registry->systems[i]);
@@ -467,10 +467,10 @@ registry_resolve_systems_update_order(Registry *registry) {
     LOG_INFO("Ready components:");
     component_log_bitmask(&registry->components, ready_components);
 
-    groups.push({});
+    registry->system_update_order.push({});
     // For each remaining system, figure out what can now be
     // processed
-    SystemUpdateGroup *group = groups.top();
+    SystemUpdateGroup *group = registry->system_update_order.top();
 
     ComponentBitmaskT ready_this_iteration = 0;
 
@@ -506,16 +506,15 @@ registry_resolve_systems_update_order(Registry *registry) {
     ready_components |= ready_this_iteration;
   }
 
-  SystemUpdateGroup *group = groups.head();
-  for (size_t i = 0; i < groups.size(); ++i) {
+  SystemUpdateGroup *group = registry->system_update_order.head();
+  const auto groups_size = registry->system_update_order.size();
+  for (size_t i = 0; i < groups_size; ++i) {
     LOG_INFO("Evaluation step %zu:", i);
     for (size_t j = 0; j < group->count; ++j) {
       LOG_INFO("'%s'", group->systems[j]->name);
     }
     group++;
   }
-
-  return groups;
 }
 
 void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now) {

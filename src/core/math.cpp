@@ -105,10 +105,10 @@ Mat4x4 look_at(Vec3f *pos, Vec3f *target, Vec3f *up) {
   Vec3f t = {vec3f_dot(pos, &r), vec3f_dot(pos, &u), vec3f_dot(pos, &d)};
 
   Mat4x4 m;
-  m.columns[0] = (Vec4f){.data = {r.x, u.x, d.x, 0.0}};
-  m.columns[1] = (Vec4f){.data = {r.y, u.y, d.y, 0.0}};
-  m.columns[2] = (Vec4f){.data = {r.z, u.z, d.z, 0.0}};
-  m.columns[3] = (Vec4f){.data = {-t.x, -t.y, -t.z, 1.0}};
+  m.columns[0] = {.data = {r.x, u.x, d.x, 0.0}};
+  m.columns[1] = {.data = {r.y, u.y, d.y, 0.0}};
+  m.columns[2] = {.data = {r.z, u.z, d.z, 0.0}};
+  m.columns[3] = {.data = {-t.x, -t.y, -t.z, 1.0}};
 
   return m;
 }

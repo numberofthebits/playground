@@ -2,6 +2,10 @@
 
 #include "log.h"
 
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,4 +126,14 @@ size_t offset_to_character(const char *str, size_t len, char c) {
   }
 
   return offset;
+}
+
+std::string bytes_to_hex_str(void *ptr, size_t num_bytes) {
+  std::stringstream ss;
+  ss << std::setw(2);
+  for (size_t i = 0; i < num_bytes; ++i) {
+    ss << "0x" << std::hex << (int)*(((unsigned char *)ptr) + i) << " ";
+  }
+
+  return ss.str();
 }

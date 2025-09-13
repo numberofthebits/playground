@@ -51,6 +51,7 @@ enum GameState { GAME_RUNNING = 0x1, GAME_DEBUG_ENABLED = 0x2 };
 
 struct Game_t {
   Registry registry;
+
   GLFWwindow *window;
   struct Assets assets;
   struct EventBus event_bus;
@@ -456,6 +457,8 @@ Game *game_create() {
   registry_add_system(&game->registry,
                       (struct SystemBase *)game->render_system);
   registry_add_system(&game->registry, (struct SystemBase *)game->text_system);
+
+  registry_resolve_systems_update_order(&game->registry);
 
   return game;
 }
@@ -1024,23 +1027,21 @@ void game_update(Game *game) {
       &game->event_bus, (struct SystemBase *)game->render_system,
       HitDetectionSystem_MeshHit, render_system_handle_hit_detection);
 
-  for (size_t i = 0; i < game->event_bus.num_deferred_events; ++i) {
-    LOG_INFO("%zu Type: %s", i,
-             event_type_name((EventType)game->event_bus.deferred_events[i].id));
-  }
+  // for (size_t i = 0; i < game->event_bus.num_deferred_events; ++i) {
+  //   LOG_INFO("%zu Type: %s", i,
+  //            event_type_name((EventType)game->event_bus.deferred_events[i].id));
+  // }
 
   event_bus_process_deferred(&game->event_bus);
-
-  auto system_update_groups =
-      registry_resolve_systems_update_order(&game->registry);
-
-  auto iter = system_update_groups.base;
+  const auto num_system_update_groups =
+      game->registry.system_update_order.size();
+  auto iter = game->registry.system_update_order.base;
 
   static const auto time_last = time_now();
   const auto now = time_now();
   const auto time_delta = time_elapsed(time_last, now);
 
-  for (size_t i = 0; i < system_update_groups.size(); ++i) {
+  for (size_t i = 0; i < num_system_update_groups; ++i) {
     for (size_t j = 0; j < iter->count; ++j) {
       if (iter->systems[j]->flag == TEXT_SYSTEM_BIT ||
           iter->systems[j]->flag == RENDER_SYSTEM_BIT) {

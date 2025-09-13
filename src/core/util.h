@@ -1,6 +1,9 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <memory>
+#include <string>
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -50,5 +53,8 @@ size_t file_write_all_binary(const char *file_path, unsigned char *buffer,
 int get_msb_set(uint64_t value);
 
 size_t offset_to_character(const char *str, size_t len, char s);
+
+// Yes. I know. Ew.
+std::string bytes_to_hex_str(void *ptr, size_t num_bytes);
 
 #endif // UTIL_H

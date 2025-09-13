@@ -3,12 +3,12 @@
 
 #include <stdlib.h>
 
-typedef struct {
-  void *next;
+struct HashMapEntry {
+  HashMapEntry *next;
   void *key;
   size_t key_len;
   void *value;
-} HashMapEntry;
+};
 
 typedef struct {
   HashMapEntry **entries;
@@ -37,5 +37,7 @@ typedef void (*HashMapPrinterFunc)(void *key, size_t key_len, void *value);
 void hash_map_print_func(HashMap *map, HashMapPrinterFunc printer);
 
 void hash_map_destroy(HashMap *map);
+
+void hash_map_log(HashMap *map);
 
 #endif
