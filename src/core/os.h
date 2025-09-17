@@ -133,7 +133,7 @@ typedef HANDLE SemaphoreHandle;
   _mm_lfence()
 
 #define MakeSemaphore(worker_thread_count)                                     \
-  CreateSemaphoreEx(0, 0, (worker_thread_count), "WorkerThreadsSemaphore", 0,  \
+  CreateSemaphoreEx(0, 0, 1, NULL /* "WorkerThreadsSemaphore" */, 0,           \
                     SEMAPHORE_ALL_ACCESS)
 
 #define WaitForSemaphore(handle)                                               \

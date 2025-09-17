@@ -13,75 +13,109 @@
 // and zero if it either did work, or it couldn't determine
 // what to do, i.e. some caller picked up next unit of work
 // before we could
-static int work_queue_process(struct WorkQueue *queue, int thread_index) {
-  (void)thread_index;
-  uint32_t original_next_queue_index = queue->work_queue_next;
-  if (original_next_queue_index < queue->work_queue_count) {
+// static int work_queue_process(WorkerThread *thread) {
+
+//   uint32_t original_next_queue_index = thread->work_queue_next;
+//   if (original_next_queue_index < thread->work_queue_count) {
+
+//     // TODO: Replace with something general
+//     uint32_t actual_index = InterlockedCompareExchange(
+//         (LONG volatile *)&thread->work_queue_next,
+//         original_next_queue_index + 1, original_next_queue_index);
+
+//     if (actual_index == original_next_queue_index) {
+//       // Pull out our unit of work
+//       WorkQueueEntry *entry = &thread->work_queue[actual_index];
+
+//       // LOG_INFO("Thread %d doing work entry %d", thread->thread_index,
+//       //          actual_index);
+//       entry->job_fn(entry->job_args);
+
+//       // TODO: Replace with something general
+//       InterlockedIncrement(
+//           (LONG volatile *)&thread->queue->work_queue_completed);
+//     }
+//   } else {
+//     // LOG_INFO("Thread %d no more work to do %d/%d", thread_index,
+//     //        original_next_queue_index, work_queue_next);
+//     return WORK_QUEUE_PROCESS_RESULT_DONE;
+//   }
+
+//   return WORK_QUEUE_PROCESS_RESULT_AGAIN;
+// }
+
+static void work_queue_process(WorkerThread *thread) {
+
+  while (!thread->work_queue.empty()) {
+    WorkQueueEntry *entry = thread->work_queue.head();
+
+    // LOG_INFO("Thread %d doing work entry %d", thread->thread_index,
+    //          actual_index);
+    entry->job_fn(entry->job_args);
+
+    thread->work_queue.pop();
 
     // TODO: Replace with something general
-    uint32_t actual_index = InterlockedCompareExchange(
-        (LONG volatile *)&queue->work_queue_next, original_next_queue_index + 1,
-        original_next_queue_index);
-
-    if (actual_index == original_next_queue_index) {
-      // Pull out our unit of work
-      WorkQueueEntry entry = queue->work_queue[actual_index];
-
-      // LOG_INFO("Thread %d doing work entry %d", thread_index, actual_index);
-      entry.job_fn(entry.job_args);
-
-      // TODO: Replace with something general
-      InterlockedIncrement((LONG volatile *)&queue->work_queue_completed);
-    }
-  } else {
-    // LOG_INFO("Thread %d no more work to do %d/%d", thread_index,
-    //        original_next_queue_index, work_queue_next);
-    return WORK_QUEUE_PROCESS_RESULT_DONE;
+    InterlockedIncrement((LONG volatile *)&thread->queue->work_queue_completed);
   }
-
-  return WORK_QUEUE_PROCESS_RESULT_AGAIN;
 }
 
 static int worker_thread_main(void *arg) {
-  WorkerThread args = *(WorkerThread *)arg;
-  thread_name = args.thread_name;
-  LOG_INFO("Thread %s (%d) started", args.thread_name, args.thread_index);
+  WorkerThread *args = (WorkerThread *)arg;
+  thread_name = args->thread_name;
+  LOG_INFO("Thread %s (%d) started", args->thread_name, args->thread_index);
   for (;;) {
-    if (work_queue_process(args.queue, args.thread_index) ==
-        WORK_QUEUE_PROCESS_RESULT_DONE) {
-      // LOG_INFO("Thread %d going to sleep", args.thread_index);
-      WaitForSemaphore(args.semaphore_handle);
-      // LOG_INFO("Thread %d woke up", args.thread_index);
-    }
+    work_queue_process(args);
+    // LOG_INFO("Thread %d going to sleep", args.thread_index);
+    WaitForSemaphore(args->semaphore_handle);
+    // LOG_INFO("Thread %d woke up", args.thread_index);
+
+    // if (work_queue_process(args) == WORK_QUEUE_PROCESS_RESULT_DONE) {
+    //   // LOG_INFO("Thread %d going to sleep", args.thread_index);
+    //   WaitForSemaphore(args->semaphore_handle);
+    //   // LOG_INFO("Thread %d woke up", args.thread_index);
+    // }
   }
 
-  LOG_INFO("Thread %d done", args.thread_index);
+  LOG_INFO("Thread %d done", args->thread_index);
 
   return 0;
 }
 
 static void work_queue_reset(struct WorkQueue *queue) {
-  InterlockedExchange((LONG *volatile)&queue->work_queue_next, 0);
-  InterlockedExchange((LONG *volatile)&queue->work_queue_count, 0);
+
+  for (size_t i = 0; i < WORKER_THREAD_COUNT; ++i) {
+    InterlockedExchange(
+        (LONG *volatile)&queue->worker_threads[i].work_queue_count, 0);
+
+    InterlockedExchange(
+        (LONG *volatile)&queue->worker_threads[i].work_queue_next, 0);
+  }
+
   InterlockedExchange((LONG *volatile)&queue->work_queue_completed, 0);
+  queue->next_worker_thread = 0;
+  queue->work_queue_queued_total = 0;
 }
 
 int work_queue_init(struct WorkQueue *queue) {
   work_queue_reset(queue);
-  queue->semaphore_handle = MakeSemaphore(WORKER_THREAD_COUNT);
-
-  if (queue->semaphore_handle == NULL) {
-    LOG_ERROR("Failed to create work queue semaphore");
-    return 0;
-  }
 
   LOG_INFO("Creating %d worker threads", WORKER_THREAD_COUNT);
 
   for (size_t i = 0; i < WORKER_THREAD_COUNT; ++i) {
     auto thread_index = int(i + 1);
     // Reserve thread_index 0 for our main thread
+
+    queue->worker_threads[i].semaphore_handle =
+        MakeSemaphore(WORKER_THREAD_COUNT);
+
+    if (queue->worker_threads[i].semaphore_handle == NULL) {
+      LOG_ERROR("Failed to create work queue semaphore");
+      return 0;
+    }
+
+    queue->worker_threads[i].work_queue.init();
     queue->worker_threads[i].thread_index = thread_index;
-    queue->worker_threads[i].semaphore_handle = queue->semaphore_handle;
     queue->worker_threads[i].queue = queue;
     sprintf(queue->worker_threads[i].thread_name, "WorkerPoolThread %d",
             thread_index);
@@ -98,26 +132,32 @@ int work_queue_init(struct WorkQueue *queue) {
   return 1;
 }
 
-static inline void work_queue_signal_worker_thread(struct WorkQueue *queue) {
+static inline void work_queue_signal_worker_thread(WorkerThread *thread) {
   /* if (SignalSemaphore(queue->semaphore_handle, */
   /*                     queue->work_queue_count > WORKER_THREAD_COUNT */
   /*                         ? WORKER_THREAD_COUNT */
   /*                         : queue->work_queue_count) == FALSE) { */
-  if (SignalSemaphore(queue->semaphore_handle, 1) == FALSE) {
 
+  if (SignalSemaphore(thread->semaphore_handle, 1) == FALSE) {
     LOG_WARN("Failed to signal semaphore");
   }
 }
 
 int work_queue_push(struct WorkQueue *queue, JobFn func, void *args) {
-  if (queue->work_queue_count >= WORK_QUEUE_MAX_SIZE) {
+  if (queue->work_queue_queued_total >= WORK_QUEUE_MAX_SIZE) {
     LOG_WARN("Work queue full (%d)", WORK_QUEUE_MAX_SIZE);
     return 0;
   }
 
-  WorkQueueEntry *entry = &queue->work_queue[queue->work_queue_count];
-  entry->job_fn = func;
-  entry->job_args = args;
+  uint32_t this_task_thread_index = queue->next_worker_thread;
+  WorkerThread *thread = &queue->worker_threads[this_task_thread_index];
+  queue->next_worker_thread = ++queue->next_worker_thread % WORKER_THREAD_COUNT;
+
+  //  WorkQueueEntry *entry = &thread->work_queue[thread->work_queue_count];
+  WorkQueueEntry entry;
+  entry.job_fn = func;
+  entry.job_args = args;
+  thread->work_queue.push(entry);
 
   //  LOG_INFO("Push work entry %d", queue->work_queue_count);
 
@@ -126,8 +166,11 @@ int work_queue_push(struct WorkQueue *queue, JobFn func, void *args) {
   // TODO: This was the one i tried changing to see if it affected
   // the first batch of work not being processed.
   // It SHOULD not matter. Only main thread writes to work_queue_count
-  InterlockedIncrement((LONG volatile *)&queue->work_queue_count);
-  work_queue_signal_worker_thread(queue);
+  InterlockedIncrement((LONG volatile *)&thread->work_queue_count);
+  ++queue->work_queue_queued_total;
+
+  work_queue_signal_worker_thread(thread);
+
   return 1;
 }
 
@@ -137,17 +180,11 @@ int work_queue_push(struct WorkQueue *queue, JobFn func, void *args) {
 /* } */
 
 void work_queue_sync(struct WorkQueue *queue) {
-  while (queue->work_queue_completed != queue->work_queue_count) {
-    work_queue_process(queue, 0);
-    //_mm_pause();
+  while (queue->work_queue_completed != queue->work_queue_queued_total) {
+    _mm_pause();
   }
-
-  LOG_INFO("completed=%d count=%d next=%d", queue->work_queue_completed,
-           queue->work_queue_count, queue->work_queue_next);
-  /* queue->work_queue_next = 0; */
-  /* queue->work_queue_count = 0; */
-  /* queue->work_queue_completed = 0; */
-
+  // CompletePastWritesBeforeFutureWrites();
+  // CompletePastReadsBeforeFutureReads();
   work_queue_reset(queue);
 }
 

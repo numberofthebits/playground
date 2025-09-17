@@ -418,10 +418,6 @@ void registry_resolve_systems_update_order(Registry *registry) {
 
   remaining.count = registry->num_systems;
 
-  // // Allocate for worst case, which is a completely serial evaluation
-  // // of systems
-  registry->system_update_order.init(&global_static_allocator);
-
   registry->system_update_order.push({});
   // size_t num_processed_systems = 0;
 

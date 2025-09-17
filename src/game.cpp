@@ -378,8 +378,8 @@ Game *game_create() {
     LOG_EXIT("Failed to init Imgui GL3 backend");
   }
 
-  //  glfwSwapInterval(1);
-  glfwSwapInterval(0);
+  glfwSwapInterval(1);
+  // glfwSwapInterval(0);
   glfwSetKeyCallback(window, &key_callback);
   glfwSetFramebufferSizeCallback(window, &framebuffer_size_callback);
   glfwSetWindowSizeCallback(window, &window_size_callback);

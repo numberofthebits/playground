@@ -60,6 +60,8 @@ target_sources(game
   ${PROJECT_SOURCE_DIR}/src/core/os.h
   ${PROJECT_SOURCE_DIR}/src/core/renderer.cpp
   ${PROJECT_SOURCE_DIR}/src/core/renderer.h
+  ${PROJECT_SOURCE_DIR}/src/core/ringbuf.h
+  ${PROJECT_SOURCE_DIR}/src/core/ringbuf.cpp
   ${PROJECT_SOURCE_DIR}/src/core/services.cpp
   ${PROJECT_SOURCE_DIR}/src/core/services.h
   ${PROJECT_SOURCE_DIR}/src/core/sparsecomponentpool.cpp
@@ -135,7 +137,7 @@ if ( CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "G
   )
 endif()
 
-if(BUILD_TESTS) 
+if(ENABLE_TESTS) 
   target_compile_options(game PRIVATE -DBUILD_TESTS)
 endif()
 

@@ -114,12 +114,8 @@ void stack_dealloc_all(struct StackAllocator *allocator);
 template <typename T, uint32_t CapacityT> struct FixedSizeStack {
   T base[CapacityT];
   int64_t index_head;
-  ArenaAllocator *allocator;
 
-  inline void init(ArenaAllocator *allocator_) {
-    this->allocator = allocator_;
-    this->index_head = -1;
-  }
+  FixedSizeStack() : index_head(-1) {}
 
   inline bool empty() { return index_head == -1; }
 
@@ -163,10 +159,6 @@ template <typename T, uint32_t CapacityT> struct FixedSizeStack {
     }
 
     return this->base;
-  }
-
-  inline ~FixedSizeStack() {
-    stack_dealloc(this->allocator, this->base, sizeof(T) * CapacityT);
   }
 };
 
