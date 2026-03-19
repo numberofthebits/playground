@@ -895,7 +895,7 @@ void render_system_debug(struct RenderSystem *system, Registry *registry) {
   Pool *collision_pool = registry_get_pool(registry, COLLISION_COMPONENT_BIT);
   Pool *transform_pool = registry_get_pool(registry, TRANSFORM_COMPONENT_BIT);
 
-  for (int i = 0; i < system->base.entities.size; ++i) {
+  for (uint32_t i = 0; i < system->base.entities.size; ++i) {
     Entity e = VEC_GET_T(&system->base.entities, Entity, i);
 
     // Skip anything that doesn't have at least a collision component

@@ -14,7 +14,7 @@ static void movement_update(SystemUpdateArgs args) {
       registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
   Pool *physics_pool = registry_get_pool(args.registry, PHYSICS_COMPONENT_BIT);
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
     Entity e = entities[i];
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, e.index);

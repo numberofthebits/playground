@@ -37,7 +37,7 @@ AssetName assets_make_asset_name_str(const char *name) {
 }
 
 AssetFilePath assets_make_asset_file_path(const char *file_path) {
-  size_t len = strlen(file_path);
+  auto len = static_cast<uint32_t>(strlen(file_path));
   if (len >= ASSET_FILE_PATH_MAX) {
     LOG_EXIT("Asset file path '%s' too long (max %d)", file_path,
              ASSET_FILE_PATH_MAX);
@@ -138,7 +138,7 @@ static AssetShaderType extension_to_shader_type(const char *extension) {
 AssetName *assets_asset_name_get_by_id(struct Assets *assets, AssetId id) {
 
   AssetMeta *meta = 0;
-  for (int i = 0; i < assets->asset_meta.size; ++i) {
+  for (uint32_t i = 0; i < assets->asset_meta.size; ++i) {
     meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
     if (meta->id == id) {
       return &meta->name;
@@ -153,7 +153,7 @@ int assets_asset_id_get_by_name(struct Assets *assets, const char *name,
   AssetMeta *meta = 0;
   AssetName asset_name = assets_make_asset_name_str(name);
 
-  for (int i = 0; i < assets->asset_meta.size; ++i) {
+  for (uint32_t i = 0; i < assets->asset_meta.size; ++i) {
     meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
     if (assets_asset_name_eq(&meta->name, &asset_name)) {
       *id = meta->id;
@@ -392,7 +392,7 @@ static int enumerate_fonts_callback(const FileSystemListResult *result,
 
 void assets_print_asset_meta(struct Assets *assets) {
   printf("*********** ASSET META *************\n");
-  for (int i = 0; i < assets->asset_meta.size; ++i) {
+  for (uint32_t i = 0; i < assets->asset_meta.size; ++i) {
     AssetMeta *meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
     (void)meta;
     printf("%d Id: %zu\tType: %s\tName: %s\tPath: %s\n", i, meta->id,
@@ -462,7 +462,7 @@ int assets_make_file_path(const char *path, const char *file_name, char *buf,
 }
 
 AssetMeta *assets_asset_meta_get(struct Assets *assets, AssetId id) {
-  for (int i = 0; i < assets->asset_meta.size; ++i) {
+  for (uint32_t i = 0; i < assets->asset_meta.size; ++i) {
     AssetMeta *meta = VEC_GET_T_PTR(&assets->asset_meta, AssetMeta, i);
     AssetMeta deref = *meta;
     if (deref.id == id) {
@@ -477,7 +477,7 @@ AssetMeta *assets_asset_meta_get(struct Assets *assets, AssetId id) {
 
 AssetMaterial *assets_get_material(struct Assets *assets, AssetId material_id) {
 
-  for (int i = 0; i < assets->materials.size; ++i) {
+  for (uint32_t i = 0; i < assets->materials.size; ++i) {
     AssetMaterial *mat = VEC_GET_T_PTR(&assets->materials, AssetMaterial, i);
     if (mat->id == material_id) {
       return mat;
@@ -508,16 +508,16 @@ int assets_load_shader(struct Assets *assets, AssetId asset_id,
                        AssetShader *shader) {
   AssetMeta *asset_meta = assets_asset_meta_get(assets, asset_id);
   if (!asset_meta) {
-    return 0;
+    return -1;
   }
 
   shader->id = asset_id;
 
-  int ret = file_read_all_buffer_text(asset_meta->file_path.path,
+  auto ret = file_read_all_buffer_text(asset_meta->file_path.path,
                                       &shader->source_buffer);
 
   // TODO: Extract this to util.*?
-  int len_path = strlen(asset_meta->file_path.path);
+  auto len_path = strlen(asset_meta->file_path.path);
   const char *extension_ptr = asset_meta->file_path.path + len_path;
 
   while ((*extension_ptr != '.') &&
@@ -527,7 +527,7 @@ int assets_load_shader(struct Assets *assets, AssetId asset_id,
 
   shader->shader_type = extension_to_shader_type(extension_ptr);
 
-  return ret;
+  return static_cast<int>(ret);
 }
 
 static int load_shader_program(const char *file_path,
@@ -743,7 +743,7 @@ int assets_load_font(struct Assets *assets, AssetId id, AssetFont *font) {
 
 AssetShaderProgram *assets_get_program(struct Assets *assets,
                                        AssetId program_id) {
-  for (int i = 0; i < assets->programs.size; ++i) {
+  for (uint32_t i = 0; i < assets->programs.size; ++i) {
     AssetShaderProgram *program =
         VEC_GET_T_PTR(&assets->programs, AssetShaderProgram, i);
     if (program->id == program_id) {
@@ -755,7 +755,7 @@ AssetShaderProgram *assets_get_program(struct Assets *assets,
 }
 
 AssetShader *assets_get_shader(struct Assets *assets, AssetId shader_id) {
-  for (int i = 0; i < assets->shaders.size; ++i) {
+  for (uint32_t i = 0; i < assets->shaders.size; ++i) {
     AssetShader *shader = VEC_GET_T_PTR(&assets->shaders, AssetShader, i);
     if (shader->id == shader_id) {
       return shader;

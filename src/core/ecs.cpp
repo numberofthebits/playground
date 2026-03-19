@@ -9,7 +9,6 @@
 
 #include <assert.h>
 #include <cstring>
-#include <stdalign.h>
 #include <stddef.h>
 
 #define REGISTRY_ENTITY_COMMIT_BUFFER_CAPACITY 1024
@@ -47,13 +46,13 @@ the next free index.
 static void print_entity_id_pool(struct EntityIdPool *entity_id_pool) {
   LOG_INFO("Entity ID pool used %zu / %zu", entity_id_pool->used,
            entity_id_pool->size);
-  for (size_t i = 0; i < entity_id_pool->used; ++i) {
+  for (uint32_t i = 0; i < entity_id_pool->used; ++i) {
     LOG_INFO("EntityIdPool[%d]=%zu", i, entity_id_pool->pool[i]);
   }
 }
 
 static void entity_id_pool_init(struct EntityIdPool *entity_ids,
-                                size_t max_entity_count) {
+                                uint32_t max_entity_count) {
   if (!max_entity_count) {
     LOG_EXIT("At least 1 entity is required");
   }
@@ -65,21 +64,21 @@ static void entity_id_pool_init(struct EntityIdPool *entity_ids,
   entity_ids->size = max_entity_count;
   entity_ids->used = 0;
 
-  for (size_t i = 0; i < max_entity_count; ++i) {
+  for (uint32_t i = 0; i < max_entity_count; ++i) {
     entity_ids->pool[i] = i;
   }
 
   //    print_entity_id_pool(entity_ids);
 }
 
-static size_t entity_id_pool_reserve_index(struct EntityIdPool *entity_ids) {
+static uint32_t entity_id_pool_reserve_index(struct EntityIdPool *entity_ids) {
   if (entity_ids->used >= entity_ids->size) {
     LOG_EXIT("Failed to find entity index. ID pool used %zu == size %zu",
              entity_ids->used, entity_ids->size);
     return ENTITY_INVALID_INDEX;
   }
 
-  size_t index = entity_ids->pool[entity_ids->used];
+  uint32_t index = entity_ids->pool[entity_ids->used];
   /* LOG_INFO("Reserve entity index %zu (in use total %zu)", index, */
   /*          entity_ids->used + 1); */
   entity_ids->used++;
@@ -94,7 +93,7 @@ static void entity_id_pool_remove_entity(struct EntityIdPool *entity_id_pool,
 
   int to_remove = -1;
 
-  for (size_t i = 0; i < entity_id_pool->used; ++i) {
+  for (uint32_t i = 0; i < entity_id_pool->used; ++i) {
     if (entity.index == entity_id_pool->pool[i]) {
       to_remove = (int)i;
       break;
@@ -111,7 +110,7 @@ static void entity_id_pool_remove_entity(struct EntityIdPool *entity_id_pool,
   LOG_INFO("Remove entity ID %d index %zu from ID pool index %d . In use %zu",
            entity.id, entity.index, to_remove, entity_id_pool->used);
 
-  size_t tmp = entity_id_pool->pool[to_remove];
+  uint32_t tmp = entity_id_pool->pool[to_remove];
   entity_id_pool->used--;
   entity_id_pool->pool[to_remove] = entity_id_pool->pool[entity_id_pool->used];
   entity_id_pool->pool[entity_id_pool->used] = tmp;
@@ -132,8 +131,8 @@ static Entity create_entity(struct EntityIdPool *entity_id_pool) {
   return entity;
 }
 
-static void zero_system_pointers(struct SystemBase **systems, size_t count) {
-  for (size_t i = 0; i < count; ++i) {
+static void zero_system_pointers(struct SystemBase **systems, uint32_t count) {
+  for (uint32_t i = 0; i < count; ++i) {
     *systems = 0;
     systems++;
   }
@@ -144,15 +143,15 @@ static inline void clear_staged_entities_add(Registry *reg) {
   memset(reg->staged_add.counts, 0x0, sizeof(reg->staged_add.counts));
 }
 
-void registry_init(Registry *reg, size_t max_entity_count,
-                   const struct Component *components, size_t component_count) {
+void registry_init(Registry *reg, uint32_t max_entity_count,
+                   const struct Component *components, uint32_t component_count) {
   entity_id_pool_init(&reg->entity_id_pool, max_entity_count);
 
   // Initialize all pools to null size null pointer data and
   // null pointer
   memset(&reg->pools[0], 0x0, sizeof(reg->pools));
   reg->num_pools = component_count;
-  for (size_t i = 0; i < component_count; ++i) {
+  for (uint32_t i = 0; i < component_count; ++i) {
     const struct Component *component = &components[i];
 
     pool_init(&reg->pools[i], component, max_entity_count);
@@ -212,7 +211,7 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
   ComponentSignatureT entity_signature =
       registry->entity_component_signatures[entity.index];
 
-  for (size_t i = 0; i < registry->num_systems; ++i) {
+  for (uint32_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
     ComponentSignatureT system_signature = system->components.signature;
 
@@ -228,11 +227,11 @@ static void registry_add_entity_to_systems(Registry *registry, Entity entity) {
 }
 
 static void remove_entity_from_systems(Registry *registry, Entity entity) {
-  size_t entity_index = entity.index;
+  uint32_t entity_index = entity.index;
   ComponentSignatureT entity_signature =
       registry->entity_component_signatures[entity_index];
 
-  for (size_t i = 0; i < registry->num_systems; ++i) {
+  for (uint32_t i = 0; i < registry->num_systems; ++i) {
     struct SystemBase *system = registry->systems[i];
 
     if (!system) {
@@ -252,7 +251,7 @@ static void remove_entity_from_systems(Registry *registry, Entity entity) {
 }
 
 static void remove_entity_from_pools(Registry *registry, Entity entity) {
-  for (size_t i = 0; i < registry->num_pools; ++i) {
+  for (uint32_t i = 0; i < registry->num_pools; ++i) {
     pool_remove(&registry->pools[i], entity);
   }
 }
@@ -264,7 +263,7 @@ void registry_entity_add(Registry *reg, Entity e) {
   ComponentSignatureT entity_signature =
       reg->entity_component_signatures[e.index];
 
-  for (size_t i = 0; i < reg->num_systems; ++i) {
+  for (uint32_t i = 0; i < reg->num_systems; ++i) {
     struct SystemBase *system = reg->systems[i];
     ComponentSignatureT system_signature = system->components.signature;
     if (!system || !system_signature) {
@@ -282,7 +281,7 @@ void registry_entity_add(Registry *reg, Entity e) {
 
 void registry_entity_remove(Registry *reg, Entity e) {
   LOG_INFO("Remove entity ID %d index %zu", e.id, e.index);
-  for (size_t i = 0; i < reg->count_to_remove; ++i) {
+  for (uint32_t i = 0; i < reg->count_to_remove; ++i) {
     if (e.id == reg->to_remove[i].id) {
       LOG_WARN("Entity ID %zu index %zu already queued for removal", e.id,
                e.index);
@@ -296,7 +295,7 @@ void registry_entity_remove(Registry *reg, Entity e) {
 void registry_entity_commit_entities(Registry *reg) {
   DeclareScopedTimer(add_entity_to_systems);
 
-  for (size_t j = 0; j < reg->count_to_remove; ++j) {
+  for (uint32_t j = 0; j < reg->count_to_remove; ++j) {
     Entity e = reg->to_remove[j];
     remove_entity_from_systems(reg, e);
     remove_entity_from_pools(reg, e);
@@ -307,22 +306,22 @@ void registry_entity_commit_entities(Registry *reg) {
   reg->count_to_remove = 0;
 
   BeginScopedTimer(add_entity_to_systems);
-  for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+  for (uint32_t i = 0; i < SYSTEMS_MAX; ++i) {
     // Reserve space for as many entities as the system will need
     // up front
     if (reg->staged_add.counts[i] != 0) {
-      size_t current_free_capacity =
+      auto current_free_capacity =
           reg->systems[i]->entities.capacity - reg->systems[i]->entities.size;
 
       if (current_free_capacity < reg->staged_add.counts[i]) {
-        size_t required_capacity =
+        auto required_capacity =
             reg->systems[i]->entities.size + reg->staged_add.counts[i];
         VEC_RESERVE_T(&reg->systems[i]->entities, Entity, required_capacity);
       }
     }
   }
 
-  for (size_t i = 0; i < reg->staged_add.count_to_add; ++i) {
+  for (uint32_t i = 0; i < reg->staged_add.count_to_add; ++i) {
     registry_add_entity_to_systems(reg, reg->staged_add.to_add[i]);
   }
 
@@ -378,7 +377,7 @@ void registry_add_system(Registry *registry, struct SystemBase *systembase) {
 }
 
 struct SystemBase *registry_get_system(Registry *reg, int system_flag) {
-  for (size_t i = 0; i < reg->num_systems; ++i) {
+  for (uint32_t i = 0; i < reg->num_systems; ++i) {
     if (reg->systems[i]->flag == system_flag) {
       return reg->systems[i];
     }
@@ -392,7 +391,7 @@ static void remove_from_group(SystemUpdateGroup *group, SystemBase *sys) {
     return;
   }
 
-  for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+  for (uint32_t i = 0; i < SYSTEMS_MAX; ++i) {
     if (sys == nullptr) {
       continue;
     }
@@ -412,19 +411,19 @@ void registry_resolve_systems_update_order(Registry *registry) {
 
   SystemUpdateGroup remaining = {};
 
-  for (size_t i = 0; i < registry->num_systems; ++i) {
+  for (uint32_t i = 0; i < registry->num_systems; ++i) {
     remaining.systems[i] = registry->systems[i];
   }
 
   remaining.count = registry->num_systems;
 
   registry->system_update_order.push({});
-  // size_t num_processed_systems = 0;
+  // uint32_t num_processed_systems = 0;
 
   ComponentBitmaskT ready_components = 0;
 
   // If system has no reads, it can be evaluated immediately
-  for (size_t i = 0; i < remaining.count; ++i) {
+  for (uint32_t i = 0; i < remaining.count; ++i) {
     if (registry->systems[i]->components.read_access_flags == 0) {
       SystemUpdateGroup *group = registry->system_update_order.top();
       group->systems[group->count++] = registry->systems[i];
@@ -438,7 +437,7 @@ void registry_resolve_systems_update_order(Registry *registry) {
        b += 1) {
     ComponentBitmaskT bit = 0x1 << b;
     bool component_has_writes = false;
-    for (size_t i = 0; i < registry->num_systems; ++i) {
+    for (uint32_t i = 0; i < registry->num_systems; ++i) {
       if (bit & registry->systems[i]->components.write_access_flags) {
         component_has_writes = true;
         break;
@@ -470,7 +469,7 @@ void registry_resolve_systems_update_order(Registry *registry) {
 
     ComponentBitmaskT ready_this_iteration = 0;
 
-    for (size_t i = 0; i < SYSTEMS_MAX; ++i) {
+    for (uint32_t i = 0; i < SYSTEMS_MAX; ++i) {
       if (remaining.systems[i] == nullptr) {
         continue;
       }
@@ -504,16 +503,16 @@ void registry_resolve_systems_update_order(Registry *registry) {
 
   SystemUpdateGroup *group = registry->system_update_order.head();
   const auto groups_size = registry->system_update_order.size();
-  for (size_t i = 0; i < groups_size; ++i) {
+  for (uint32_t i = 0; i < groups_size; ++i) {
     LOG_INFO("Evaluation step %zu:", i);
-    for (size_t j = 0; j < group->count; ++j) {
+    for (uint32_t j = 0; j < group->count; ++j) {
       LOG_INFO("'%s'", group->systems[j]->name);
     }
     group++;
   }
 }
 
-void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now) {
+void registry_update(Registry *reg, uint64_t frame_index, TimeT frame_time_now) {
 
   (void)frame_time_now;
   (void)frame_index;
@@ -521,11 +520,11 @@ void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now) {
 
   // auto update_groups = resolve_systems_update_order(reg);
   // auto iter = update_groups.head();
-  // for (size_t i = 0; i < update_groups.size(); ++i) {
+  // for (uint32_t i = 0; i < update_groups.size(); ++i) {
   //   reg->
   // }
 
-  //   for (size_t i = 0; i < reg->num_systems; ++i) {
+  //   for (uint32_t i = 0; i < reg->num_systems; ++i) {
   //     struct SystemBase *system = reg->systems[i];
   //     if (system) {
 
@@ -582,7 +581,7 @@ void registry_entity_untag(Registry *reg, Entity entity) {
                                         &entity, sizeof(entity));
   if (value) {
     Entity *e = (Entity *)hash_map_remove(&reg->entity_tags.tag_entity_map,
-                                          (char *)value, strlen(value));
+                                          (char *)value, (unsigned int)strlen(value));
     if (e) {
       free(e);
     } else {
@@ -640,7 +639,7 @@ void registry_entity_ungroup(Registry *reg, Entity entity) {
                    std::strlen((const char *)group), &vptr)) {
     Vec *v = (Vec *)vptr;
     if (v) {
-      for (int i = 0; i < v->size; ++i) {
+      for (uint32_t i = 0; i < v->size; ++i) {
         Entity *e = VEC_GET_T_PTR(v, Entity, i);
         if (e->id == entity.id) {
           VEC_ERASE_T(v, Entity, i);
@@ -669,7 +668,7 @@ int registry_entity_in_group(Registry *reg, Entity entity, const char *group) {
   }
 
   Vec *v = (Vec *)ptr;
-  for (int i = 0; i < v->size; ++i) {
+  for (uint32_t i = 0; i < v->size; ++i) {
     Entity e = VEC_GET_T(v, Entity, i);
     if (e.id == entity.id) {
       return 1;

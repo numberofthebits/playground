@@ -16,14 +16,14 @@ struct SystemBase;
 
 struct SystemUpdateGroup {
   SystemBase *systems[SYSTEMS_MAX];
-  size_t count;
+  uint32_t count;
 };
 // Track our entity indexes so we can reuse destroyed entities
 // Note this is not a component pool
 struct EntityIdPool {
-  size_t size;
-  size_t used;
-  size_t *pool;
+  uint32_t size;
+  uint32_t used;
+  uint32_t *pool;
 };
 
 typedef struct {
@@ -49,23 +49,23 @@ typedef struct {
 
 struct Registry_t {
   Pool pools[COMPONENT_POOLS_MAX];
-  size_t num_pools;
+  uint32_t num_pools;
 
   struct SystemBase *systems[SYSTEMS_MAX];
-  size_t num_systems;
+  uint32_t num_systems;
 
   struct EntityIdPool entity_id_pool;
 
-  size_t num_entities;
-  size_t max_entities;
+  uint32_t num_entities;
+  uint32_t max_entities;
 
   /* Entity *to_add; */
-  /* size_t count_to_add; */
+  /* uint32_t count_to_add; */
 
   StagedAdd staged_add;
 
   Entity *to_remove;
-  size_t count_to_remove;
+  uint32_t count_to_remove;
 
   // Array must must be 'num_entities' size always
   ComponentSignatureT *entity_component_signatures;
@@ -85,8 +85,8 @@ typedef struct Registry_t Registry;
 /*
  Registry API
  */
-void registry_init(Registry *registry, size_t max_entity_count,
-                   const struct Component *components, size_t component_count);
+void registry_init(Registry *registry, uint32_t max_entity_count,
+                   const struct Component *components, uint32_t component_count);
 
 Pool *registry_get_pool(Registry *reg, int component_bit);
 
@@ -95,7 +95,7 @@ void registry_add_system(Registry *reg, struct SystemBase *s);
 struct SystemBase *registry_get_system(Registry *reg, int system_id);
 
 // Process 'to_add' and 'to_remove' lists
-void registry_update(Registry *reg, size_t frame_index, TimeT frame_time_now);
+void registry_update(Registry *reg, uint64_t frame_index, TimeT frame_time_now);
 
 // Build a naive parallellization of system execution order
 void registry_resolve_systems_update_order(Registry *registry);

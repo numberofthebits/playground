@@ -13,7 +13,7 @@ static void time_update(SystemUpdateArgs args) {
 
   Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
     Entity e = entities[i];
 
     TimeComponent *tc = PoolGetComponent(time_pool, TimeComponent, e.index);

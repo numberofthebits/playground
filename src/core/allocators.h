@@ -3,10 +3,8 @@
 
 #include "log.h"
 
-#include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <threads.h>
 
 #define STACK_ALLOCATOR_DEFAULT_THREAD_LOCAL_STACK_SIZE 1024ULL * 1024ULL * 8ULL
 

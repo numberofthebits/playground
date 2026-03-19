@@ -28,10 +28,10 @@ size_t file_read_all_buffer_binary(const char *file_path, unsigned char *buffer,
     return 0;
   }
 
-  int bytes_read = fread(buffer, 1, file_size, fp);
+  auto bytes_read = fread(buffer, 1, static_cast<size_t>(file_size), fp);
   fclose(fp);
 
-  return (size_t)bytes_read;
+  return bytes_read;
 }
 
 size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer) {
@@ -51,12 +51,12 @@ size_t file_read_all_buffer_text(const char *file_path, Buffer *buffer) {
     return 0;
   }
 
-  int bytes_read = fread(buffer->data, 1, file_size, fp);
+  auto bytes_read = fread(buffer->data, 1, static_cast<size_t>(file_size), fp);
   fclose(fp);
   buffer->data[bytes_read] = 0;
   buffer->used = (size_t)bytes_read;
 
-  return (size_t)bytes_read;
+  return bytes_read;
 }
 
 static inline int file_get_size_impl(FILE *fp) {
@@ -88,11 +88,11 @@ int file_read_all(const char *file_path, Buffer *buffer) {
 size_t file_write_all_binary(const char *file_path, unsigned char *buffer,
                              size_t buffer_size) {
   FILE *fp = fopen(file_path, "w+b");
-  int ret = fwrite(buffer, buffer_size, 1, fp);
+  auto ret = fwrite(buffer, buffer_size, 1, fp);
   if (ret < 0) {
     return 0;
   }
-  return (size_t)ret;
+  return ret;
 }
 
 int file_get_size(const char *file_path) {

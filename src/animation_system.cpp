@@ -19,7 +19,7 @@ static void animation_update(SystemUpdateArgs update_args) {
 
   Entity *entities = VEC_ITER_BEGIN_T(&update_args.system->entities, Entity);
 
-  for (int i = 0; i < update_args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < update_args.system->entities.size; ++i) {
     Entity entity = entities[i];
     RenderComponent *rc =
         PoolGetComponent(render_pool, RenderComponent, entity.index);
@@ -33,8 +33,8 @@ static void animation_update(SystemUpdateArgs update_args) {
     auto microsecs = time_to_millisecs(update_args.now);
 
     auto fratio = microsecs / MILLISECS_PER_FRAME;
-    size_t iratio = size_t(fratio);
-    size_t animation_frame_nr =
+    auto iratio = uint8_t(fratio);
+    uint8_t animation_frame_nr =
         iratio % ac->num_animation_frames * ac->is_playing;
 
     // X is our animation playing in time

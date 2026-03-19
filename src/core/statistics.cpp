@@ -1,6 +1,7 @@
 #include "statistics.h"
 
 #include "log.h"
+
 Statistics stats;
 
 Duration *statistics_reserve_duration(const char *name) {

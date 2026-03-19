@@ -12,7 +12,7 @@
 typedef struct {
   struct SystemBase base;
   Ray3f *rays;
-  size_t num_rays;
+  uint32_t num_rays;
   Vec2u16 framebuffer_size;
 } HitDetectionSystem;
 

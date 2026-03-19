@@ -11,8 +11,8 @@ static void hit_detection_system_update(SystemUpdateArgs args) {
   Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
   struct EventBus *event_bus = args.system->services.event_bus;
 
-  for (size_t r = 0; r < system->num_rays; ++r) {
-    for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t r = 0; r < system->num_rays; ++r) {
+    for (uint32_t i = 0; i < args.system->entities.size; ++i) {
       Entity entity = entities[i];
       MeshComponent *mesh =
           PoolGetComponent(mesh_pool, MeshComponent, entity.index);

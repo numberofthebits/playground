@@ -12,10 +12,10 @@ typedef struct Chunk_t Chunk;
 struct Vec_t {
   Chunk storage;
   // Count elements
-  int size;
+  uint32_t size;
 
   //
-  int capacity;
+  uint32_t capacity;
 };
 typedef struct Vec_t Vec;
 

@@ -7,7 +7,7 @@
 void damage_system_update(SystemUpdateArgs args) {
   Pool *health_pool = registry_get_pool(args.registry, HEALTH_COMPONENT_BIT);
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
     Entity e = VEC_GET_T(&args.system->entities, Entity, i);
     HealthComponent *hc =
         PoolGetComponent(health_pool, HealthComponent, e.index);
@@ -32,8 +32,8 @@ damage_system_handle_collision_detected(DamageSystem *sys,
   }
 
   // Now we know the two entities are hostile towards each other
-  int is_a_projectile = is_projectile(flags_a);
-  int is_b_projectile = is_projectile(flags_b);
+  auto is_a_projectile = is_projectile(flags_a);
+  auto is_b_projectile = is_projectile(flags_b);
 
   // One should be a projectile and one should be a unit
   if (!(is_a_projectile ^ is_b_projectile)) {

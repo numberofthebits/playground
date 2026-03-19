@@ -1,15 +1,12 @@
 #include "systembase.h"
 
-#include "allocators.h"
 #include "types.h"
-
-#include <stdlib.h>
 
 #define SYSTEM_ENTITIES_DEFAULT_CAPACITY 64
 
 static EntityIndex find_entity_index(Vec *entities, Entity e) {
   Entity *iter = VEC_ITER_BEGIN_T(entities, Entity);
-  for (int i = 0; i < entities->size; ++i, ++iter) {
+  for (uint32_t i = 0; i < entities->size; ++i, ++iter) {
     if (iter->id == e.id) {
       return i;
     }

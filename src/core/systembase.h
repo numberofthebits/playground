@@ -7,7 +7,6 @@
 #include "statistics.h"
 #include "types.h"
 #include "vec.h"
-#include <stdalign.h>
 
 typedef struct SystemBase SystemBase;
 typedef struct Registry_t Registry;

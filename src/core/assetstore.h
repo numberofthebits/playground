@@ -15,7 +15,6 @@
 #include "util.h"
 #include "vec.h"
 
-#include <stdalign.h>
 #include <stdint.h>
 
 typedef struct {

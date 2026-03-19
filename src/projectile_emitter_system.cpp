@@ -91,7 +91,7 @@ void projectile_emitter_system_update(SystemUpdateArgs args) {
   Pool *projectile_pool =
       registry_get_pool(args.registry, PROJECTILE_EMITTER_COMPONENT_BIT);
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
     Entity e = VEC_GET_T(&args.system->entities, Entity, i);
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, e.index);

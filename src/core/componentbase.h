@@ -21,7 +21,7 @@ struct Component {
 // Is this struct really necessary?
 // Registry init doesn't take this thing
 struct Components {
-  size_t num_components;
+  uint32_t num_components;
   const struct Component *components;
 };
 
@@ -29,11 +29,11 @@ struct Components {
 //       pointless functions
 int component_index(struct Components *components, int component_bit);
 
-int component_flag(struct Components *components, int index);
+int component_flag(struct Components *components, uint32_t index);
 
 size_t component_size(struct Components *components, int component_bit);
 
-int component_table_size(struct Components *components);
+uint32_t component_table_size(struct Components *components);
 
 const char *component_name(struct Components *components, int index);
 

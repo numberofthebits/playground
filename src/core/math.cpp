@@ -429,7 +429,7 @@ static inline int mesh_intersect_ray_impl(Vec3f *p0, Vec3f *p1, Vec3f *p2,
 
 int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
                        MeshRayIntersection *intersect_out) {
-  for (size_t i = 0; i < mesh->num_triangles; ++i) {
+  for (uint32_t i = 0; i < mesh->num_triangles; ++i) {
     Vec3f *p0 = &mesh->vertices[mesh->triangles[i].index_v0];
     Vec3f *p1 = &mesh->vertices[mesh->triangles[i].index_v1];
     Vec3f *p2 = &mesh->vertices[mesh->triangles[i].index_v2];
@@ -445,7 +445,7 @@ int mesh_intersect_ray(Mesh *mesh, Ray3f *ray,
 
 int mesh_transform_intersect_ray(Mesh *mesh, Ray3f *ray, Mat4x4 *transform,
                                  MeshRayIntersection *intersect_out) {
-  for (size_t i = 0; i < mesh->num_triangles; ++i) {
+  for (uint32_t i = 0; i < mesh->num_triangles; ++i) {
     Vec3f *p0 = &mesh->vertices[mesh->triangles[i].index_v0];
     Vec3f *p1 = &mesh->vertices[mesh->triangles[i].index_v1];
     Vec3f *p2 = &mesh->vertices[mesh->triangles[i].index_v2];

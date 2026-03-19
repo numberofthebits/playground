@@ -2,14 +2,8 @@
 
 #include "log.h"
 
-// TODO: This is dumb. Just read `Components::num_components` instead of jumping
-// around the code. But one thing at a time.
-int component_table_size(struct Components *components) {
-  return components->num_components;
-}
-
 int component_index(struct Components *components, int component_bit) {
-  for (int i = 0; i < component_table_size(components); ++i) {
+  for (uint32_t i = 0; i < components->num_components; ++i) {
     if (components->components[i].flag == component_bit) {
       return i;
     }
@@ -18,8 +12,8 @@ int component_index(struct Components *components, int component_bit) {
   return -1;
 }
 
-int component_flag(struct Components *components, int index) {
-  if (index >= component_table_size(components)) {
+int component_flag(struct Components *components, uint32_t index) {
+  if (index >= components->num_components) {
     return INVALID_COMPONENT_BIT;
   }
 

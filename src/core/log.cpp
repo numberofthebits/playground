@@ -4,7 +4,6 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <threads.h>
 #include <time.h>
 
 unsigned long long time_logging;

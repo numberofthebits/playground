@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <threads.h>
 
 typedef struct AllocImplResult {
   void *ptr;

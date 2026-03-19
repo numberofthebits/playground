@@ -39,7 +39,7 @@ static inline void camera_movement_system_update(SystemUpdateArgs args) {
   Pool *pool = registry_get_pool(args.registry, TRANSFORM_COMPONENT_BIT);
   CameraMovementSystem *cms = (CameraMovementSystem *)args.system;
 
-  for (int i = 0; i < args.system->entities.size && i < 1; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size && i < 1; ++i) {
 
     Entity e = *(ptr + i);
     TransformComponent *tc =
@@ -47,9 +47,6 @@ static inline void camera_movement_system_update(SystemUpdateArgs args) {
 
     cms->camera.position =
         clamp_camera_pos(&tc->pos, cms->world_size, &cms->camera);
-
-    Vec3f pos_neg = {-cms->camera.position.x, -cms->camera.position.y, 1.f};
-    (void)pos_neg;
 
     float f = 4.f;
     Mat4x4 projection = ortho(1.0f, -1.0f, f, -f, f, -f);

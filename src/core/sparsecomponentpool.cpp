@@ -16,20 +16,20 @@ void pool_print(Pool *p) {
     if (p->sparse[i] == ENTITY_INVALID_INDEX) {
       printf("X");
     } else {
-      printf("%zu", p->sparse[i]);
+      printf("%d", p->sparse[i]);
     }
     printf("\n");
   }
 
   printf("\nPacked:\n");
 
-  for (size_t i = 0; i < p->count; ++i) {
-    printf("%zu=%zu\n", i, p->packed[i]);
+  for (uint32_t i = 0; i < p->count; ++i) {
+    printf("%d=%du\n", i, p->packed[i]);
   }
 }
 
 void pool_init(Pool *pool, const struct Component *descriptor,
-               size_t max_entities) {
+               uint32_t max_entities) {
   pool->descriptor = descriptor;
   pool->data = arena_alloc(&global_static_allocator, descriptor->size,
                            max_entities, descriptor->alignment);
@@ -53,7 +53,7 @@ Bool pool_has_entity(Pool *p, Entity e) {
 }
 
 void pool_insert(Pool *pool, Entity e, void *data) {
-  size_t current_idx = pool->count;
+  auto current_idx = pool->count;
 
   pool->sparse[e.index] = current_idx;
 
@@ -104,7 +104,7 @@ typedef struct {
 } PoolTestComponentData;
 
 void pool_test() {
-  const int max_entities = 10;
+  const uint32_t max_entities = 10;
   struct Component c;
   c.alignment = alignof(PoolTestComponentData);
   c.name = "test_component";

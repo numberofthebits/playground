@@ -15,10 +15,11 @@ typedef struct {
 typedef int (*IterCallback)(const FileSystemListResult *result, void *context);
 
 #ifdef _WIN32
-#include <intrin.h>
 #include <windows.h>
-typedef LARGE_INTEGER TimeT;
 #define CALLING_CONVENTION APIENTRY
+#include <intrin.h>
+
+typedef LARGE_INTEGER TimeT;
 
 #elif __linux__
 #include <time.h>

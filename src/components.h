@@ -6,8 +6,6 @@
 #include "core/os.h"
 #include "core/types.h"
 
-#include <stdalign.h>
-
 typedef enum ComponentBit {
   TRANSFORM_COMPONENT_BIT = (1U << 0),
   RENDER_COMPONENT_BIT = (1U << 1),

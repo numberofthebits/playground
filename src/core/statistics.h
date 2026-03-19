@@ -56,7 +56,7 @@ static inline void cbuf_push(CircularBuffer *buffer, uint64_t value) {
   buffer->size++;
 }
 
-static inline uint64_t cbuf_next(CircularBuffer *buffer, uint32_t index_prev) {
+static inline uint32_t cbuf_next(CircularBuffer *buffer, uint32_t index_prev) {
   return (index_prev + 1) % (buffer->size < STATISTICS_CIRCULAR_BUFFER_SIZE
                                  ? buffer->size
                                  : STATISTICS_CIRCULAR_BUFFER_SIZE);

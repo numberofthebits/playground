@@ -26,7 +26,7 @@ typedef ComponentBitmaskT ComponentSignatureT;
 typedef ComponentBitmaskT ComponentReadAccessT;
 typedef ComponentBitmaskT ComponentWriteAccessT;
 typedef int EntityId;
-typedef size_t EntityIndex;
+typedef uint32_t EntityIndex;
 typedef uint64_t EntityFlags;
 typedef int Bool;
 

@@ -17,7 +17,7 @@ static void collision_update(SystemUpdateArgs args) {
   struct EventBus *event_bus = args.system->services.event_bus;
   Entity *entities = VEC_ITER_BEGIN_T(&args.system->entities, Entity);
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
     Entity self = entities[i];
     CollisionComponent *self_collision =
         PoolGetComponent(collision_pool, CollisionComponent, self.index);
@@ -30,7 +30,7 @@ static void collision_update(SystemUpdateArgs args) {
     /* self_rect.pos.x += self_transform->pos.x; */
     /* self_rect.pos.y += self_transform->pos.y; */
 
-    for (int j = i; j < args.system->entities.size; ++j) {
+    for (uint32_t j = i; j < args.system->entities.size; ++j) {
       Entity other = entities[j];
 
       if (other.id == self.id) {
@@ -89,7 +89,7 @@ void collision_system_handle_event(struct SystemBase *system, struct Event e) {
   // struct CollisionSystem* cs = (struct CollisionSystem*)system;
   switch (e.id) {
   case DebugEvent_StateChanged:
-    for (int i = 0; i < system->entities.size; ++i) {
+    for (uint32_t i = 0; i < system->entities.size; ++i) {
       // Entity entity = VEC_GET_T(&system->entities, Entity, i);
       // RenderComponent rc;
       // registry_add_component( , e, RENDER_COMPONENT_BIT, &rc);

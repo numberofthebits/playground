@@ -2,16 +2,15 @@
 #define SPARSECOMPONENTPOOL_H
 
 #include "types.h"
-#include "vec.h"
 
 #include <stdint.h>
 
 typedef struct {
-  size_t max_entities;
+  uint32_t max_entities;
 
   // Number of actual entities in this pool, i.e. the packed components
   // and entity list
-  size_t count;
+  uint32_t count;
   void *data;
   const struct Component *descriptor;
 
@@ -24,7 +23,7 @@ typedef struct {
 } Pool;
 
 void pool_init(Pool *scp, const struct Component *descriptor,
-               size_t max_entities);
+               uint32_t max_entities);
 
 Bool pool_has_entity(Pool *p, Entity e);
 

@@ -3,7 +3,6 @@
 
 #include <math.h>
 #include <memory.h>
-#include <stdalign.h>
 #include <stdint.h>
 
 #define PI 3.1415927f

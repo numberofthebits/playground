@@ -114,7 +114,7 @@ void player_system_update(SystemUpdateArgs args) {
 
   const auto millisecs = float(time_to_millisecs(args.delta));
 
-  for (int i = 0; i < player_system->base.entities.size; ++i) {
+  for (uint32_t i = 0; i < player_system->base.entities.size; ++i) {
     Entity entity = entities[i];
     TransformComponent *tc =
         PoolGetComponent(transform_pool, TransformComponent, entity.index);

@@ -64,7 +64,10 @@ static int worker_thread_main(void *arg) {
   WorkerThread *args = (WorkerThread *)arg;
   thread_name = args->thread_name;
   LOG_INFO("Thread %s (%d) started", args->thread_name, args->thread_index);
-  for (;;) {
+
+  // We could, if WorkQueue is only constructed once in the application lifetime,
+  // not query the running state at all
+  while(args->want_running) {
     work_queue_process(args);
     // LOG_INFO("Thread %d going to sleep", args.thread_index);
     WaitForSemaphore(args->semaphore_handle);
@@ -77,7 +80,7 @@ static int worker_thread_main(void *arg) {
     // }
   }
 
-  LOG_INFO("Thread %d done", args->thread_index);
+  LOG_INFO("Thread %s (%d) done", args->thread_name, args->thread_index);
 
   return 0;
 }
@@ -86,15 +89,16 @@ static void work_queue_reset(struct WorkQueue *queue) {
 
   for (size_t i = 0; i < WORKER_THREAD_COUNT; ++i) {
     InterlockedExchange(
-        (LONG *volatile)&queue->worker_threads[i].work_queue_count, 0);
+        (LONG *)&queue->worker_threads[i].work_queue_count, 0);
 
     InterlockedExchange(
-        (LONG *volatile)&queue->worker_threads[i].work_queue_next, 0);
+        (LONG *)&queue->worker_threads[i].work_queue_next, 0);
   }
 
-  InterlockedExchange((LONG *volatile)&queue->work_queue_completed, 0);
+  InterlockedExchange((LONG *)&queue->work_queue_completed, 0);
   queue->next_worker_thread = 0;
   queue->work_queue_queued_total = 0;
+
 }
 
 int work_queue_init(struct WorkQueue *queue) {
@@ -114,19 +118,24 @@ int work_queue_init(struct WorkQueue *queue) {
       return 0;
     }
 
+    sprintf(queue->worker_threads[i].thread_name, "WorkerPoolThread %d",
+            thread_index);
+    
     queue->worker_threads[i].work_queue.init();
     queue->worker_threads[i].thread_index = thread_index;
     queue->worker_threads[i].queue = queue;
-    sprintf(queue->worker_threads[i].thread_name, "WorkerPoolThread %d",
-            thread_index);
-
-    if (thrd_create(&queue->worker_threads[i].thread_handle,
-                    &worker_thread_main,
-                    &queue->worker_threads[i]) != thrd_success) {
-      LOG_ERROR("Failed to create thread %s %d",
-                queue->worker_threads[i].thread_name);
-      return 0;
-    }
+    queue->worker_threads[i].want_running = true;
+    
+    queue->worker_threads[i].thread_handle = std::thread([thread_args = &queue->worker_threads[i]]() {
+      worker_thread_main(thread_args);
+    });
+    // if (thrd_create(&queue->worker_threads[i].thread_handle,
+    //                 &worker_thread_main,
+    //                 &queue->worker_threads[i]) != thrd_success) {
+    //   LOG_ERROR("Failed to create thread %s %d",
+    //             queue->worker_threads[i].thread_name);
+    //   return 0;
+    // }
   }
 
   return 1;
@@ -192,7 +201,7 @@ void work_queue_sync(struct WorkQueue *queue) {
 void print_string(void *args) { LOG_INFO("%s", (const char *)args); }
 
 void work_queue_test() {
-  struct WorkQueue *queue = (WorkQueue *)malloc(sizeof(struct WorkQueue));
+  struct WorkQueue *queue = new WorkQueue();
 
   if (!work_queue_init(queue)) {
     LOG_EXIT("Failed to init work queue");
@@ -211,6 +220,6 @@ void work_queue_test() {
 
   work_queue_sync(queue);
 
-  free(queue);
+  delete queue;
 }
 #endif

@@ -110,7 +110,7 @@ void text_system_update(SystemUpdateArgs args) {
   Vec3f scale_factor = {sf, sf, 1.f};
   uint32_t num_glyphs_total = 0;
 
-  for (int i = 0; i < args.system->entities.size; ++i) {
+  for (uint32_t i = 0; i < args.system->entities.size; ++i) {
 
     DrawElementsIndirectCommand *draw_command = &system->draw_commands[i];
     DrawCommandDataText *draw_command_data = &system->draw_command_data[i];

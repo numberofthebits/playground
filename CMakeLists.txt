@@ -6,13 +6,14 @@ cmake_minimum_required(VERSION 3.5)
 # leave it on so i never have to specify this manually again
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_C STANDARD 23)
 
 project(pikuma_2d_game_engine C CXX)
 
 option(ENABLE_TESTS "Compile test functions" ON)
 option(ENABLE_DEBUG_TIMERS "Log debug timers" ON)
-option(ENABLE_SANITIZERS "Enable sanitizers" ON)
+option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
 add_executable(game)
 #target_compile_options(game PRIVATE -fsanitize=addresss,leak,undefined -fno-omit-frame-pointer)
@@ -162,7 +163,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
   
 if ( MSVC )
-  message("MSVC")
+  message("Using MSVC")
   target_compile_options(game
     PRIVATE
      /D_CRT_SECURE_NO_WARNINGS
@@ -170,7 +171,6 @@ if ( MSVC )
      /arch:AVX
      /Zi
      /W3
-     /std:c++20
    )
    # Make VS understand from where we should run this thing
    set_target_properties(game PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")

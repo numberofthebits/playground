@@ -20,7 +20,6 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include <GLFW/glfw3.h>
-#include <stdalign.h>
 #include <stdio.h>
 
 #define MAX_ENTITIES 100000
@@ -326,6 +325,8 @@ Game *game_create() {
 
   Game *game = ArenaAlloc<Game>(&global_static_allocator, 1);
 
+  new(game)(Game);
+
   work_queue_init(&game->work_queue);
 
   game->state = 0;
@@ -465,9 +466,9 @@ Game *game_create() {
 
 void map_write_meta(Map *map, const char *filepath) {
   FILE *handle = fopen(filepath, "w+b");
-  int bytes_to_write = offsetof(Map, tiles);
+  auto bytes_to_write = offsetof(Map, tiles);
 
-  int res = fwrite(map, 1, bytes_to_write, handle);
+  auto res = fwrite(map, 1, bytes_to_write, handle);
   if (res != bytes_to_write) {
     LOG_EXIT("Failed to write map meta");
   }
@@ -513,8 +514,8 @@ void map_load(Game *game, AssetId asset_id) {
 
       TransformComponent tc = {};
       tc.scale = 1.f;
-      tc.pos.x = col;
-      tc.pos.y = row;
+      tc.pos.x = static_cast<float>(col);
+      tc.pos.y = static_cast<float>(row);
       tc.pos.z = 0.0f;
       tc.rotation = 0.0f;
 
@@ -824,7 +825,7 @@ void load_units(Registry *registry, struct Assets *assets) {
 
     TextComponent text;
     text.text = "Text follows Player 1";
-    text.len = strlen(text.text);
+    text.len = static_cast<uint32_t>(strlen(text.text));
     text.flags = 0;
     text.scale_factor = 1.f;
     text.color = {.r = 0, .g = 0, .b = 255, .a = 255};
@@ -853,7 +854,7 @@ void load_units(Registry *registry, struct Assets *assets) {
 
   TextComponent text = {};
   text.text = "OVERLAY TEXT Level 1";
-  text.len = strlen(text.text);
+  text.len = static_cast<uint32_t>(strlen(text.text));
   text.flags |= TEXT_COMPONENT_FLAG_SCREEN_SPACE;
   text.scale_factor = 1.f;
   text.color = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -1091,7 +1092,7 @@ static void game_ui() {
   static bool show_stats_window = true;
   if (ImGui::Begin("Stats", &show_stats_window)) {
     for (uint32_t i = 0; i < stats.num_durations; ++i) {
-      ImGui::Text("Time '%s': %llu Âµs", stats.durations[i].name,
+      ImGui::Text("Time '%s': %llu µs", stats.durations[i].name,
                   stats.durations[i].value);
     }
 
